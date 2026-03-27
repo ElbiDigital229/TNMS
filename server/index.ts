@@ -13,6 +13,9 @@ async function main() {
     if (env.NODE_ENV === "development") {
       const { setupVite } = await import("./vite.js");
       await setupVite(app);
+    } else {
+      const { serveStatic } = await import("./vite.js");
+      serveStatic(app);
     }
 
     app.listen(env.PORT, () => {
