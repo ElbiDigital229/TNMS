@@ -1,4 +1,5 @@
 import type { Express } from "express";
+import express from "express";
 import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
@@ -37,7 +38,6 @@ export async function setupVite(app: Express) {
 
 export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "../public");
-  const express = require("express");
 
   app.use(express.static(distPath));
   app.use("*", (_req: any, res: any) => {
