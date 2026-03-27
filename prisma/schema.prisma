@@ -1,0 +1,332 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum PropertyType {
+  FLOOR
+  BUILDING
+  COMPOUND
+}
+
+enum City {
+  LAHORE
+  ISLAMABAD
+}
+
+enum Status {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum AssetCondition {
+  EXCELLENT
+  GOOD
+  FAIR
+  POOR
+}
+
+enum TaskType {
+  COMPLAIN
+  MAINTENANCE
+  INSPECT
+  TASK
+}
+
+enum SubTaskType {
+  REACTIVE
+  PREVENTIVE
+}
+
+enum Priority {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum TicketStatus {
+  OPEN
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum RecurringType {
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum TodoStatus {
+  OPEN
+  COMPLETED
+}
+
+// ─── RBAC Models ───────────────────────────────────────────
+
+model Role {
+  id                  String   @id @default(uuid())
+  name                String   @unique
+  level               Int
+  canAssignToMaxLevel Int?
+  isSystemRole        Boolean  @default(false)
+  status              Status   @default(ACTIVE)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  permissions RolePermission[]
+  users       User[]
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  key         String   @unique
+  module      String
+  description String
+  createdAt   DateTime @default(now())
+
+  roles RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserPropertyAssignment {
+  id         String   @id @default(uuid())
+  userId     String
+  propertyId String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  property   Property @relation(fields: [propertyId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, propertyId])
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  action    String
+  module    String
+  entityId  String?
+  details   String?
+  ipAddress String?
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// ─── Core Models ───────────────────────────────────────────
+
+model User {
+  id            String   @id @default(uuid())
+  username      String   @unique
+  passwordHash  String
+  fullName      String?
+  email         String?  @unique
+  phone         String?
+  isSuperAdmin  Boolean  @default(false)
+  allProperties Boolean  @default(false)
+  roleId        String
+  role          Role     @relation(fields: [roleId], references: [id])
+  reportsToId   String?
+  reportsTo     User?    @relation("UserHierarchy", fields: [reportsToId], references: [id])
+  subordinates  User[]   @relation("UserHierarchy")
+  status        Status   @default(ACTIVE)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  todos               Todo[]
+  propertyAssignments  UserPropertyAssignment[]
+  auditLogs           AuditLog[]
+  createdTickets      Ticket[]  @relation("TicketCreator")
+  assignedTickets     Ticket[]  @relation("TicketAssignee")
+}
+
+model AreaGroup {
+  id        String     @id @default(uuid())
+  city      City       @unique
+  groupName String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  properties Property[]
+}
+
+model Property {
+  id          String       @id @default(uuid())
+  name        String
+  code        String       @unique
+  type        PropertyType
+  description String?
+  imagePath   String?
+  latitude    Float?
+  longitude   Float?
+  city        City
+  status      Status       @default(ACTIVE)
+  areaGroupId String?
+  areaGroup   AreaGroup?   @relation(fields: [areaGroupId], references: [id])
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  floors          Floor[]
+  units           Unit[]
+  assets          Asset[]
+  tickets         Ticket[]
+  userAssignments UserPropertyAssignment[]
+}
+
+model Floor {
+  id         String   @id @default(uuid())
+  name       String
+  propertyId String
+  property   Property @relation(fields: [propertyId], references: [id])
+  status     Status   @default(ACTIVE)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  units Unit[]
+}
+
+model Unit {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  name        String
+  unitType    String
+  description String?
+  floorId     String
+  floor       Floor    @relation(fields: [floorId], references: [id])
+  propertyId  String
+  property    Property @relation(fields: [propertyId], references: [id])
+  status      Status   @default(ACTIVE)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  assets  Asset[]
+  tickets Ticket[]
+}
+
+model Asset {
+  id                String         @id @default(uuid())
+  code              String         @unique
+  name              String
+  categoryId        String
+  category          AssetCategory  @relation(fields: [categoryId], references: [id])
+  unitOfMeasure     String
+  condition         AssetCondition
+  additionalInfo    String?
+  unitId            String
+  unit              Unit           @relation(fields: [unitId], references: [id])
+  propertyId        String
+  property          Property       @relation(fields: [propertyId], references: [id])
+  serialNumber      String?
+  purchaseDate      DateTime?
+  imagePath         String?
+  qrCode            String
+  status            Status         @default(ACTIVE)
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  ticketAssets      TicketAsset[]
+}
+
+model Ticket {
+  id              String        @id @default(uuid())
+  ticketNumber    String        @unique
+  name            String
+  description     String
+  propertyId      String
+  property        Property      @relation(fields: [propertyId], references: [id])
+  unitId          String
+  unit            Unit          @relation(fields: [unitId], references: [id])
+  dueDate         DateTime
+  taskType        TaskType
+  subTaskType     SubTaskType
+  categoryId      String
+  category        TicketCategory @relation(fields: [categoryId], references: [id])
+  priority        Priority
+  status          TicketStatus  @default(OPEN)
+  createdById     String?
+  createdBy       User?         @relation("TicketCreator", fields: [createdById], references: [id])
+  assignedToId    String?
+  assignedTo      User?         @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  isRecurring     Boolean       @default(false)
+  recurringType   RecurringType?
+  recurringDay    Int?
+  recurringDueDays Int?
+  imagePath       String?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  assets          TicketAsset[]
+  comments        TicketComment[]
+  activities      TicketActivity[]
+}
+
+model TicketAsset {
+  id        String @id @default(uuid())
+  ticketId  String
+  ticket    Ticket @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  assetId   String
+  asset     Asset  @relation(fields: [assetId], references: [id])
+
+  @@unique([ticketId, assetId])
+}
+
+model TicketComment {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model TicketActivity {
+  id        String   @id @default(uuid())
+  ticketId  String
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  action    String
+  details   String?
+  createdAt DateTime @default(now())
+}
+
+model TicketCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tickets Ticket[]
+}
+
+model AssetCategory {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  assets Asset[]
+}
+
+model Todo {
+  id          String     @id @default(uuid())
+  title       String
+  dueDate     DateTime
+  status      TodoStatus @default(OPEN)
+  completedAt DateTime?
+  userId      String
+  user        User       @relation(fields: [userId], references: [id])
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}

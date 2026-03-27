@@ -1,0 +1,45 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  @apply bg-gray-50 text-gray-900 antialiased;
+  font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+}
+
+/* Smooth transitions globally */
+*, *::before, *::after {
+  @apply transition-colors duration-150;
+}
+
+/* Override for elements that shouldn't transition colors */
+input, textarea, select, svg, img, video {
+  transition: none;
+}
+
+/* Restore specific transitions for interactive inputs */
+input:focus, textarea:focus, select:focus {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+/* Smooth scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply rounded-full bg-gray-300;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-gray-400;
+}
+
+.leaflet-container {
+  @apply h-full w-full rounded-lg;
+}
