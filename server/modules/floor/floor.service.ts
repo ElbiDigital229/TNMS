@@ -38,6 +38,18 @@ export const floorService = {
   },
 
   async activate(id: string) {
-    return prisma.floor.update({ where: { id }, data: { status: "ACTIVE" } });
+    // Cascade activation to match deactivation behavior
+    await prisma.$transaction(async (tx) => {
+      await tx.floor.update({ where: { id }, data: { status: "ACTIVE" } });
+      const units = await tx.unit.findMany({ where: { floorId: id }, select: { id: true } });
+      if (units.length > 0) {
+        await tx.unit.updateMany({ where: { floorId: id }, data: { status: "ACTIVE" } });
+        await tx.asset.updateMany({
+          where: { unitId: { in: units.map((u) => u.id) } },
+          data: { status: "ACTIVE" },
+        });
+      }
+    });
+    return prisma.floor.findUnique({ where: { id } });
   },
 };

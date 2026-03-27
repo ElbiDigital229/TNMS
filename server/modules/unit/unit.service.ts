@@ -66,9 +66,13 @@ export const unitService = {
   },
 
   async activate(id: string) {
-    return prisma.unit.update({
+    // Cascade activation to match deactivation behavior
+    await prisma.$transaction(async (tx) => {
+      await tx.unit.update({ where: { id }, data: { status: "ACTIVE" } });
+      await tx.asset.updateMany({ where: { unitId: id }, data: { status: "ACTIVE" } });
+    });
+    return prisma.unit.findUnique({
       where: { id },
-      data: { status: "ACTIVE" },
       include: { floor: { select: { id: true, name: true } } },
     });
   },
