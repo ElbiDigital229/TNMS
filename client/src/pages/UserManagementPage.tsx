@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { userApi, roleApi, propertyApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import Modal from "../components/ui/Modal";
-import { Users, Plus, Edit2, Power, Search, Shield, KeyRound } from "lucide-react";
+import BulkImportModal from "../components/ui/BulkImportModal";
+import { Users, Plus, Edit2, Power, Search, Shield, KeyRound, Upload } from "lucide-react";
 
 interface Role {
   id: string;
@@ -63,6 +64,7 @@ export default function UserManagementPage() {
   const [resetPwUser, setResetPwUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
   const [managerPropertyIds, setManagerPropertyIds] = useState<string[] | "all" | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const fetchUsers = () => {
     userApi
@@ -286,13 +288,22 @@ export default function UserManagementPage() {
             Manage system users, roles, and property access.
           </p>
         </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-        >
-          <Plus size={18} />
-          Add User
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+          >
+            <Upload size={18} />
+            Bulk Import
+          </button>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+          >
+            <Plus size={18} />
+            Add User
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -742,6 +753,28 @@ export default function UserManagementPage() {
           </div>
         </div>
       </Modal>
+
+      <BulkImportModal
+        isOpen={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Bulk Import Users"
+        columns={[
+          { key: "username", label: "Username", required: true, example: "john_doe" },
+          { key: "password", label: "Password", required: true, example: "password123" },
+          { key: "fullName", label: "Full Name", required: false, example: "John Doe" },
+          { key: "email", label: "Email", required: false, example: "john@example.com" },
+          { key: "phone", label: "Phone", required: false, example: "+923001234567" },
+          { key: "roleName", label: "Role Name", required: true, example: "Technician" },
+          { key: "reportsToUsername", label: "Reports To", required: false, example: "admin" },
+          { key: "allProperties", label: "All Properties", required: false, example: "yes" },
+          { key: "propertyNames", label: "Property Names", required: false, example: "Gulberg Heights;Blue Area Tower" },
+        ]}
+        onImport={async (items) => {
+          const res = await userApi.bulkImport(items);
+          return res.data.data;
+        }}
+        onComplete={fetchUsers}
+      />
     </div>
   );
 }

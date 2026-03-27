@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { unitApi, floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
-import { Plus, Pencil, Building2 } from "lucide-react";
+import BulkImportModal from "../ui/BulkImportModal";
+import { Plus, Pencil, Building2, Upload } from "lucide-react";
 
 interface Unit {
   id: string;
@@ -32,6 +33,7 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [unitType, setUnitType] = useState("");
@@ -120,7 +122,14 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        <button
+          onClick={() => setBulkOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+        >
+          <Upload size={16} />
+          Bulk Import
+        </button>
         <button
           onClick={openAdd}
           className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
@@ -277,6 +286,26 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
           </div>
         </div>
       </Modal>
+
+      <BulkImportModal
+        isOpen={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Bulk Import Units"
+        columns={[
+          { key: "name", label: "Name", required: true, example: "Unit 101" },
+          { key: "unitType", label: "Unit Type", required: true, example: "Office" },
+          { key: "floorName", label: "Floor Name", required: true, example: "Ground Floor" },
+          { key: "description", label: "Description", required: false, example: "Corner unit" },
+        ]}
+        onImport={async (items) => {
+          const res = await unitApi.bulkImport(propertyId, items);
+          return res.data.data;
+        }}
+        onComplete={() => {
+          fetchData();
+          onUpdate();
+        }}
+      />
     </div>
   );
 }

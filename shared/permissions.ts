@@ -18,6 +18,7 @@ export const PERMISSIONS = {
     EDIT: "units.edit",
     DEACTIVATE: "units.deactivate",
     EXPORT: "units.export",
+    IMPORT: "units.import",
   },
   ASSETS: {
     VIEW: "assets.view",
@@ -55,6 +56,7 @@ export const PERMISSIONS = {
     CREATE: "users.create",
     EDIT: "users.edit",
     DEACTIVATE: "users.deactivate",
+    IMPORT: "users.import",
   },
   ROLES: {
     VIEW: "roles.view",
@@ -94,6 +96,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.UNITS.EDIT, module: "units", description: "Edit units" },
   { key: PERMISSIONS.UNITS.DEACTIVATE, module: "units", description: "Deactivate/reactivate units" },
   { key: PERMISSIONS.UNITS.EXPORT, module: "units", description: "Export unit data" },
+  { key: PERMISSIONS.UNITS.IMPORT, module: "units", description: "Bulk import units" },
   // Assets
   { key: PERMISSIONS.ASSETS.VIEW, module: "assets", description: "View asset list and details" },
   { key: PERMISSIONS.ASSETS.CREATE, module: "assets", description: "Add assets" },
@@ -125,6 +128,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.USERS.CREATE, module: "users", description: "Create new users" },
   { key: PERMISSIONS.USERS.EDIT, module: "users", description: "Edit user details" },
   { key: PERMISSIONS.USERS.DEACTIVATE, module: "users", description: "Deactivate/reactivate users" },
+  { key: PERMISSIONS.USERS.IMPORT, module: "users", description: "Bulk import users" },
   // Roles
   { key: PERMISSIONS.ROLES.VIEW, module: "roles", description: "View roles" },
   { key: PERMISSIONS.ROLES.MANAGE, module: "roles", description: "Create/edit/delete roles" },

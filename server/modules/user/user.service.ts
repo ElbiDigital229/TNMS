@@ -392,6 +392,118 @@ export const userService = {
     }
   },
 
+  async bulkCreate(
+    items: {
+      username: string;
+      password: string;
+      fullName?: string;
+      email?: string;
+      phone?: string;
+      roleName: string;
+      reportsToUsername?: string;
+      allProperties?: string;
+      propertyNames?: string;
+    }[]
+  ) {
+    const roles = await prisma.role.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    const roleMap = new Map(roles.map((r) => [r.name.toLowerCase(), r.id]));
+
+    const existingUsers = await prisma.user.findMany({
+      select: { id: true, username: true },
+    });
+    const userMap = new Map(existingUsers.map((u) => [u.username.toLowerCase(), u.id]));
+
+    const allProperties = await prisma.property.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    const propertyMap = new Map(allProperties.map((p) => [p.name.toLowerCase(), p.id]));
+
+    const results: { row: number; status: string; username: string; error?: string }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      try {
+        if (!item.username || !item.password || !item.roleName) {
+          results.push({ row: i + 1, status: "error", username: item.username || "", error: "username, password, and roleName are required" });
+          continue;
+        }
+
+        if (userMap.has(item.username.toLowerCase())) {
+          results.push({ row: i + 1, status: "error", username: item.username, error: "Username already exists" });
+          continue;
+        }
+
+        const roleId = roleMap.get(item.roleName.toLowerCase());
+        if (!roleId) {
+          results.push({ row: i + 1, status: "error", username: item.username, error: `Role "${item.roleName}" not found` });
+          continue;
+        }
+
+        let reportsToId: string | undefined;
+        if (item.reportsToUsername) {
+          reportsToId = userMap.get(item.reportsToUsername.toLowerCase());
+          if (!reportsToId) {
+            results.push({ row: i + 1, status: "error", username: item.username, error: `Reports-to user "${item.reportsToUsername}" not found` });
+            continue;
+          }
+        }
+
+        const isAllProps = item.allProperties?.toLowerCase() === "yes" || item.allProperties?.toLowerCase() === "true";
+        let propertyIds: string[] = [];
+
+        if (!isAllProps && item.propertyNames) {
+          const names = item.propertyNames.split(";").map((n) => n.trim());
+          for (const name of names) {
+            const pid = propertyMap.get(name.toLowerCase());
+            if (!pid) {
+              results.push({ row: i + 1, status: "error", username: item.username, error: `Property "${name}" not found` });
+              break;
+            }
+            propertyIds.push(pid);
+          }
+          if (results[results.length - 1]?.row === i + 1 && results[results.length - 1]?.status === "error") continue;
+        }
+
+        const passwordHash = await bcrypt.hash(item.password, env.BCRYPT_SALT_ROUNDS);
+
+        const user = await prisma.user.create({
+          data: {
+            username: item.username,
+            passwordHash,
+            fullName: item.fullName || undefined,
+            email: item.email || undefined,
+            phone: item.phone || undefined,
+            roleId,
+            reportsToId,
+            allProperties: isAllProps,
+          },
+        });
+
+        // Track new user for subsequent rows that may reference it
+        userMap.set(item.username.toLowerCase(), user.id);
+
+        if (!isAllProps && propertyIds.length > 0) {
+          await prisma.userPropertyAssignment.createMany({
+            data: propertyIds.map((propertyId) => ({
+              userId: user.id,
+              propertyId,
+            })),
+          });
+        }
+
+        results.push({ row: i + 1, status: "success", username: item.username });
+      } catch (err: any) {
+        results.push({ row: i + 1, status: "error", username: item.username || "", error: err.message });
+      }
+    }
+
+    return results;
+  },
+
   async getSubordinates(id: string) {
     const result: any[] = [];
 

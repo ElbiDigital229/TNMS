@@ -72,4 +72,50 @@ export const unitService = {
       include: { floor: { select: { id: true, name: true } } },
     });
   },
+
+  async bulkCreate(
+    propertyId: string,
+    items: { name: string; unitType: string; floorName: string; description?: string }[]
+  ) {
+    const floors = await prisma.floor.findMany({
+      where: { propertyId, status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    const floorMap = new Map(floors.map((f) => [f.name.toLowerCase(), f.id]));
+
+    const results: { row: number; status: string; name: string; error?: string }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      try {
+        if (!item.name || !item.unitType || !item.floorName) {
+          results.push({ row: i + 1, status: "error", name: item.name || "", error: "name, unitType, and floorName are required" });
+          continue;
+        }
+
+        const floorId = floorMap.get(item.floorName.toLowerCase());
+        if (!floorId) {
+          results.push({ row: i + 1, status: "error", name: item.name, error: `Floor "${item.floorName}" not found` });
+          continue;
+        }
+
+        const code = await this.generateCode();
+        await prisma.unit.create({
+          data: {
+            code,
+            name: item.name,
+            unitType: item.unitType,
+            floorId,
+            propertyId,
+            description: item.description || undefined,
+          },
+        });
+        results.push({ row: i + 1, status: "success", name: item.name });
+      } catch (err: any) {
+        results.push({ row: i + 1, status: "error", name: item.name || "", error: err.message });
+      }
+    }
+
+    return results;
+  },
 };

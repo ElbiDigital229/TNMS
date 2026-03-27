@@ -65,4 +65,25 @@ export const unitController = {
       sendError(res, error.message);
     }
   },
+
+  async bulkImport(req: Request, res: Response) {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return sendError(res, "items array is required", 400);
+      }
+      if (items.length > 500) {
+        return sendError(res, "Maximum 500 items per import", 400);
+      }
+
+      const results = await unitService.bulkCreate(req.params.propertyId, items);
+      const successCount = results.filter((r) => r.status === "success").length;
+      const errorCount = results.filter((r) => r.status === "error").length;
+
+      sendSuccess(res, { results, summary: { total: items.length, success: successCount, errors: errorCount } },
+        `Imported ${successCount} units, ${errorCount} errors`, 201);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
 };

@@ -72,6 +72,8 @@ export const unitApi = {
     api.put(`/properties/units/${id}`, data),
   deactivate: (id: string) => api.patch(`/properties/units/${id}/deactivate`),
   activate: (id: string) => api.patch(`/properties/units/${id}/activate`),
+  bulkImport: (propertyId: string, items: Record<string, string>[]) =>
+    api.post(`/properties/${propertyId}/units/bulk-import`, { items }),
 };
 
 // Asset API
@@ -92,6 +94,8 @@ export const assetApi = {
     }),
   deactivate: (id: string) => api.patch(`/assets/${id}/deactivate`),
   activate: (id: string) => api.patch(`/assets/${id}/activate`),
+  bulkImport: (propertyId: string, items: Record<string, string>[]) =>
+    api.post(`/properties/${propertyId}/assets/bulk-import`, { items }),
 };
 
 // Area Group API
@@ -178,6 +182,8 @@ export const userApi = {
   activate: (id: string) => api.patch(`/users/${id}/activate`),
   getSubordinates: (id: string) => api.get(`/users/${id}/subordinates`),
   getManagerProperties: (id: string) => api.get(`/users/${id}/properties`),
+  bulkImport: (items: Record<string, string>[]) =>
+    api.post("/users/bulk-import", { items }),
 };
 
 // Role API

@@ -187,4 +187,85 @@ export const assetService = {
       data: { status: "ACTIVE" },
     });
   },
+
+  async bulkCreate(
+    propertyId: string,
+    items: {
+      name: string;
+      categoryName: string;
+      unitOfMeasure: string;
+      condition: string;
+      unitCode: string;
+      serialNumber?: string;
+      purchaseDate?: string;
+      additionalInfo?: string;
+    }[]
+  ) {
+    const categories = await prisma.assetCategory.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    const categoryMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+
+    const units = await prisma.unit.findMany({
+      where: { propertyId, status: "ACTIVE" },
+      select: { id: true, code: true },
+    });
+    const unitMap = new Map(units.map((u) => [u.code.toLowerCase(), u.id]));
+
+    const validConditions = ["EXCELLENT", "GOOD", "FAIR", "POOR"];
+    const results: { row: number; status: string; name: string; error?: string }[] = [];
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      try {
+        if (!item.name || !item.categoryName || !item.unitOfMeasure || !item.condition || !item.unitCode) {
+          results.push({ row: i + 1, status: "error", name: item.name || "", error: "name, categoryName, unitOfMeasure, condition, and unitCode are required" });
+          continue;
+        }
+
+        const conditionUpper = item.condition.toUpperCase();
+        if (!validConditions.includes(conditionUpper)) {
+          results.push({ row: i + 1, status: "error", name: item.name, error: `Invalid condition "${item.condition}". Use: EXCELLENT, GOOD, FAIR, POOR` });
+          continue;
+        }
+
+        const categoryId = categoryMap.get(item.categoryName.toLowerCase());
+        if (!categoryId) {
+          results.push({ row: i + 1, status: "error", name: item.name, error: `Category "${item.categoryName}" not found` });
+          continue;
+        }
+
+        const unitId = unitMap.get(item.unitCode.toLowerCase());
+        if (!unitId) {
+          results.push({ row: i + 1, status: "error", name: item.name, error: `Unit "${item.unitCode}" not found in this property` });
+          continue;
+        }
+
+        const code = await this.generateCode();
+        const qrCode = await this.generateQRCode(code);
+
+        await prisma.asset.create({
+          data: {
+            code,
+            name: item.name,
+            categoryId,
+            unitOfMeasure: item.unitOfMeasure,
+            condition: conditionUpper as AssetCondition,
+            unitId,
+            propertyId,
+            serialNumber: item.serialNumber || undefined,
+            purchaseDate: item.purchaseDate ? new Date(item.purchaseDate) : undefined,
+            additionalInfo: item.additionalInfo || undefined,
+            qrCode,
+          },
+        });
+        results.push({ row: i + 1, status: "success", name: item.name });
+      } catch (err: any) {
+        results.push({ row: i + 1, status: "error", name: item.name || "", error: err.message });
+      }
+    }
+
+    return results;
+  },
 };

@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { assetApi, unitApi, assetCategoryApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
-import { Plus, Eye, Pencil, Package } from "lucide-react";
+import BulkImportModal from "../ui/BulkImportModal";
+import { Plus, Eye, Pencil, Package, Upload } from "lucide-react";
 import { CONDITION_LABELS } from "../../../../shared/types";
 
 interface Asset {
@@ -53,6 +54,7 @@ export default function AssetsTab({
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [detailAsset, setDetailAsset] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -199,7 +201,14 @@ export default function AssetsTab({
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        <button
+          onClick={() => setBulkOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+        >
+          <Upload size={16} />
+          Bulk Import
+        </button>
         <button
           onClick={openAdd}
           className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
@@ -491,6 +500,30 @@ export default function AssetsTab({
           </div>
         </div>
       </Modal>
+
+      <BulkImportModal
+        isOpen={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Bulk Import Assets"
+        columns={[
+          { key: "name", label: "Name", required: true, example: "Split AC Unit" },
+          { key: "categoryName", label: "Category", required: true, example: "HVAC" },
+          { key: "unitOfMeasure", label: "Unit of Measure", required: true, example: "Piece" },
+          { key: "condition", label: "Condition", required: true, example: "GOOD" },
+          { key: "unitCode", label: "Unit Code", required: true, example: "UNT001" },
+          { key: "serialNumber", label: "Serial Number", required: false, example: "SN-12345" },
+          { key: "purchaseDate", label: "Purchase Date", required: false, example: "2024-01-15" },
+          { key: "additionalInfo", label: "Additional Info", required: false, example: "Brand X" },
+        ]}
+        onImport={async (items) => {
+          const res = await assetApi.bulkImport(propertyId, items);
+          return res.data.data;
+        }}
+        onComplete={() => {
+          fetchData();
+          onUpdate();
+        }}
+      />
 
       {/* Asset Detail Modal */}
       <Modal

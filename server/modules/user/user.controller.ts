@@ -147,6 +147,27 @@ export const userController = {
     }
   },
 
+  async bulkImport(req: Request, res: Response) {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return sendError(res, "items array is required", 400);
+      }
+      if (items.length > 500) {
+        return sendError(res, "Maximum 500 items per import", 400);
+      }
+
+      const results = await userService.bulkCreate(items);
+      const successCount = results.filter((r) => r.status === "success").length;
+      const errorCount = results.filter((r) => r.status === "error").length;
+
+      sendSuccess(res, { results, summary: { total: items.length, success: successCount, errors: errorCount } },
+        `Imported ${successCount} users, ${errorCount} errors`, 201);
+    } catch (error: any) {
+      sendError(res, error.message || "Failed to bulk import users");
+    }
+  },
+
   async getManagerProperties(req: Request, res: Response) {
     try {
       const result = await userService.getManagerPropertyIds(req.params.id);
