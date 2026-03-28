@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { propertyApi, areaGroupApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import {
@@ -34,6 +34,7 @@ interface AreaGroup {
 }
 
 export default function PropertyListPage() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [properties, setProperties] = useState<Property[]>([]);
   const [areaGroups, setAreaGroups] = useState<AreaGroup[]>([]);
@@ -249,7 +250,8 @@ export default function PropertyListPage() {
                 properties.map((p) => (
                   <tr
                     key={p.id}
-                    className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
+                    onClick={() => navigate(`/properties/${p.id}`)}
+                    className="cursor-pointer border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
                   >
                     <td className="px-5 py-3.5">
                       {p.imagePath ? (
@@ -288,7 +290,7 @@ export default function PropertyListPage() {
                         {p.status}
                       </span>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className="px-5 py-3.5" onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-2">
                         <Link
                           to={`/properties/${p.id}`}
