@@ -40,7 +40,11 @@ export function serveStatic(app: Express) {
   const distPath = path.resolve(__dirname, "../public");
 
   app.use(express.static(distPath));
-  app.use("*", (_req: any, res: any) => {
+  app.use("*", (_req: any, res: any, next: any) => {
+    const url = _req.originalUrl;
+    if (url.startsWith("/api") || url.startsWith("/uploads")) {
+      return next();
+    }
     res.sendFile(path.resolve(distPath, "index.html"));
   });
 }
