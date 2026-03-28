@@ -232,10 +232,9 @@ export async function seed() {
     console.log("Updated admin user with Super Admin role");
   }
 
-  // ─── 5+ Skip mock data if DB already has properties ─────
-  const existingPropertyCount = await prisma.property.count();
-  if (existingPropertyCount > 0) {
-    console.log(`${existingPropertyCount} properties exist, skipping mock data seeding`);
+  // ─── 5+ Only seed mock data when explicitly requested ─────
+  if (process.env.SEED_MOCK_DATA !== "true") {
+    console.log("Skipping mock data seeding (set SEED_MOCK_DATA=true to seed)");
     return;
   }
 
