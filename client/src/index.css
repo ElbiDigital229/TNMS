@@ -42,4 +42,5 @@ input:focus, textarea:focus, select:focus {
 
 .leaflet-container {
   @apply h-full w-full rounded-lg;
+  z-index: 0;
 }

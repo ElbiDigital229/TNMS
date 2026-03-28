@@ -22,6 +22,8 @@ import UserManagementPage from "./pages/UserManagementPage";
 import RoleManagementPage from "./pages/RoleManagementPage";
 import AuditLogPage from "./pages/AuditLogPage";
 import ReportBuilderPage from "./pages/ReportBuilderPage";
+import NotificationsPage from "./pages/NotificationsPage";
+import { NotificationProvider } from "./contexts/NotificationContext";
 import { PERMISSIONS } from "../../shared/permissions";
 
 const P = PERMISSIONS;
@@ -30,6 +32,7 @@ export default function App() {
   return (
     <AuthProvider>
       <ToastProvider>
+        <NotificationProvider>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
@@ -55,9 +58,11 @@ export default function App() {
               <Route path="/settings/roles" element={<RequirePermission permission={P.ROLES.VIEW}><RoleManagementPage /></RequirePermission>} />
               <Route path="/reports" element={<RequirePermission permission={P.REPORTS.VIEW}><ReportBuilderPage /></RequirePermission>} />
               <Route path="/settings/audit-logs" element={<RequirePermission permission={P.AUDIT.VIEW}><AuditLogPage /></RequirePermission>} />
+              <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
         </Routes>
+        </NotificationProvider>
       </ToastProvider>
     </AuthProvider>
   );

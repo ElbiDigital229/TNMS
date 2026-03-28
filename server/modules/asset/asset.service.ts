@@ -5,6 +5,7 @@ import fs from "fs";
 import path from "path";
 import type { AssetCondition } from "@prisma/client";
 import { rbacService } from "../../services/rbac.service.js";
+import { notificationTrigger } from "../../services/notificationTrigger.service.js";
 
 export const assetService = {
   async generateCode(): Promise<string> {
@@ -175,14 +176,34 @@ export const assetService = {
       imagePath?: string;
     }
   ) {
-    return prisma.asset.update({
+    // Check if condition is changing to POOR
+    let wasPoor = true;
+    if (data.condition === "POOR") {
+      const existing = await prisma.asset.findUnique({
+        where: { id },
+        select: { condition: true },
+      });
+      wasPoor = existing?.condition === "POOR";
+    }
+
+    const asset = await prisma.asset.update({
       where: { id },
       data,
       include: {
         unit: { select: { id: true, name: true, code: true } },
         category: { select: { id: true, name: true } },
+        property: { select: { id: true, name: true } },
       },
     });
+
+    // Fire-and-forget notification if condition just became POOR
+    if (data.condition === "POOR" && !wasPoor) {
+      notificationTrigger
+        .onAssetConditionPoor(asset.id, asset.name, asset.code, (asset as any).property.id)
+        .catch(console.error);
+    }
+
+    return asset;
   },
 
   async deactivate(id: string) {

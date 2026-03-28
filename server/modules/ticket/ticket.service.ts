@@ -7,6 +7,7 @@ import type {
   RecurringType,
 } from "@prisma/client";
 import { rbacService } from "../../services/rbac.service.js";
+import { notificationTrigger } from "../../services/notificationTrigger.service.js";
 
 export const ticketService = {
   async generateTicketNumber(): Promise<string> {
@@ -163,6 +164,11 @@ export const ticketService = {
       },
     });
 
+    // Fire-and-forget notification
+    if (data.createdById) {
+      notificationTrigger.onTicketCreated(ticket.id, data.createdById).catch(console.error);
+    }
+
     return ticket;
   },
 
@@ -183,7 +189,8 @@ export const ticketService = {
       recurringDueDays?: number | null;
       imagePath?: string;
       assetIds?: string[];
-    }
+    },
+    editorUserId?: string
   ) {
     const { assetIds, ...ticketData } = data;
 
@@ -218,10 +225,15 @@ export const ticketService = {
       },
     });
 
+    // Fire-and-forget notification (#9 ticket edited)
+    if (editorUserId) {
+      notificationTrigger.onTicketEdited(id, editorUserId).catch(console.error);
+    }
+
     return ticket;
   },
 
-  async updateStatus(id: string, status: TicketStatus) {
+  async updateStatus(id: string, status: TicketStatus, updatedByUserId?: string) {
     const ticket = await prisma.ticket.update({
       where: { id },
       data: { status },
@@ -235,10 +247,15 @@ export const ticketService = {
       },
     });
 
+    // Fire-and-forget notification
+    if (updatedByUserId) {
+      notificationTrigger.onTicketStatusChanged(id, status, updatedByUserId).catch(console.error);
+    }
+
     return ticket;
   },
 
-  async addComment(ticketId: string, content: string) {
+  async addComment(ticketId: string, content: string, commenterId?: string) {
     const comment = await prisma.ticketComment.create({
       data: { ticketId, content },
     });
@@ -250,6 +267,11 @@ export const ticketService = {
         details: "New comment added",
       },
     });
+
+    // Fire-and-forget notification
+    if (commenterId) {
+      notificationTrigger.onTicketCommentAdded(ticketId, commenterId).catch(console.error);
+    }
 
     return comment;
   },
@@ -287,6 +309,11 @@ export const ticketService = {
         details: `Assigned to ${assignee?.fullName || assignee?.username}`,
       },
     });
+
+    // Fire-and-forget notification (includes #8 reassigned-away if previous assignee existed)
+    notificationTrigger
+      .onTicketAssigned(ticketId, assigneeId, assignerId, ticket.assignedToId)
+      .catch(console.error);
 
     return updated;
   },

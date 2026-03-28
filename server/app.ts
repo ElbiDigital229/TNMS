@@ -21,6 +21,7 @@ import { roleRoutes } from "./modules/role/role.routes.js";
 import { userRoutes } from "./modules/user/user.routes.js";
 import { auditRoutes } from "./modules/audit/audit.routes.js";
 import { reportRoutes } from "./modules/report/report.routes.js";
+import { notificationRoutes } from "./modules/notification/notification.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -49,6 +50,16 @@ const loginLimiter = rateLimit({
   message: { error: "Too many login attempts, please try again later." },
 });
 
+// Generous rate limit for notification polling (300 req/15min)
+const notificationPollLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests, please try again later." },
+});
+app.use("/api/notifications/unread-count", notificationPollLimiter);
+
 // Apply general rate limit to all API routes
 app.use("/api", apiLimiter);
 
@@ -74,6 +85,7 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit-logs", auditRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Error handler
 app.use(errorHandler);

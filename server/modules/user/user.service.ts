@@ -2,6 +2,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import type { Status } from "@prisma/client";
+import { notificationTrigger } from "../../services/notificationTrigger.service.js";
 
 export const userService = {
   async findAll(params: {
@@ -147,6 +148,11 @@ export const userService = {
       });
     }
 
+    // Fire-and-forget: notify manager about new team member (#16)
+    notificationTrigger
+      .onNewUserCreated(user.id, data.fullName || data.username, data.reportsToId)
+      .catch(console.error);
+
     return this.findById(user.id);
   },
 
@@ -179,6 +185,13 @@ export const userService = {
 
     const { propertyIds, ...userData } = data;
 
+    // Track changes for notification
+    const changes: string[] = [];
+    if (data.roleId && data.roleId !== existing.roleId) {
+      const newRole = await prisma.role.findUnique({ where: { id: data.roleId }, select: { name: true } });
+      if (newRole) changes.push(`role changed to ${newRole.name}`);
+    }
+
     const user = await prisma.user.update({
       where: { id },
       data: userData,
@@ -203,6 +216,24 @@ export const userService = {
             propertyId,
           })),
         });
+      }
+      changes.push("property assignments updated");
+    }
+
+    // Fire-and-forget notifications
+    if (changes.length > 0) {
+      notificationTrigger
+        .onUserAccountChanged(id, `Your account was updated: ${changes.join(", ")}`)
+        .catch(console.error);
+    }
+
+    // #11 Subordinate reassigned — notify new and previous managers
+    if (data.reportsToId !== undefined && data.reportsToId !== existing.reportsToId) {
+      const userName = existing.fullName || existing.username;
+      if (data.reportsToId) {
+        notificationTrigger
+          .onNewSubordinate(id, userName, data.reportsToId, existing.reportsToId)
+          .catch(console.error);
       }
     }
 
@@ -277,17 +308,24 @@ export const userService = {
     return this.findById(id);
   },
 
-  async resetPassword(id: string, newPassword: string) {
+  async resetPassword(id: string, newPassword: string, resetByUserId?: string) {
     const passwordHash = await bcrypt.hash(newPassword, env.BCRYPT_SALT_ROUNDS);
 
-    return prisma.user.update({
+    const result = await prisma.user.update({
       where: { id },
       data: { passwordHash },
       select: { id: true, username: true },
     });
+
+    // Fire-and-forget notification (#14)
+    if (resetByUserId && resetByUserId !== id) {
+      notificationTrigger.onPasswordReset(id, resetByUserId).catch(console.error);
+    }
+
+    return result;
   },
 
-  async deactivate(id: string) {
+  async deactivate(id: string, changedByUserId?: string) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error("User not found");
     if (user.isSuperAdmin) throw new Error("Cannot deactivate super admin user");
@@ -310,31 +348,52 @@ export const userService = {
       );
     }
 
-    return prisma.user.update({
+    const result = await prisma.user.update({
       where: { id },
       data: { status: "INACTIVE" },
       include: { role: true },
     });
+
+    // Fire-and-forget notification (#15)
+    if (changedByUserId) {
+      notificationTrigger.onUserStatusChanged(id, "deactivated", changedByUserId).catch(console.error);
+    }
+
+    return result;
   },
 
-  async block(id: string) {
+  async block(id: string, changedByUserId?: string) {
     const user = await prisma.user.findUnique({ where: { id } });
     if (!user) throw new Error("User not found");
     if (user.isSuperAdmin) throw new Error("Cannot block super admin user");
 
-    return prisma.user.update({
+    const result = await prisma.user.update({
       where: { id },
       data: { status: "BLOCKED" },
       include: { role: true },
     });
+
+    // Fire-and-forget notification (#15)
+    if (changedByUserId) {
+      notificationTrigger.onUserStatusChanged(id, "blocked", changedByUserId).catch(console.error);
+    }
+
+    return result;
   },
 
-  async activate(id: string) {
-    return prisma.user.update({
+  async activate(id: string, changedByUserId?: string) {
+    const result = await prisma.user.update({
       where: { id },
       data: { status: "ACTIVE" },
       include: { role: true },
     });
+
+    // Fire-and-forget notification (#15)
+    if (changedByUserId) {
+      notificationTrigger.onUserStatusChanged(id, "activated", changedByUserId).catch(console.error);
+    }
+
+    return result;
   },
 
   async getManagerPropertyIds(managerId: string): Promise<string[] | "all"> {

@@ -1,6 +1,7 @@
 import { prisma } from "../../config/db.js";
 import { CITY_CODES } from "../../../shared/types.js";
 import type { City, PropertyType, Status } from "@prisma/client";
+import { notificationTrigger } from "../../services/notificationTrigger.service.js";
 
 export const propertyService = {
   async generateCode(city: City): Promise<string> {
@@ -140,6 +141,12 @@ export const propertyService = {
   },
 
   async deactivate(id: string) {
+    // Get property name before deactivation for notification
+    const property = await prisma.property.findUnique({
+      where: { id },
+      select: { name: true },
+    });
+
     // Cascade deactivation
     await prisma.$transaction(async (tx) => {
       await tx.property.update({
@@ -162,6 +169,11 @@ export const propertyService = {
         data: { status: "INACTIVE" },
       });
     });
+
+    // Fire-and-forget notification
+    if (property) {
+      notificationTrigger.onPropertyDeactivated(id, property.name).catch(console.error);
+    }
 
     return prisma.property.findUnique({
       where: { id },

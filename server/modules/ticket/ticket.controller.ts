@@ -155,7 +155,7 @@ export const ticketController = {
             ? JSON.parse(assetIds)
             : assetIds
           : undefined,
-      });
+      }, req.user!.id);
 
       sendSuccess(res, ticket, "Ticket updated");
     } catch (error: any) {
@@ -168,7 +168,7 @@ export const ticketController = {
       const { status } = req.body;
       if (!status) return sendError(res, "Status is required", 400);
 
-      const ticket = await ticketService.updateStatus(req.params.id, status);
+      const ticket = await ticketService.updateStatus(req.params.id, status, req.user!.id);
       sendSuccess(res, ticket, "Status updated");
     } catch (error: any) {
       sendError(res, error.message);
@@ -180,7 +180,7 @@ export const ticketController = {
       const { content } = req.body;
       if (!content) return sendError(res, "Comment content is required", 400);
 
-      const comment = await ticketService.addComment(req.params.id, content);
+      const comment = await ticketService.addComment(req.params.id, content, req.user!.id);
       sendSuccess(res, comment, "Comment added", 201);
     } catch (error: any) {
       sendError(res, error.message);

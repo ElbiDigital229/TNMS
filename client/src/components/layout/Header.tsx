@@ -1,5 +1,6 @@
 import { Menu, User } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
+import NotificationBell from "./NotificationBell";
 
 interface HeaderProps {
   onMenuClick: () => void;
@@ -19,13 +20,16 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
       <div className="flex-1" />
 
-      <div className="flex items-center gap-2.5">
-        <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 ring-1 ring-primary-100">
-          <User size={14} className="text-primary-600" />
+      <div className="flex items-center gap-4">
+        <NotificationBell />
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 ring-1 ring-primary-100">
+            <User size={14} className="text-primary-600" />
+          </div>
+          <span className="text-[13px] font-medium text-gray-600">
+            {user?.username}
+          </span>
         </div>
-        <span className="text-[13px] font-medium text-gray-600">
-          {user?.username}
-        </span>
       </div>
     </header>
   );

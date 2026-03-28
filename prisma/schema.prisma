@@ -67,6 +67,25 @@ enum TodoStatus {
   COMPLETED
 }
 
+enum NotificationType {
+  TICKET_ASSIGNED
+  TICKET_REASSIGNED_AWAY
+  TICKET_STATUS_CHANGED
+  TICKET_COMMENT
+  TICKET_CREATED_IN_PROPERTY
+  TICKET_EDITED
+  TICKET_OVERDUE
+  TICKET_DUE_SOON
+  TICKET_OVERDUE_ESCALATION
+  ASSET_CONDITION_POOR
+  PROPERTY_DEACTIVATED
+  USER_ACCOUNT_CHANGED
+  USER_PASSWORD_RESET
+  USER_STATUS_CHANGED
+  USER_NEW_SUBORDINATE
+  USER_CREATED_UNDER_YOU
+}
+
 // ─── RBAC Models ───────────────────────────────────────────
 
 model Role {
@@ -148,6 +167,7 @@ model User {
   todos               Todo[]
   propertyAssignments  UserPropertyAssignment[]
   auditLogs           AuditLog[]
+  notifications       Notification[]
   createdTickets      Ticket[]  @relation("TicketCreator")
   assignedTickets     Ticket[]  @relation("TicketAssignee")
 }
@@ -201,10 +221,10 @@ model Unit {
   id          String   @id @default(uuid())
   code        String   @unique
   name        String
-  unitType    String
+  unitType    String?
   description String?
-  floorId     String
-  floor       Floor    @relation(fields: [floorId], references: [id])
+  floorId     String?
+  floor       Floor?   @relation(fields: [floorId], references: [id])
   propertyId  String
   property    Property @relation(fields: [propertyId], references: [id])
   status      Status   @default(ACTIVE)
@@ -329,4 +349,21 @@ model Todo {
   user        User       @relation(fields: [userId], references: [id])
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+}
+
+model Notification {
+  id        String           @id @default(uuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  message   String
+  linkUrl   String?
+  isRead    Boolean          @default(false)
+  readAt    DateTime?
+  metadata  Json?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, isRead, createdAt(sort: Desc)])
+  @@index([userId, createdAt(sort: Desc)])
 }

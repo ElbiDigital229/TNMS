@@ -3,16 +3,16 @@ import { unitApi, floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
-import { Plus, Pencil, Building2, Upload } from "lucide-react";
+import { Plus, Pencil, Building2, Upload, Trash2 } from "lucide-react";
 
 interface Unit {
   id: string;
   code: string;
   name: string;
-  unitType: string;
+  unitType: string | null;
   description: string | null;
   status: string;
-  floor: { id: string; name: string };
+  floor: { id: string; name: string } | null;
 }
 
 interface Floor {
@@ -34,6 +34,8 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingUnit, setEditingUnit] = useState<Unit | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const [name, setName] = useState("");
   const [unitType, setUnitType] = useState("");
@@ -48,6 +50,7 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
       .then(([unitsRes, floorsRes]) => {
         setUnits(unitsRes.data.data);
         setFloors(floorsRes.data.data.filter((f: Floor) => f.status === "ACTIVE"));
+        setSelectedIds(new Set());
       })
       .catch(() => toast.error("Failed to load data"))
       .finally(() => setLoading(false));
@@ -56,8 +59,6 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
   useEffect(() => {
     fetchData();
   }, [propertyId]);
-
-  const noFloors = floors.length === 0;
 
   const openAdd = () => {
     setEditingUnit(null);
@@ -71,35 +72,38 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
   const openEdit = (unit: Unit) => {
     setEditingUnit(unit);
     setName(unit.name);
-    setUnitType(unit.unitType);
-    setFloorId(unit.floor.id);
+    setUnitType(unit.unitType || "");
+    setFloorId(unit.floor?.id || "");
     setDescription(unit.description || "");
     setModalOpen(true);
   };
 
   const handleSave = async () => {
-    const missing: string[] = [];
-    if (!name) missing.push("Unit Name");
-    if (!floorId) missing.push("Floor");
-    if (!unitType) missing.push("Unit Type");
-    if (missing.length > 0) {
-      toast.error(`Please fill required fields: ${missing.join(", ")}`);
+    if (!name) {
+      toast.error("Please fill the required field: Unit Name");
       return;
     }
 
     try {
+      const payload = {
+        name,
+        unitType: unitType || undefined,
+        floorId: floorId || undefined,
+        description: description || undefined,
+      };
       if (editingUnit) {
-        await unitApi.update(editingUnit.id, { name, unitType, floorId, description });
+        await unitApi.update(editingUnit.id, payload);
         toast.success("Unit updated");
       } else {
-        await unitApi.create(propertyId, { name, unitType, floorId, description });
+        await unitApi.create(propertyId, payload);
         toast.success("Unit created");
       }
       setModalOpen(false);
       fetchData();
       onUpdate();
-    } catch {
-      toast.error("Failed to save unit");
+    } catch (err: any) {
+      const msg = err?.response?.data?.message || "Failed to save unit";
+      toast.error(msg);
     }
   };
 
@@ -119,6 +123,41 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === units.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(units.map((u) => u.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (!window.confirm(`Are you sure you want to delete ${count} unit${count > 1 ? "s" : ""}? This will also delete all associated assets and tickets.`)) return;
+
+    setDeleting(true);
+    try {
+      await unitApi.bulkDelete(Array.from(selectedIds));
+      toast.success(`${count} unit${count > 1 ? "s" : ""} deleted`);
+      fetchData();
+      onUpdate();
+    } catch {
+      toast.error("Failed to delete units");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center py-12">
@@ -128,32 +167,35 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
 
   return (
     <div>
-      {noFloors && (
-        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-          <p className="font-medium">No floors available</p>
-          <p className="mt-0.5 text-amber-700">
-            Please create at least one floor before adding units. Go to the <span className="font-semibold">Floors</span> tab to add floors.
-          </p>
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-700 disabled:opacity-50"
+            >
+              <Trash2 size={16} />
+              {deleting ? "Deleting..." : `Delete ${selectedIds.size} selected`}
+            </button>
+          )}
         </div>
-      )}
-
-      <div className="mb-4 flex justify-end gap-2">
-        <button
-          onClick={() => setBulkOpen(true)}
-          disabled={noFloors}
-          className={`inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-gray-300 ${noFloors ? "cursor-not-allowed text-gray-400" : "text-gray-700 hover:bg-gray-50"}`}
-        >
-          <Upload size={16} />
-          Bulk Import
-        </button>
-        <button
-          onClick={openAdd}
-          disabled={noFloors}
-          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 ${noFloors ? "cursor-not-allowed bg-primary-300 text-white" : "bg-primary-600 text-white hover:bg-primary-700"}`}
-        >
-          <Plus size={16} />
-          Add Unit
-        </button>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+          >
+            <Upload size={16} />
+            Bulk Import
+          </button>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+          >
+            <Plus size={16} />
+            Add Unit
+          </button>
+        </div>
       </div>
 
       {units.length === 0 ? (
@@ -167,6 +209,14 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
+                <th className="px-3 py-3 text-left">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === units.length && units.length > 0}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Code</th>
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Name</th>
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Floor</th>
@@ -177,11 +227,19 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
             </thead>
             <tbody>
               {units.map((unit) => (
-                <tr key={unit.id} className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80">
+                <tr key={unit.id} className={`border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80 ${selectedIds.has(unit.id) ? "bg-primary-50/40" : ""}`}>
+                  <td className="px-3 py-3.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(unit.id)}
+                      onChange={() => toggleSelect(unit.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
                   <td className="px-5 py-3.5 font-mono text-xs font-medium text-primary-600">{unit.code}</td>
                   <td className="px-5 py-3.5 font-medium">{unit.name}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{unit.floor.name}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{unit.unitType}</td>
+                  <td className="px-5 py-3.5 text-gray-600">{unit.floor?.name || "—"}</td>
+                  <td className="px-5 py-3.5 text-gray-600">{unit.unitType || "—"}</td>
                   <td className="px-5 py-3.5">
                     <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${unit.status === "ACTIVE" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
                       {unit.status}
@@ -235,7 +293,7 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
 
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Select Floor <span className="text-red-500">*</span>
+              Select Floor
             </label>
             <select
               value={floorId}
@@ -251,7 +309,7 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
 
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Unit Type <span className="text-red-500">*</span>
+              Unit Type
             </label>
             <input
               type="text"
@@ -259,18 +317,6 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
               onChange={(e) => setUnitType(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
               placeholder="e.g. Office, Retail, Storage"
-            />
-          </div>
-
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Property
-            </label>
-            <input
-              type="text"
-              value={propertyId}
-              disabled
-              className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm text-gray-500"
             />
           </div>
 
@@ -310,8 +356,8 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
         title="Bulk Import Units"
         columns={[
           { key: "name", label: "Name", required: true, example: "Unit 101" },
-          { key: "unitType", label: "Unit Type", required: true, example: "Office" },
-          { key: "floorName", label: "Floor Name", required: true, example: "Ground Floor" },
+          { key: "unitType", label: "Unit Type", required: false, example: "Office" },
+          { key: "floorName", label: "Floor Name", required: false, example: "Ground Floor" },
           { key: "description", label: "Description", required: false, example: "Corner unit" },
         ]}
         onImport={async (items) => {

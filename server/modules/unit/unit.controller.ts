@@ -15,14 +15,14 @@ export const unitController = {
   async create(req: Request, res: Response) {
     try {
       const { name, unitType, floorId, description } = req.body;
-      if (!name || !unitType || !floorId) {
-        return sendError(res, "Name, unit type, and floor are required", 400);
+      if (!name) {
+        return sendError(res, "Name is required", 400);
       }
 
       const unit = await unitService.create({
         name,
-        unitType,
-        floorId,
+        unitType: unitType || undefined,
+        floorId: floorId || undefined,
         propertyId: req.params.propertyId,
         description: description || undefined,
       });
@@ -61,6 +61,20 @@ export const unitController = {
     try {
       const unit = await unitService.activate(req.params.id);
       sendSuccess(res, unit, "Unit activated");
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
+  async bulkDelete(req: Request, res: Response) {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return sendError(res, "ids array is required", 400);
+      }
+
+      const count = await unitService.bulkDelete(ids);
+      sendSuccess(res, { deleted: count }, `${count} unit${count > 1 ? "s" : ""} deleted`);
     } catch (error: any) {
       sendError(res, error.message);
     }

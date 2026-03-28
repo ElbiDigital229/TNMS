@@ -66,14 +66,16 @@ export const floorApi = {
 // Unit API
 export const unitApi = {
   list: (propertyId: string) => api.get(`/properties/${propertyId}/units`),
-  create: (propertyId: string, data: Record<string, string>) =>
+  create: (propertyId: string, data: Record<string, string | undefined>) =>
     api.post(`/properties/${propertyId}/units`, data),
-  update: (id: string, data: Record<string, string>) =>
+  update: (id: string, data: Record<string, string | undefined>) =>
     api.put(`/properties/units/${id}`, data),
   deactivate: (id: string) => api.patch(`/properties/units/${id}/deactivate`),
   activate: (id: string) => api.patch(`/properties/units/${id}/activate`),
   bulkImport: (propertyId: string, items: Record<string, string>[]) =>
     api.post(`/properties/${propertyId}/units/bulk-import`, { items }),
+  bulkDelete: (ids: string[]) =>
+    api.post(`/properties/units/bulk-delete`, { ids }),
 };
 
 // Asset API
@@ -214,6 +216,15 @@ export const auditApi = {
 export const reportApi = {
   runQuery: (query: Record<string, unknown>) =>
     api.post("/reports/query", query),
+};
+
+// Notification API
+export const notificationApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get("/notifications", { params }),
+  getUnreadCount: () => api.get("/notifications/unread-count"),
+  markAsRead: (id: string) => api.patch(`/notifications/${id}/read`),
+  markAllAsRead: () => api.patch("/notifications/read-all"),
 };
 
 export default api;

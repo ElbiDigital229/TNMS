@@ -104,7 +104,7 @@ export const userController = {
         return sendError(res, "newPassword is required", 400);
       }
 
-      const user = await userService.resetPassword(req.params.id, newPassword);
+      const user = await userService.resetPassword(req.params.id, newPassword, req.user!.id);
       sendSuccess(res, user, "Password reset successfully");
     } catch (error: any) {
       sendError(res, error.message || "Failed to reset password");
@@ -113,7 +113,7 @@ export const userController = {
 
   async deactivate(req: Request, res: Response) {
     try {
-      const user = await userService.deactivate(req.params.id);
+      const user = await userService.deactivate(req.params.id, req.user!.id);
       sendSuccess(res, user, "User deactivated");
     } catch (error: any) {
       sendError(res, error.message || "Failed to deactivate user");
@@ -122,7 +122,7 @@ export const userController = {
 
   async block(req: Request, res: Response) {
     try {
-      const user = await userService.block(req.params.id);
+      const user = await userService.block(req.params.id, req.user!.id);
       sendSuccess(res, user, "User access blocked");
     } catch (error: any) {
       sendError(res, error.message || "Failed to block user");
@@ -131,7 +131,7 @@ export const userController = {
 
   async activate(req: Request, res: Response) {
     try {
-      const user = await userService.activate(req.params.id);
+      const user = await userService.activate(req.params.id, req.user!.id);
       sendSuccess(res, user, "User activated");
     } catch (error: any) {
       sendError(res, error.message || "Failed to activate user");
