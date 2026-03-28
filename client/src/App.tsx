@@ -21,6 +21,7 @@ import TodoListPage from "./pages/TodoListPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import RoleManagementPage from "./pages/RoleManagementPage";
 import AuditLogPage from "./pages/AuditLogPage";
+import ReportBuilderPage from "./pages/ReportBuilderPage";
 import { PERMISSIONS } from "../../shared/permissions";
 
 const P = PERMISSIONS;
@@ -52,6 +53,7 @@ export default function App() {
               <Route path="/settings/ticket-categories" element={<RequirePermission permission={P.SETTINGS.TICKET_CATEGORIES_MANAGE}><TicketCategoriesPage /></RequirePermission>} />
               <Route path="/settings/users" element={<RequirePermission permission={P.USERS.VIEW}><UserManagementPage /></RequirePermission>} />
               <Route path="/settings/roles" element={<RequirePermission permission={P.ROLES.VIEW}><RoleManagementPage /></RequirePermission>} />
+              <Route path="/reports" element={<RequirePermission permission={P.REPORTS.VIEW}><ReportBuilderPage /></RequirePermission>} />
               <Route path="/settings/audit-logs" element={<RequirePermission permission={P.AUDIT.VIEW}><AuditLogPage /></RequirePermission>} />
             </Route>
           </Route>

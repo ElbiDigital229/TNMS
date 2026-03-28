@@ -210,4 +210,10 @@ export const auditApi = {
     api.get("/audit-logs/export", { params, responseType: "blob" }),
 };
 
+// Report API
+export const reportApi = {
+  runQuery: (query: Record<string, unknown>) =>
+    api.post("/reports/query", query),
+};
+
 export default api;

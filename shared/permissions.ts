@@ -66,6 +66,9 @@ export const PERMISSIONS = {
     VIEW: "audit.view",
     EXPORT: "audit.export",
   },
+  REPORTS: {
+    VIEW: "reports.view",
+  },
 } as const;
 
 // Flat list of all permission keys
@@ -135,6 +138,8 @@ export const PERMISSION_DEFINITIONS: {
   // Audit
   { key: PERMISSIONS.AUDIT.VIEW, module: "audit", description: "View audit log" },
   { key: PERMISSIONS.AUDIT.EXPORT, module: "audit", description: "Export audit log" },
+  // Reports
+  { key: PERMISSIONS.REPORTS.VIEW, module: "reports", description: "Run report queries" },
 ];
 
 // Module labels for UI grouping
@@ -150,4 +155,5 @@ export const MODULE_LABELS: Record<string, string> = {
   users: "User Management",
   roles: "Roles & Permissions",
   audit: "Audit Log",
+  reports: "Reports",
 };

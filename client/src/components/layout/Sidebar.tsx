@@ -10,6 +10,7 @@ import {
   Tag,
   TicketCheck,
   CheckSquare,
+  BarChart3,
   Users,
   Shield,
   ScrollText,
@@ -112,6 +113,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavLink to="/todos" className={linkClass} onClick={onClose}>
                 <CheckSquare size={18} />
                 To-Do List
+              </NavLink>
+            )}
+
+            {hasPermission(P.REPORTS.VIEW) && (
+              <NavLink to="/reports" className={linkClass} onClick={onClose}>
+                <BarChart3 size={18} />
+                Reports
               </NavLink>
             )}
           </div>

@@ -20,6 +20,7 @@ import { permissionRoutes } from "./modules/permission/permission.routes.js";
 import { roleRoutes } from "./modules/role/role.routes.js";
 import { userRoutes } from "./modules/user/user.routes.js";
 import { auditRoutes } from "./modules/audit/audit.routes.js";
+import { reportRoutes } from "./modules/report/report.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -72,6 +73,7 @@ app.use("/api/permissions", permissionRoutes);
 app.use("/api/roles", roleRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/audit-logs", auditRoutes);
+app.use("/api/reports", reportRoutes);
 
 // Error handler
 app.use(errorHandler);

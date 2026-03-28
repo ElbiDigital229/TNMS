@@ -67,6 +67,7 @@ export async function seed() {
         P.USERS.VIEW, P.USERS.CREATE, P.USERS.EDIT, P.USERS.DEACTIVATE,
         P.ROLES.VIEW, // can view roles but NOT manage
         P.AUDIT.VIEW, P.AUDIT.EXPORT,
+        P.REPORTS.VIEW,
       ],
     },
     {
@@ -86,6 +87,7 @@ export async function seed() {
         P.USERS.VIEW, P.USERS.CREATE, P.USERS.EDIT, P.USERS.DEACTIVATE,
         P.ROLES.VIEW,
         P.AUDIT.VIEW, P.AUDIT.EXPORT,
+        P.REPORTS.VIEW,
       ],
     },
     {
