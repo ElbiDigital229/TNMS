@@ -57,6 +57,8 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
     fetchData();
   }, [propertyId]);
 
+  const noFloors = floors.length === 0;
+
   const openAdd = () => {
     setEditingUnit(null);
     setName("");
@@ -76,8 +78,12 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
   };
 
   const handleSave = async () => {
-    if (!name || !unitType || !floorId) {
-      toast.error("Please fill all required fields");
+    const missing: string[] = [];
+    if (!name) missing.push("Unit Name");
+    if (!floorId) missing.push("Floor");
+    if (!unitType) missing.push("Unit Type");
+    if (missing.length > 0) {
+      toast.error(`Please fill required fields: ${missing.join(", ")}`);
       return;
     }
 
@@ -122,17 +128,28 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
 
   return (
     <div>
+      {noFloors && (
+        <div className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          <p className="font-medium">No floors available</p>
+          <p className="mt-0.5 text-amber-700">
+            Please create at least one floor before adding units. Go to the <span className="font-semibold">Floors</span> tab to add floors.
+          </p>
+        </div>
+      )}
+
       <div className="mb-4 flex justify-end gap-2">
         <button
           onClick={() => setBulkOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+          disabled={noFloors}
+          className={`inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium shadow-sm ring-1 ring-gray-300 ${noFloors ? "cursor-not-allowed text-gray-400" : "text-gray-700 hover:bg-gray-50"}`}
         >
           <Upload size={16} />
           Bulk Import
         </button>
         <button
           onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+          disabled={noFloors}
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 ${noFloors ? "cursor-not-allowed bg-primary-300 text-white" : "bg-primary-600 text-white hover:bg-primary-700"}`}
         >
           <Plus size={16} />
           Add Unit

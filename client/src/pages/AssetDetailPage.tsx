@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
 import { assetApi } from "../lib/api";
 import { CONDITION_LABELS } from "../../../shared/types";
-import { Building2, Layers, MapPin, Package } from "lucide-react";
+import { Building2, Download, Layers, MapPin, Package } from "lucide-react";
 
 export default function AssetDetailPage() {
   const { code } = useParams();
@@ -148,21 +148,38 @@ export default function AssetDetailPage() {
         )}
 
         {/* QR Code */}
-        {asset.qrCode && (
-          <div className="rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-gray-950/5">
-            <h2 className="mb-4 text-lg font-semibold text-gray-900">
-              QR Code
-            </h2>
-            <img
-              src={`/${asset.qrCode}`}
-              alt="QR Code"
-              className="mx-auto h-48 w-48"
-            />
-            <p className="mt-2 text-[13px] text-gray-500">
-              Scan this QR code to view asset details
-            </p>
-          </div>
-        )}
+        <div className="rounded-xl bg-white p-6 text-center shadow-sm ring-1 ring-gray-950/5">
+          <h2 className="mb-4 text-lg font-semibold text-gray-900">
+            QR Code
+          </h2>
+          {asset.qrCode ? (
+            <>
+              <img
+                src={`/${asset.qrCode}`}
+                alt="QR Code"
+                className="mx-auto h-48 w-48"
+              />
+              <p className="mt-2 text-[13px] text-gray-500">
+                Scan this QR code to view asset details
+              </p>
+              <a
+                href={`/${asset.qrCode}`}
+                download={`${asset.code}-qrcode.png`}
+                className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+              >
+                <Download size={16} />
+                Download QR Code
+              </a>
+            </>
+          ) : (
+            <div className="py-4">
+              <Package size={32} className="mx-auto text-gray-300" />
+              <p className="mt-2 text-[13px] text-gray-500">
+                QR code has not been generated for this asset yet.
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -3,7 +3,7 @@ import { assetApi, unitApi, assetCategoryApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
-import { Plus, Eye, Pencil, Package, Upload } from "lucide-react";
+import { Plus, Eye, Pencil, Package, Upload, Download } from "lucide-react";
 import { CONDITION_LABELS } from "../../../../shared/types";
 
 interface Asset {
@@ -135,6 +135,11 @@ export default function AssetsTab({
   const handleSave = async () => {
     if (!name || !categoryId || !unitOfMeasure || !condition || !unitId) {
       toast.error("Please fill all required fields");
+      return;
+    }
+
+    if (purchaseDate && new Date(purchaseDate) > new Date()) {
+      toast.error("Purchase date cannot be in the future");
       return;
     }
 
@@ -460,6 +465,7 @@ export default function AssetsTab({
               type="date"
               value={purchaseDate}
               onChange={(e) => setPurchaseDate(e.target.value)}
+              max={new Date().toISOString().split("T")[0]}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
             />
           </div>
@@ -603,16 +609,30 @@ export default function AssetsTab({
               />
             )}
 
-            {detailAsset.qrCode && (
-              <div className="text-center">
-                <p className="mb-2 text-sm text-gray-500">QR Code</p>
-                <img
-                  src={`/${detailAsset.qrCode}`}
-                  alt="QR Code"
-                  className="mx-auto h-40 w-40"
-                />
-              </div>
-            )}
+            <div className="text-center">
+              <p className="mb-2 text-sm text-gray-500">QR Code</p>
+              {detailAsset.qrCode ? (
+                <>
+                  <img
+                    src={`/${detailAsset.qrCode}`}
+                    alt="QR Code"
+                    className="mx-auto h-40 w-40"
+                  />
+                  <a
+                    href={`/${detailAsset.qrCode}`}
+                    download={`${detailAsset.code}-qrcode.png`}
+                    className="mt-3 inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+                  >
+                    <Download size={14} />
+                    Download QR Code
+                  </a>
+                </>
+              ) : (
+                <p className="py-2 text-xs text-gray-400">
+                  QR code not yet generated
+                </p>
+              )}
+            </div>
           </div>
         )}
       </Modal>

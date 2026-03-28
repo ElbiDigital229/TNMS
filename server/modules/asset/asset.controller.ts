@@ -11,6 +11,8 @@ export const assetController = {
         limit: limit ? parseInt(limit as string) : undefined,
         search: search as string,
         status: status as string,
+        userId: (req as any).user?.id,
+        allProperties: (req as any).user?.allProperties,
       });
       sendSuccess(res, result);
     } catch (error: any) {
@@ -68,6 +70,10 @@ export const assetController = {
         );
       }
 
+      if (purchaseDate && new Date(purchaseDate) > new Date()) {
+        return sendError(res, "Purchase date cannot be in the future", 400);
+      }
+
       const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
 
       const asset = await assetService.create({
@@ -101,6 +107,10 @@ export const assetController = {
         serialNumber,
         purchaseDate,
       } = req.body;
+
+      if (purchaseDate && new Date(purchaseDate) > new Date()) {
+        return sendError(res, "Purchase date cannot be in the future", 400);
+      }
 
       const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
 

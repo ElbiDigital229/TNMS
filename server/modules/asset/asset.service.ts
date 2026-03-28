@@ -4,6 +4,7 @@ import QRCode from "qrcode";
 import fs from "fs";
 import path from "path";
 import type { AssetCondition } from "@prisma/client";
+import { rbacService } from "../../services/rbac.service.js";
 
 export const assetService = {
   async generateCode(): Promise<string> {
@@ -39,6 +40,8 @@ export const assetService = {
     limit?: number;
     search?: string;
     status?: string;
+    userId?: string;
+    allProperties?: boolean;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
@@ -52,6 +55,14 @@ export const assetService = {
       ];
     }
     if (params.status) where.status = params.status;
+
+    // Filter by user's assigned properties unless they have access to all
+    if (params.userId && !params.allProperties) {
+      const propertyIds = await rbacService.getUserPropertyIds(params.userId);
+      if (propertyIds !== "all") {
+        where.propertyId = { in: propertyIds };
+      }
+    }
 
     const [data, total] = await Promise.all([
       prisma.asset.findMany({
@@ -239,6 +250,11 @@ export const assetService = {
         const unitId = unitMap.get(item.unitCode.toLowerCase());
         if (!unitId) {
           results.push({ row: i + 1, status: "error", name: item.name, error: `Unit "${item.unitCode}" not found in this property` });
+          continue;
+        }
+
+        if (item.purchaseDate && new Date(item.purchaseDate) > new Date()) {
+          results.push({ row: i + 1, status: "error", name: item.name, error: "Purchase date cannot be in the future" });
           continue;
         }
 
