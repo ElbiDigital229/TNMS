@@ -232,6 +232,13 @@ export async function seed() {
     console.log("Updated admin user with Super Admin role");
   }
 
+  // ─── 5+ Skip mock data if DB already has properties ─────
+  const existingPropertyCount = await prisma.property.count();
+  if (existingPropertyCount > 0) {
+    console.log(`${existingPropertyCount} properties exist, skipping mock data seeding`);
+    return;
+  }
+
   // ─── 5. Seed Default Area Groups ─────────────────────────
   for (const ag of [
     { city: "LAHORE" as const, groupName: "Central" },
