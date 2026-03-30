@@ -3,7 +3,7 @@ import { assetApi, floorApi, assetCategoryApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
-import { Plus, Eye, Pencil, Package, Upload, Download } from "lucide-react";
+import { Plus, Eye, Pencil, Package, Upload, Download, Trash2 } from "lucide-react";
 import { CONDITION_LABELS } from "../../../../shared/types";
 
 interface Asset {
@@ -55,6 +55,8 @@ export default function AssetsTab({
   const [detailAsset, setDetailAsset] = useState<any>(null);
   const [detailOpen, setDetailOpen] = useState(false);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   // Form state
   const [name, setName] = useState("");
@@ -90,6 +92,42 @@ export default function AssetsTab({
   useEffect(() => {
     fetchData();
   }, [propertyId]);
+
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === assets.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(assets.map((a) => a.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (!window.confirm(`Are you sure you want to delete ${count} asset${count > 1 ? "s" : ""}? This cannot be undone.`)) return;
+
+    setDeleting(true);
+    try {
+      await assetApi.bulkDelete(propertyId, Array.from(selectedIds));
+      toast.success(`${count} asset${count > 1 ? "s" : ""} deleted`);
+      setSelectedIds(new Set());
+      fetchData();
+      onUpdate();
+    } catch {
+      toast.error("Failed to delete assets");
+    } finally {
+      setDeleting(false);
+    }
+  };
 
   const resetForm = () => {
     setName("");
@@ -210,21 +248,35 @@ export default function AssetsTab({
 
   return (
     <div>
-      <div className="mb-4 flex justify-end gap-2">
-        <button
-          onClick={() => setBulkOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-        >
-          <Upload size={16} />
-          Bulk Import
-        </button>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-        >
-          <Plus size={16} />
-          Add Asset
-        </button>
+      <div className="mb-4 flex justify-between">
+        <div>
+          {selectedIds.size > 0 && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-red-700 disabled:opacity-50"
+            >
+              <Trash2 size={16} />
+              {deleting ? "Deleting..." : `Delete ${selectedIds.size} selected`}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+          >
+            <Upload size={16} />
+            Bulk Import
+          </button>
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+          >
+            <Plus size={16} />
+            Add Asset
+          </button>
+        </div>
       </div>
 
       {assets.length === 0 ? (
@@ -238,6 +290,14 @@ export default function AssetsTab({
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-gray-200">
+                <th className="px-3 py-3">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.size === assets.length && assets.length > 0}
+                    onChange={toggleSelectAll}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </th>
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                   Code
                 </th>
@@ -265,8 +325,16 @@ export default function AssetsTab({
               {assets.map((asset) => (
                 <tr
                   key={asset.id}
-                  className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
+                  className={`border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80 ${selectedIds.has(asset.id) ? "bg-primary-50/40" : ""}`}
                 >
+                  <td className="px-3 py-3.5">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(asset.id)}
+                      onChange={() => toggleSelect(asset.id)}
+                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                  </td>
                   <td className="px-5 py-3.5 font-mono text-xs font-medium text-primary-600">
                     {asset.code}
                   </td>

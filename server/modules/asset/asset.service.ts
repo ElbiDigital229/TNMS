@@ -205,6 +205,18 @@ export const assetService = {
     });
   },
 
+  async bulkDelete(ids: string[]) {
+    await prisma.$transaction(async (tx) => {
+      // Delete related ticket records first
+      await tx.ticketAsset.deleteMany({
+        where: { assetId: { in: ids } },
+      });
+      // Delete the assets
+      await tx.asset.deleteMany({ where: { id: { in: ids } } });
+    });
+    return ids.length;
+  },
+
   async bulkCreate(
     propertyId: string,
     items: {

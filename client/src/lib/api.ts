@@ -98,6 +98,8 @@ export const assetApi = {
   activate: (id: string) => api.patch(`/assets/${id}/activate`),
   bulkImport: (propertyId: string, items: Record<string, string>[]) =>
     api.post(`/properties/${propertyId}/assets/bulk-import`, { items }),
+  bulkDelete: (propertyId: string, ids: string[]) =>
+    api.post(`/properties/${propertyId}/assets/bulk-delete`, { ids }),
 };
 
 // Area Group API

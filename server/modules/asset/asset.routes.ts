@@ -23,3 +23,4 @@ propertyAssetRoutes.use(authenticate);
 propertyAssetRoutes.get("/:propertyId/assets", assetController.findByProperty);
 propertyAssetRoutes.post("/:propertyId/assets", requirePermission(PERMISSIONS.ASSETS.CREATE), uploadSingle, assetController.create);
 propertyAssetRoutes.post("/:propertyId/assets/bulk-import", requirePermission(PERMISSIONS.ASSETS.IMPORT), assetController.bulkImport);
+propertyAssetRoutes.post("/:propertyId/assets/bulk-delete", requirePermission(PERMISSIONS.ASSETS.DEACTIVATE), assetController.bulkDelete);

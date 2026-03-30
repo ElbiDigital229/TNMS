@@ -154,6 +154,19 @@ export const assetController = {
     }
   },
 
+  async bulkDelete(req: Request, res: Response) {
+    try {
+      const { ids } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return sendError(res, "ids array is required", 400);
+      }
+      const count = await assetService.bulkDelete(ids);
+      sendSuccess(res, { deleted: count }, `${count} asset${count > 1 ? "s" : ""} deleted`);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
   async bulkImport(req: Request, res: Response) {
     try {
       const { items } = req.body;
