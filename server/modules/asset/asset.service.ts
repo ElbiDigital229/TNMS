@@ -274,7 +274,7 @@ export const assetService = {
             name: item.name,
             categoryId,
             unitOfMeasure: item.unitOfMeasure || "NOS",
-            quantity: item.quantity || 1,
+            quantity: item.quantity ? parseInt(String(item.quantity), 10) : 1,
             condition: conditionUpper as AssetCondition,
             floorId,
             propertyId,
