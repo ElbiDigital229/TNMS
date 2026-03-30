@@ -9,16 +9,13 @@ import { notificationTrigger } from "../../services/notificationTrigger.service.
 
 export const assetService = {
   async generateCode(): Promise<string> {
-    const lastAsset = await prisma.asset.findFirst({
-      orderBy: { code: "desc" },
-      select: { code: true },
-    });
+    // Use raw query to find the max numeric code value, avoiding string sort issues
+    const result = await prisma.$queryRaw<
+      { max_num: number | null }[]
+    >`SELECT MAX(CAST(SUBSTRING(code FROM 4) AS INTEGER)) as max_num FROM "Asset"`;
 
-    let nextNum = 1;
-    if (lastAsset) {
-      const numPart = parseInt(lastAsset.code.slice(3), 10);
-      nextNum = numPart + 1;
-    }
+    const maxNum = result[0]?.max_num || 0;
+    const nextNum = maxNum + 1;
 
     return `AST${String(nextNum).padStart(3, "0")}`;
   },
