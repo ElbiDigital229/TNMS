@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { assetApi, unitApi, assetCategoryApi } from "../../lib/api";
+import { assetApi, floorApi, assetCategoryApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
@@ -13,17 +13,17 @@ interface Asset {
   condition: string;
   status: string;
   unitOfMeasure: string;
+  quantity: number;
   additionalInfo?: string;
   serialNumber?: string;
   purchaseDate?: string;
   imagePath?: string;
-  unit: { id: string; name: string; code: string };
+  floor: { id: string; name: string };
   category: { id: string; name: string };
 }
 
-interface Unit {
+interface Floor {
   id: string;
-  code: string;
   name: string;
   status: string;
 }
@@ -47,7 +47,7 @@ export default function AssetsTab({
 }: AssetsTabProps) {
   const toast = useToast();
   const [assets, setAssets] = useState<Asset[]>([]);
-  const [units, setUnits] = useState<Unit[]>([]);
+  const [floors, setFloors] = useState<Floor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -60,9 +60,10 @@ export default function AssetsTab({
   const [name, setName] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [unitOfMeasure, setUnitOfMeasure] = useState("");
+  const [quantity, setQuantity] = useState("1");
   const [condition, setCondition] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
-  const [unitId, setUnitId] = useState("");
+  const [floorId, setFloorId] = useState("");
   const [serialNumber, setSerialNumber] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -70,13 +71,13 @@ export default function AssetsTab({
   const fetchData = () => {
     Promise.all([
       assetApi.listByProperty(propertyId),
-      unitApi.list(propertyId),
+      floorApi.list(propertyId),
       assetCategoryApi.list(),
     ])
-      .then(([assetsRes, unitsRes, catsRes]) => {
+      .then(([assetsRes, floorsRes, catsRes]) => {
         setAssets(assetsRes.data.data);
-        setUnits(
-          unitsRes.data.data.filter((u: Unit) => u.status === "ACTIVE")
+        setFloors(
+          floorsRes.data.data.filter((f: Floor) => f.status === "ACTIVE")
         );
         setCategories(
           catsRes.data.data.filter((c: Category) => c.status === "ACTIVE")
@@ -94,9 +95,10 @@ export default function AssetsTab({
     setName("");
     setCategoryId("");
     setUnitOfMeasure("");
+    setQuantity("1");
     setCondition("");
     setAdditionalInfo("");
-    setUnitId("");
+    setFloorId("");
     setSerialNumber("");
     setPurchaseDate("");
     setImage(null);
@@ -116,9 +118,10 @@ export default function AssetsTab({
       setName(full.name);
       setCategoryId(full.categoryId || full.category?.id || "");
       setUnitOfMeasure(full.unitOfMeasure);
+      setQuantity(String(full.quantity || 1));
       setCondition(full.condition);
       setAdditionalInfo(full.additionalInfo || "");
-      setUnitId(full.unitId || full.unit?.id || "");
+      setFloorId(full.floorId || full.floor?.id || "");
       setSerialNumber(full.serialNumber || "");
       setPurchaseDate(
         full.purchaseDate
@@ -133,8 +136,8 @@ export default function AssetsTab({
   };
 
   const handleSave = async () => {
-    if (!name || !categoryId || !unitOfMeasure || !condition || !unitId) {
-      toast.error("Please fill all required fields");
+    if (!name || !categoryId || !floorId) {
+      toast.error("Name, category, and floor are required");
       return;
     }
 
@@ -146,10 +149,11 @@ export default function AssetsTab({
     const formData = new FormData();
     formData.append("name", name);
     formData.append("categoryId", categoryId);
-    formData.append("unitOfMeasure", unitOfMeasure);
-    formData.append("condition", condition);
+    if (unitOfMeasure) formData.append("unitOfMeasure", unitOfMeasure);
+    if (quantity) formData.append("quantity", quantity);
+    if (condition) formData.append("condition", condition);
     if (additionalInfo) formData.append("additionalInfo", additionalInfo);
-    formData.append("unitId", unitId);
+    formData.append("floorId", floorId);
     if (serialNumber) formData.append("serialNumber", serialNumber);
     if (purchaseDate) formData.append("purchaseDate", purchaseDate);
     if (image) formData.append("image", image);
@@ -244,7 +248,7 @@ export default function AssetsTab({
                   Category
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Unit
+                  Floor
                 </th>
                 <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                   Condition
@@ -271,7 +275,7 @@ export default function AssetsTab({
                     {asset.category.name}
                   </td>
                   <td className="px-5 py-3.5 text-gray-600">
-                    {asset.unit.name}
+                    {asset.floor?.name || "—"}
                   </td>
                   <td className="px-5 py-3.5">
                     <span
@@ -398,6 +402,20 @@ export default function AssetsTab({
 
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              Quantity <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              placeholder="e.g. 1"
+            />
+          </div>
+
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
               Condition <span className="text-red-500">*</span>
             </label>
             <select
@@ -428,17 +446,17 @@ export default function AssetsTab({
 
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Select Unit <span className="text-red-500">*</span>
+              Select Floor <span className="text-red-500">*</span>
             </label>
             <select
-              value={unitId}
-              onChange={(e) => setUnitId(e.target.value)}
+              value={floorId}
+              onChange={(e) => setFloorId(e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
             >
-              <option value="">Select unit</option>
-              {units.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.name} ({u.code})
+              <option value="">Select floor</option>
+              {floors.map((f) => (
+                <option key={f.id} value={f.id}>
+                  {f.name}
                 </option>
               ))}
             </select>
@@ -512,14 +530,15 @@ export default function AssetsTab({
         onClose={() => setBulkOpen(false)}
         title="Bulk Import Assets"
         columns={[
+          { key: "floorName", label: "Floor", required: true, example: "Ground" },
           { key: "name", label: "Name", required: true, example: "Split AC Unit" },
           { key: "categoryName", label: "Category", required: true, example: "HVAC" },
-          { key: "unitOfMeasure", label: "Unit of Measure", required: true, example: "Piece" },
-          { key: "condition", label: "Condition", required: true, example: "GOOD" },
-          { key: "unitCode", label: "Unit Code", required: true, example: "UNT001" },
+          { key: "quantity", label: "Quantity", required: false, example: "5" },
+          { key: "unitOfMeasure", label: "Unit of Measure", required: false, example: "NOS" },
+          { key: "additionalInfo", label: "Additional Info", required: false, example: "Brand X" },
+          { key: "condition", label: "Condition", required: false, example: "GOOD" },
           { key: "serialNumber", label: "Serial Number", required: false, example: "SN-12345" },
           { key: "purchaseDate", label: "Purchase Date", required: false, example: "2024-01-15" },
-          { key: "additionalInfo", label: "Additional Info", required: false, example: "Brand X" },
         ]}
         onImport={async (items) => {
           const res = await assetApi.bulkImport(propertyId, items);
@@ -561,13 +580,9 @@ export default function AssetsTab({
                 </p>
               </div>
               <div>
-                <span className="text-gray-500">Unit</span>
-                <p className="font-medium">{detailAsset.unit?.name}</p>
-              </div>
-              <div>
                 <span className="text-gray-500">Floor</span>
                 <p className="font-medium">
-                  {detailAsset.unit?.floor?.name || "\u2014"}
+                  {detailAsset.floor?.name || "\u2014"}
                 </p>
               </div>
               <div>
@@ -577,6 +592,10 @@ export default function AssetsTab({
               <div>
                 <span className="text-gray-500">Unit of Measure</span>
                 <p className="font-medium">{detailAsset.unitOfMeasure}</p>
+              </div>
+              <div>
+                <span className="text-gray-500">Quantity</span>
+                <p className="font-medium">{detailAsset.quantity || 1}</p>
               </div>
               {detailAsset.serialNumber && (
                 <div>

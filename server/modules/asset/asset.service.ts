@@ -66,7 +66,7 @@ export const assetService = {
       prisma.asset.findMany({
         where,
         include: {
-          unit: { select: { id: true, name: true, code: true } },
+          floor: { select: { id: true, name: true } },
           category: { select: { id: true, name: true } },
           property: { select: { id: true, name: true, code: true } },
         },
@@ -92,7 +92,7 @@ export const assetService = {
     return prisma.asset.findMany({
       where: { propertyId },
       include: {
-        unit: { select: { id: true, name: true, code: true } },
+        floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
@@ -103,14 +103,7 @@ export const assetService = {
     return prisma.asset.findUnique({
       where: { id },
       include: {
-        unit: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            floor: { select: { id: true, name: true } },
-          },
-        },
+        floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         property: { select: { id: true, name: true, code: true } },
       },
@@ -121,14 +114,7 @@ export const assetService = {
     return prisma.asset.findUnique({
       where: { code },
       include: {
-        unit: {
-          select: {
-            id: true,
-            name: true,
-            code: true,
-            floor: { select: { id: true, name: true } },
-          },
-        },
+        floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         property: { select: { id: true, name: true, code: true } },
       },
@@ -139,9 +125,10 @@ export const assetService = {
     name: string;
     categoryId: string;
     unitOfMeasure: string;
+    quantity?: number;
     condition: AssetCondition;
     additionalInfo?: string;
-    unitId: string;
+    floorId: string;
     propertyId: string;
     serialNumber?: string;
     purchaseDate?: Date;
@@ -153,7 +140,7 @@ export const assetService = {
     return prisma.asset.create({
       data: { ...data, code, qrCode },
       include: {
-        unit: { select: { id: true, name: true, code: true } },
+        floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
       },
     });
@@ -165,9 +152,10 @@ export const assetService = {
       name?: string;
       categoryId?: string;
       unitOfMeasure?: string;
+      quantity?: number;
       condition?: AssetCondition;
       additionalInfo?: string;
-      unitId?: string;
+      floorId?: string;
       serialNumber?: string;
       purchaseDate?: Date;
       imagePath?: string;
@@ -187,7 +175,7 @@ export const assetService = {
       where: { id },
       data,
       include: {
-        unit: { select: { id: true, name: true, code: true } },
+        floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         property: { select: { id: true, name: true } },
       },
@@ -222,9 +210,10 @@ export const assetService = {
     items: {
       name: string;
       categoryName: string;
-      unitOfMeasure: string;
-      condition: string;
-      unitCode: string;
+      unitOfMeasure?: string;
+      quantity?: number;
+      condition?: string;
+      floorName: string;
       serialNumber?: string;
       purchaseDate?: string;
       additionalInfo?: string;
@@ -236,11 +225,11 @@ export const assetService = {
     });
     const categoryMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
 
-    const units = await prisma.unit.findMany({
+    const floors = await prisma.floor.findMany({
       where: { propertyId, status: "ACTIVE" },
-      select: { id: true, code: true },
+      select: { id: true, name: true },
     });
-    const unitMap = new Map(units.map((u) => [u.code.toLowerCase(), u.id]));
+    const floorMap = new Map(floors.map((f) => [f.name.toLowerCase(), f.id]));
 
     const validConditions = ["EXCELLENT", "GOOD", "FAIR", "POOR"];
     const results: { row: number; status: string; name: string; error?: string }[] = [];
@@ -248,12 +237,12 @@ export const assetService = {
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       try {
-        if (!item.name || !item.categoryName || !item.unitOfMeasure || !item.condition || !item.unitCode) {
-          results.push({ row: i + 1, status: "error", name: item.name || "", error: "name, categoryName, unitOfMeasure, condition, and unitCode are required" });
+        if (!item.name || !item.categoryName || !item.floorName) {
+          results.push({ row: i + 1, status: "error", name: item.name || "", error: "name, categoryName, and floorName are required" });
           continue;
         }
 
-        const conditionUpper = item.condition.toUpperCase();
+        const conditionUpper = (item.condition || "GOOD").toUpperCase();
         if (!validConditions.includes(conditionUpper)) {
           results.push({ row: i + 1, status: "error", name: item.name, error: `Invalid condition "${item.condition}". Use: EXCELLENT, GOOD, FAIR, POOR` });
           continue;
@@ -265,9 +254,9 @@ export const assetService = {
           continue;
         }
 
-        const unitId = unitMap.get(item.unitCode.toLowerCase());
-        if (!unitId) {
-          results.push({ row: i + 1, status: "error", name: item.name, error: `Unit "${item.unitCode}" not found in this property` });
+        const floorId = floorMap.get(item.floorName.toLowerCase());
+        if (!floorId) {
+          results.push({ row: i + 1, status: "error", name: item.name, error: `Floor "${item.floorName}" not found in this property` });
           continue;
         }
 
@@ -284,9 +273,10 @@ export const assetService = {
             code,
             name: item.name,
             categoryId,
-            unitOfMeasure: item.unitOfMeasure,
+            unitOfMeasure: item.unitOfMeasure || "NOS",
+            quantity: item.quantity || 1,
             condition: conditionUpper as AssetCondition,
-            unitId,
+            floorId,
             propertyId,
             serialNumber: item.serialNumber || undefined,
             purchaseDate: item.purchaseDate ? new Date(item.purchaseDate) : undefined,

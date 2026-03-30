@@ -342,8 +342,7 @@ export async function seed() {
       }
     }
 
-    // Assets — a few per property spread across units
-    const propUnits = createdUnits.filter((u) => u.propertyCode === propDef.code);
+    // Assets — a few per property spread across floors
     const assetDefs = [
       { name: "Split AC Unit", categoryId: hvacCat!.id, unitOfMeasure: "Unit", condition: "GOOD" as const },
       { name: "Water Heater", categoryId: plumbingCat!.id, unitOfMeasure: "Unit", condition: "EXCELLENT" as const },
@@ -354,7 +353,7 @@ export async function seed() {
     ];
 
     for (let i = 0; i < assetDefs.length; i++) {
-      const targetUnit = propUnits[i % propUnits.length];
+      const targetFloor = createdFloors[i % createdFloors.length];
       const assetCode = `${propDef.code}-A${String(i + 1).padStart(3, "0")}`;
       await prisma.asset.create({
         data: {
@@ -363,7 +362,7 @@ export async function seed() {
           categoryId: assetDefs[i].categoryId,
           unitOfMeasure: assetDefs[i].unitOfMeasure,
           condition: assetDefs[i].condition,
-          unitId: targetUnit.id,
+          floorId: targetFloor.id,
           propertyId: property.id,
           qrCode: `QR-${assetCode}`,
         },

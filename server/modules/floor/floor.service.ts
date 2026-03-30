@@ -29,7 +29,7 @@ export const floorService = {
       if (units.length > 0) {
         await tx.unit.updateMany({ where: { floorId: id }, data: { status: "INACTIVE" } });
         await tx.asset.updateMany({
-          where: { unitId: { in: units.map((u) => u.id) } },
+          where: { floorId: id },
           data: { status: "INACTIVE" },
         });
       }
@@ -45,7 +45,7 @@ export const floorService = {
       if (units.length > 0) {
         await tx.unit.updateMany({ where: { floorId: id }, data: { status: "ACTIVE" } });
         await tx.asset.updateMany({
-          where: { unitId: { in: units.map((u) => u.id) } },
+          where: { floorId: id },
           data: { status: "ACTIVE" },
         });
       }

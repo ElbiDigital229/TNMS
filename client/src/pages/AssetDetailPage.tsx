@@ -73,10 +73,7 @@ export default function AssetDetailPage() {
             <span>{asset.property?.name}</span>
             <span>/</span>
             <Layers size={14} />
-            <span>{asset.unit?.floor?.name}</span>
-            <span>/</span>
-            <MapPin size={14} />
-            <span>{asset.unit?.name}</span>
+            <span>{asset.floor?.name}</span>
           </div>
         </div>
 

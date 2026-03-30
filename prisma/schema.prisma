@@ -214,7 +214,8 @@ model Floor {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 
-  units Unit[]
+  units  Unit[]
+  assets Asset[]
 }
 
 model Unit {
@@ -231,7 +232,6 @@ model Unit {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  assets  Asset[]
   tickets Ticket[]
 }
 
@@ -242,10 +242,11 @@ model Asset {
   categoryId        String
   category          AssetCategory  @relation(fields: [categoryId], references: [id])
   unitOfMeasure     String
+  quantity          Int            @default(1)
   condition         AssetCondition
   additionalInfo    String?
-  unitId            String
-  unit              Unit           @relation(fields: [unitId], references: [id])
+  floorId           String
+  floor             Floor          @relation(fields: [floorId], references: [id])
   propertyId        String
   property          Property       @relation(fields: [propertyId], references: [id])
   serialNumber      String?

@@ -127,7 +127,7 @@ function getGroupByPrismaField(entity: Entity, groupBy: string): string {
       property: "propertyId",
       category: "categoryId",
       condition: "condition",
-      floor: "unitId", // assets don't have floorId directly; we'll resolve via unit
+      floor: "floorId",
     },
     properties: {
       city: "city",
@@ -269,44 +269,27 @@ async function resolveLabels(
 }
 
 // ─── Special: assets groupBy floor ───────────────────────
-// Assets don't have a direct floorId. We need to go through unit.floorId.
-// For this case, we use a raw approach: group assets by unit, then map unit -> floor.
+// Assets have a direct floorId, so we can group by it directly.
 
 async function queryAssetsGroupedByFloor(where: any, sortOrder: SortOrder, limit: number) {
-  // First group by unitId
-  const unitGroups = await prisma.asset.groupBy({
-    by: ["unitId"],
+  const floorGroups = await prisma.asset.groupBy({
+    by: ["floorId"],
     where,
     _count: { id: true },
   });
 
-  // Get unit -> floor mapping
-  const unitIds = unitGroups.map((g) => g.unitId);
-  const units = await prisma.unit.findMany({
-    where: { id: { in: unitIds } },
-    select: { id: true, floorId: true },
-  });
-  const unitFloorMap = new Map(units.map((u) => [u.id, u.floorId]));
-
-  // Aggregate by floor
-  const floorCounts = new Map<string, number>();
-  for (const group of unitGroups) {
-    const floorId = unitFloorMap.get(group.unitId) || "unknown";
-    floorCounts.set(floorId, (floorCounts.get(floorId) || 0) + group._count.id);
-  }
-
   // Sort and limit
-  const sorted = Array.from(floorCounts.entries()).sort((a, b) =>
-    sortOrder === "desc" ? b[1] - a[1] : a[1] - b[1]
-  );
+  const sorted = floorGroups
+    .map((g) => [g.floorId, g._count.id] as [string, number])
+    .sort((a, b) => (sortOrder === "desc" ? b[1] - a[1] : a[1] - b[1]));
   const limited = sorted.slice(0, limit);
 
   // Resolve labels
-  const floorKeys = limited.map(([k]) => k === "unknown" ? null : k);
+  const floorKeys = limited.map(([k]) => k);
   const labels = await resolveLabels("assets", "floor", floorKeys);
 
   return limited.map(([key, count]) => ({
-    groupKey: key === "unknown" ? null : key,
+    groupKey: key,
     label: labels.get(key === "unknown" ? null : key) || "Unassigned",
     value: count,
   }));
@@ -427,7 +410,7 @@ export const reportService = {
     // Get the Prisma field for grouping
     const prismaGroupByField = getGroupByPrismaField(entity, groupBy);
 
-    // Special case: assets grouped by floor (needs unit -> floor resolution)
+    // Special case: assets grouped by floor
     if (entity === "assets" && groupBy === "floor") {
       const data = await queryAssetsGroupedByFloor(where, sortOrder, limit);
       if (data.length === 0) {

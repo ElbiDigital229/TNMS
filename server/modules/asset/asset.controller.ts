@@ -55,17 +55,18 @@ export const assetController = {
         name,
         categoryId,
         unitOfMeasure,
+        quantity,
         condition,
         additionalInfo,
-        unitId,
+        floorId,
         serialNumber,
         purchaseDate,
       } = req.body;
 
-      if (!name || !categoryId || !unitOfMeasure || !condition || !unitId) {
+      if (!name || !categoryId || !floorId) {
         return sendError(
           res,
-          "Name, category, unit of measure, condition, and unit are required",
+          "Name, category, and floor are required",
           400
         );
       }
@@ -79,10 +80,11 @@ export const assetController = {
       const asset = await assetService.create({
         name,
         categoryId,
-        unitOfMeasure,
-        condition,
+        unitOfMeasure: unitOfMeasure || "NOS",
+        quantity: quantity ? parseInt(quantity, 10) : undefined,
+        condition: condition || "GOOD",
         additionalInfo: additionalInfo || undefined,
-        unitId,
+        floorId,
         propertyId: req.params.propertyId,
         serialNumber: serialNumber || undefined,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
@@ -101,9 +103,10 @@ export const assetController = {
         name,
         categoryId,
         unitOfMeasure,
+        quantity,
         condition,
         additionalInfo,
-        unitId,
+        floorId,
         serialNumber,
         purchaseDate,
       } = req.body;
@@ -118,9 +121,10 @@ export const assetController = {
         name,
         categoryId,
         unitOfMeasure,
+        quantity: quantity ? parseInt(quantity, 10) : undefined,
         condition,
         additionalInfo,
-        unitId,
+        floorId,
         serialNumber,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
         imagePath,

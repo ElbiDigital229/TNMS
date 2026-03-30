@@ -93,10 +93,7 @@ export const unitService = {
   },
 
   async deactivate(id: string) {
-    await prisma.$transaction(async (tx) => {
-      await tx.unit.update({ where: { id }, data: { status: "INACTIVE" } });
-      await tx.asset.updateMany({ where: { unitId: id }, data: { status: "INACTIVE" } });
-    });
+    await prisma.unit.update({ where: { id }, data: { status: "INACTIVE" } });
     return prisma.unit.findUnique({
       where: { id },
       include: { floor: { select: { id: true, name: true } } },
@@ -104,10 +101,7 @@ export const unitService = {
   },
 
   async activate(id: string) {
-    await prisma.$transaction(async (tx) => {
-      await tx.unit.update({ where: { id }, data: { status: "ACTIVE" } });
-      await tx.asset.updateMany({ where: { unitId: id }, data: { status: "ACTIVE" } });
-    });
+    await prisma.unit.update({ where: { id }, data: { status: "ACTIVE" } });
     return prisma.unit.findUnique({
       where: { id },
       include: { floor: { select: { id: true, name: true } } },
@@ -129,8 +123,6 @@ export const unitService = {
       });
       // Delete tickets in these units
       await tx.ticket.deleteMany({ where: { unitId: { in: ids } } });
-      // Delete assets in these units
-      await tx.asset.deleteMany({ where: { unitId: { in: ids } } });
       // Delete the units themselves
       await tx.unit.deleteMany({ where: { id: { in: ids } } });
     });
