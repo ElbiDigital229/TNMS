@@ -167,12 +167,14 @@ export default function RoleManagementPage() {
       return;
     }
 
-    const payload: Record<string, unknown> = {
-      name: formName.trim(),
-      level: formLevel,
-      canAssignToMaxLevel: formMaxLevel ? Number(formMaxLevel) : null,
-      permissionIds: Array.from(selectedPermissionIds),
-    };
+    const payload: Record<string, unknown> = editing?.isSystemRole
+      ? { permissionIds: Array.from(selectedPermissionIds) }
+      : {
+          name: formName.trim(),
+          level: formLevel,
+          canAssignToMaxLevel: formMaxLevel ? Number(formMaxLevel) : null,
+          permissionIds: Array.from(selectedPermissionIds),
+        };
 
     setSaving(true);
     try {
