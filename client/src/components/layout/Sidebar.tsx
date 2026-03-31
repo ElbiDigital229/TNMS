@@ -42,6 +42,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
     P.SETTINGS.AREA_GROUPS_MANAGE,
     P.SETTINGS.ASSET_CATEGORIES_MANAGE,
     P.SETTINGS.TICKET_CATEGORIES_MANAGE,
+    P.SETTINGS.DEPARTMENTS_MANAGE,
     P.USERS.VIEW,
     P.ROLES.VIEW,
     P.AUDIT.VIEW
@@ -176,6 +177,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       >
                         <TicketCheck size={16} />
                         Ticket Categories
+                      </NavLink>
+                    )}
+                    {hasPermission(P.SETTINGS.DEPARTMENTS_MANAGE) && (
+                      <NavLink
+                        to="/settings/departments"
+                        className={linkClass}
+                        onClick={onClose}
+                      >
+                        <Building2 size={16} />
+                        Departments
                       </NavLink>
                     )}
                     {hasPermission(P.USERS.VIEW) && (

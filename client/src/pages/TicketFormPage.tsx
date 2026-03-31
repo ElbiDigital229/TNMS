@@ -6,6 +6,7 @@ import {
   propertyApi,
   unitApi,
   assetApi,
+  departmentApi,
 } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
@@ -39,6 +40,19 @@ interface Category {
   status: string;
 }
 
+interface Department {
+  id: string;
+  name: string;
+  status: string;
+}
+
+interface DeptUser {
+  id: string;
+  fullName: string | null;
+  username: string;
+  role: { id: string; name: string };
+}
+
 export default function TicketFormPage() {
   const { id } = useParams();
   const isEdit = Boolean(id);
@@ -51,6 +65,7 @@ export default function TicketFormPage() {
   const [units, setUnits] = useState<UnitItem[]>([]);
   const [assets, setAssets] = useState<AssetItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loadingData, setLoadingData] = useState(true);
 
   // Form state
@@ -63,6 +78,9 @@ export default function TicketFormPage() {
   const [taskType, setTaskType] = useState("");
   const [subTaskType, setSubTaskType] = useState("");
   const [categoryId, setCategoryId] = useState("");
+  const [departmentId, setDepartmentId] = useState("");
+  const [deptUsers, setDeptUsers] = useState<DeptUser[]>([]);
+  const [assignedToId, setAssignedToId] = useState("");
   const [priority, setPriority] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
   const [recurringType, setRecurringType] = useState("");
@@ -72,17 +90,19 @@ export default function TicketFormPage() {
   const [saving, setSaving] = useState(false);
   const [assetSearch, setAssetSearch] = useState("");
 
-  // Load properties and categories
+  // Load properties, categories, and departments
   useEffect(() => {
     Promise.all([
       propertyApi.list({ limit: 100, status: "ACTIVE" }),
       ticketCategoryApi.list(),
+      departmentApi.list(),
     ])
-      .then(([propRes, catRes]) => {
+      .then(([propRes, catRes, deptRes]) => {
         setProperties(propRes.data.data.data);
         setCategories(
           catRes.data.data.filter((c: Category) => c.status === "ACTIVE")
         );
+        setDepartments(deptRes.data.data.filter((d: Department) => d.status === "ACTIVE"));
       })
       .catch(() => toast.error("Failed to load data"))
       .finally(() => setLoadingData(false));
@@ -102,6 +122,8 @@ export default function TicketFormPage() {
       setTaskType(t.taskType);
       setSubTaskType(t.subTaskType);
       setCategoryId(t.categoryId);
+      setDepartmentId(t.departmentId);
+      setAssignedToId(t.assignedToId || "");
       setPriority(t.priority);
       setIsRecurring(t.isRecurring);
       setRecurringType(t.recurringType || "");
@@ -109,6 +131,12 @@ export default function TicketFormPage() {
       setRecurringDueDays(t.recurringDueDays?.toString() || "");
     });
   }, [id]);
+
+  // Load department users when departmentId changes
+  useEffect(() => {
+    if (!departmentId) { setDeptUsers([]); setAssignedToId(""); return; }
+    departmentApi.getUsers(departmentId).then((res) => setDeptUsers(res.data.data));
+  }, [departmentId]);
 
   // Load units when property changes
   useEffect(() => {
@@ -158,6 +186,7 @@ export default function TicketFormPage() {
       !taskType ||
       !subTaskType ||
       !categoryId ||
+      !departmentId ||
       !priority
     ) {
       toast.error("Please fill all required fields");
@@ -174,6 +203,8 @@ export default function TicketFormPage() {
     formData.append("taskType", taskType);
     formData.append("subTaskType", subTaskType);
     formData.append("categoryId", categoryId);
+    formData.append("departmentId", departmentId);
+    if (assignedToId) formData.append("assignedToId", assignedToId);
     formData.append("priority", priority);
     formData.append("isRecurring", String(isRecurring));
     if (isRecurring && recurringType) {
@@ -406,6 +437,45 @@ export default function TicketFormPage() {
               </select>
             </div>
           </div>
+
+          {/* Department */}
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              Department <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={departmentId}
+              onChange={(e) => { setDepartmentId(e.target.value); setAssignedToId(""); }}
+              disabled={isEdit}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:bg-gray-100"
+            >
+              <option value="">Select department</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Assign To */}
+          {departmentId && (
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+                Assign To <span className="text-gray-400">(optional)</span>
+              </label>
+              <select
+                value={assignedToId}
+                onChange={(e) => setAssignedToId(e.target.value)}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              >
+                <option value="">Leave unassigned</option>
+                {deptUsers.map((u) => (
+                  <option key={u.id} value={u.id}>
+                    {u.fullName || u.username} ({u.role.name})
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Category & Priority */}
           <div className="grid grid-cols-2 gap-4">

@@ -39,6 +39,20 @@ export const ticketController = {
     try {
       const ticket = await ticketService.findById(req.params.id);
       if (!ticket) return sendError(res, "Ticket not found", 404);
+
+      const u = req.user!;
+      const hasViewAll = u.isSuperAdmin || u.permissions.includes(PERMISSIONS.TICKETS.VIEW_ALL);
+      const hasViewAssigned = u.permissions.includes(PERMISSIONS.TICKETS.VIEW_ASSIGNED);
+      const isAssignee = ticket.assignedToId === u.id;
+      const isCreator = ticket.createdById === u.id;
+      const isActiveBlocker = (ticket as any).blocks?.some(
+        (b: any) => b.blockingUserId === u.id && !b.resolvedAt
+      );
+
+      if (!hasViewAll && !(hasViewAssigned && (isAssignee || isCreator)) && !isActiveBlocker) {
+        return sendError(res, "Access denied", 403);
+      }
+
       sendSuccess(res, ticket);
     } catch (error: any) {
       sendError(res, error.message);
@@ -56,6 +70,8 @@ export const ticketController = {
         taskType,
         subTaskType,
         categoryId,
+        departmentId,
+        assignedToId,
         priority,
         isRecurring,
         recurringType,
@@ -64,17 +80,7 @@ export const ticketController = {
         assetIds,
       } = req.body;
 
-      if (
-        !name ||
-        !description ||
-        !propertyId ||
-        !unitId ||
-        !dueDate ||
-        !taskType ||
-        !subTaskType ||
-        !categoryId ||
-        !priority
-      ) {
+      if (!name || !description || !propertyId || !unitId || !dueDate || !taskType || !subTaskType || !categoryId || !departmentId || !priority) {
         return sendError(res, "Missing required fields", 400);
       }
 
@@ -89,6 +95,8 @@ export const ticketController = {
         taskType,
         subTaskType,
         categoryId,
+        departmentId,
+        assignedToId: assignedToId || undefined,
         priority,
         isRecurring: isRecurring === "true" || isRecurring === true,
         recurringType: recurringType || undefined,
@@ -212,6 +220,50 @@ export const ticketController = {
       sendSuccess(res, users);
     } catch (error: any) {
       sendError(res, error.message);
+    }
+  },
+
+  async blockTicket(req: Request, res: Response) {
+    try {
+      const { blockingUserId, departmentId, reason } = req.body;
+      if (!departmentId || !reason) {
+        return sendError(res, "departmentId and reason are required", 400);
+      }
+
+      // Allow: assignee OR anyone with UPDATE_STATUS
+      const hasUpdateStatus = req.user!.isSuperAdmin || req.user!.permissions.includes(PERMISSIONS.TICKETS.UPDATE_STATUS);
+      if (!hasUpdateStatus) {
+        const ticket = await ticketService.findById(req.params.id);
+        if (!ticket || ticket.assignedToId !== req.user!.id) {
+          return sendError(res, "Only the assignee or managers can report a blocker", 403);
+        }
+      }
+
+      await ticketService.block(req.params.id, { blockingUserId: blockingUserId || undefined, departmentId, reason }, req.user!.id);
+      sendSuccess(res, null, "Ticket blocked");
+    } catch (error: any) {
+      sendError(res, error.message, 400);
+    }
+  },
+
+  async unblockTicket(req: Request, res: Response) {
+    try {
+      const { resolvedNote } = req.body;
+      const hasUpdateStatus = req.user!.isSuperAdmin || req.user!.permissions.includes(PERMISSIONS.TICKETS.UPDATE_STATUS);
+
+      if (!hasUpdateStatus) {
+        // Must be the blocker (blockingUser) or the one who raised it (blockedBy)
+        const ticket = await ticketService.findById(req.params.id);
+        if (!ticket) return sendError(res, "Ticket not found", 404);
+        const activeBlock = (ticket as any).blocks?.find((b: any) => !b.resolvedAt);
+        const isInvolved = activeBlock && (activeBlock.blockingUserId === req.user!.id || activeBlock.blockedById === req.user!.id);
+        if (!isInvolved) return sendError(res, "Only the blocking parties can unblock this ticket", 403);
+      }
+
+      await ticketService.unblock(req.params.id, resolvedNote, req.user!.id);
+      sendSuccess(res, null, "Ticket unblocked");
+    } catch (error: any) {
+      sendError(res, error.message, 400);
     }
   },
 };

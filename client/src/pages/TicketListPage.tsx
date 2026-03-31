@@ -106,6 +106,8 @@ export default function TicketListPage() {
         return "bg-blue-50 text-blue-600";
       case "IN_PROGRESS":
         return "bg-yellow-50 text-yellow-600";
+      case "BLOCKED":
+        return "bg-orange-100 text-orange-700";
       case "COMPLETED":
         return "bg-green-50 text-green-600";
       default:
@@ -161,6 +163,7 @@ export default function TicketListPage() {
           <option value="">All Status</option>
           <option value="OPEN">Open</option>
           <option value="IN_PROGRESS">In Progress</option>
+          <option value="BLOCKED">Blocked</option>
           <option value="COMPLETED">Completed</option>
         </select>
 
@@ -287,11 +290,16 @@ export default function TicketListPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColor(ticket.status)}`}
-                      >
-                        {TICKET_STATUS_LABELS[ticket.status]}
-                      </span>
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColor(ticket.status)}`}>
+                          {TICKET_STATUS_LABELS[ticket.status]}
+                        </span>
+                        {ticket.status === "COMPLETED" && ticket.completedAt && ticket.dueDate && new Date(ticket.completedAt) > new Date(ticket.dueDate) && (
+                          <span className="inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-600">
+                            Late
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-5 py-3.5 text-gray-600">
                       {ticket.assignedTo ? (

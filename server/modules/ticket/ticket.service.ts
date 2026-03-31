@@ -6,7 +6,6 @@ import type {
   TicketStatus,
   RecurringType,
 } from "@prisma/client";
-import { rbacService } from "../../services/rbac.service.js";
 import { notificationTrigger } from "../../services/notificationTrigger.service.js";
 
 export const ticketService = {
@@ -64,6 +63,7 @@ export const ticketService = {
           property: { select: { id: true, name: true, code: true } },
           unit: { select: { id: true, name: true, code: true } },
           category: { select: { id: true, name: true } },
+          department: { select: { id: true, name: true } },
           createdBy: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
           assignedTo: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
           assets: {
@@ -103,13 +103,26 @@ export const ticketService = {
           },
         },
         category: { select: { id: true, name: true } },
+        department: { select: { id: true, name: true } },
         assets: {
           include: { asset: { select: { id: true, name: true, code: true } } },
         },
         createdBy: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
         assignedTo: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
         comments: { orderBy: { createdAt: "desc" } },
-        activities: { orderBy: { createdAt: "desc" } },
+        activities: {
+          orderBy: { createdAt: "asc" },
+          include: { performedBy: { select: { id: true, fullName: true, username: true } } },
+        },
+        blocks: {
+          orderBy: { createdAt: "desc" },
+          include: {
+            blockedBy: { select: { id: true, fullName: true, username: true } },
+            blockingUser: { select: { id: true, fullName: true, username: true } },
+            resolvedBy: { select: { id: true, fullName: true, username: true } },
+            department: { select: { id: true, name: true } },
+          },
+        },
       },
     });
   },
@@ -123,6 +136,8 @@ export const ticketService = {
     taskType: TaskType;
     subTaskType: SubTaskType;
     categoryId: string;
+    departmentId: string;
+    assignedToId?: string;
     priority: Priority;
     isRecurring?: boolean;
     recurringType?: RecurringType;
@@ -161,6 +176,7 @@ export const ticketService = {
         ticketId: ticket.id,
         action: "CREATED",
         details: `Ticket ${ticketNumber} created`,
+        performedById: data.createdById || null,
       },
     });
 
@@ -222,6 +238,7 @@ export const ticketService = {
         ticketId: id,
         action: "UPDATED",
         details: "Ticket details updated",
+        performedById: editorUserId || null,
       },
     });
 
@@ -234,9 +251,32 @@ export const ticketService = {
   },
 
   async updateStatus(id: string, status: TicketStatus, updatedByUserId?: string) {
+    // If completing a blocked ticket, auto-resolve the active block first
+    if (status === "COMPLETED") {
+      const activeBlock = await prisma.ticketBlock.findFirst({
+        where: { ticketId: id, resolvedAt: null },
+        select: { id: true, blockedById: true },
+      });
+      if (activeBlock) {
+        await prisma.ticketBlock.update({
+          where: { id: activeBlock.id },
+          data: { resolvedAt: new Date(), resolvedById: updatedByUserId || null, resolvedNote: "Auto-resolved: ticket marked as completed" },
+        });
+        await prisma.ticketActivity.create({
+          data: { ticketId: id, action: "UNBLOCKED", details: "Auto-resolved: ticket marked as completed", performedById: updatedByUserId || null },
+        });
+        if (updatedByUserId) {
+          notificationTrigger.onTicketUnblocked(id, updatedByUserId, activeBlock.blockedById).catch(console.error);
+        }
+      }
+    }
+
     const ticket = await prisma.ticket.update({
       where: { id },
-      data: { status },
+      data: {
+        status,
+        completedAt: status === "COMPLETED" ? new Date() : (status === "OPEN" || status === "IN_PROGRESS" ? null : undefined),
+      },
     });
 
     await prisma.ticketActivity.create({
@@ -244,6 +284,7 @@ export const ticketService = {
         ticketId: id,
         action: "STATUS_CHANGED",
         details: `Status changed to ${status}`,
+        performedById: updatedByUserId || null,
       },
     });
 
@@ -265,6 +306,7 @@ export const ticketService = {
         ticketId,
         action: "COMMENT_ADDED",
         details: "New comment added",
+        performedById: commenterId || null,
       },
     });
 
@@ -279,15 +321,9 @@ export const ticketService = {
   async assign(ticketId: string, assigneeId: string, assignerId: string) {
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },
-      select: { propertyId: true, assignedToId: true },
+      select: { assignedToId: true },
     });
-
     if (!ticket) throw new Error("Ticket not found");
-
-    const check = await rbacService.canAssignTo(assignerId, assigneeId, ticket.propertyId);
-    if (!check.allowed) {
-      throw new Error(check.reason || "Assignment not allowed");
-    }
 
     const updated = await prisma.ticket.update({
       where: { id: ticketId },
@@ -307,10 +343,10 @@ export const ticketService = {
         ticketId,
         action: "ASSIGNED",
         details: `Assigned to ${assignee?.fullName || assignee?.username}`,
+        performedById: assignerId,
       },
     });
 
-    // Fire-and-forget notification (includes #8 reassigned-away if previous assignee existed)
     notificationTrigger
       .onTicketAssigned(ticketId, assigneeId, assignerId, ticket.assignedToId)
       .catch(console.error);
@@ -318,14 +354,102 @@ export const ticketService = {
     return updated;
   },
 
-  async getAssignableUsers(ticketId: string, assignerId: string) {
-    const ticket = await prisma.ticket.findUnique({
-      where: { id: ticketId },
-      select: { propertyId: true },
+  async block(ticketId: string, data: { blockingUserId?: string; departmentId: string; reason: string }, blockedById: string) {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true, status: true } });
+    if (!ticket) throw new Error("Ticket not found");
+    if (ticket.status === "BLOCKED") throw new Error("Ticket is already blocked");
+    if (ticket.status === "COMPLETED") throw new Error("Cannot block a completed ticket");
+
+    await prisma.ticketBlock.create({
+      data: {
+        ticketId,
+        blockedById,
+        blockingUserId: data.blockingUserId || null,
+        departmentId: data.departmentId,
+        reason: data.reason,
+        previousStatus: ticket.status,
+      },
     });
 
-    if (!ticket) throw new Error("Ticket not found");
+    await prisma.ticket.update({ where: { id: ticketId }, data: { status: "BLOCKED" } });
 
-    return rbacService.getAssignableUsers(assignerId, ticket.propertyId);
+    // Resolve display names for activity log
+    const [blockedByUser, blockingUserRecord, deptRecord] = await Promise.all([
+      prisma.user.findUnique({ where: { id: blockedById }, select: { fullName: true, username: true } }),
+      data.blockingUserId ? prisma.user.findUnique({ where: { id: data.blockingUserId }, select: { fullName: true, username: true } }) : null,
+      prisma.department.findUnique({ where: { id: data.departmentId }, select: { name: true } }),
+    ]);
+    const blockedByName = blockedByUser?.fullName || blockedByUser?.username || "Unknown";
+    const blockingTarget = blockingUserRecord
+      ? `${blockingUserRecord.fullName || blockingUserRecord.username} (${deptRecord?.name})`
+      : deptRecord?.name || "Unknown department";
+
+    await prisma.ticketActivity.create({
+      data: {
+        ticketId,
+        action: "BLOCKED",
+        details: `${blockedByName} blocked — waiting on ${blockingTarget}. Reason: ${data.reason}`,
+        performedById: blockedById,
+      },
+    });
+
+    if (data.blockingUserId) {
+      notificationTrigger.onTicketBlocked(ticketId, blockedById, data.blockingUserId, data.reason).catch(console.error);
+    }
+  },
+
+  async unblock(ticketId: string, resolvedNote: string | undefined, resolvedById: string) {
+    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true, status: true } });
+    if (!ticket) throw new Error("Ticket not found");
+    if (ticket.status !== "BLOCKED") throw new Error("Ticket is not blocked");
+
+    const activeBlock = await prisma.ticketBlock.findFirst({
+      where: { ticketId, resolvedAt: null },
+      select: { id: true, blockedById: true, previousStatus: true },
+    });
+    if (!activeBlock) throw new Error("No active block found");
+
+    await prisma.ticketBlock.update({
+      where: { id: activeBlock.id },
+      data: { resolvedAt: new Date(), resolvedById, resolvedNote: resolvedNote || null },
+    });
+
+    await prisma.ticket.update({ where: { id: ticketId }, data: { status: activeBlock.previousStatus } });
+
+    const resolvedByUser = await prisma.user.findUnique({ where: { id: resolvedById }, select: { fullName: true, username: true } });
+    const resolvedByName = resolvedByUser?.fullName || resolvedByUser?.username || "Unknown";
+
+    await prisma.ticketActivity.create({
+      data: {
+        ticketId,
+        action: "UNBLOCKED",
+        details: resolvedNote ? `${resolvedByName} unblocked: ${resolvedNote}` : `${resolvedByName} resolved the block`,
+        performedById: resolvedById,
+      },
+    });
+
+    notificationTrigger.onTicketUnblocked(ticketId, resolvedById, activeBlock.blockedById).catch(console.error);
+  },
+
+  async getAssignableUsers(ticketId: string, _assignerId: string) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { departmentId: true },
+    });
+    if (!ticket) throw new Error("Ticket not found");
+    return prisma.user.findMany({
+      where: {
+        departmentId: ticket.departmentId,
+        status: "ACTIVE",
+        role: { name: { in: ["Manager", "Supervisor", "Technician"] } },
+      },
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        role: { select: { id: true, name: true } },
+      },
+      orderBy: { fullName: "asc" },
+    });
   },
 };

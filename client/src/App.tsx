@@ -16,6 +16,7 @@ import TicketListPage from "./pages/TicketListPage";
 import TicketFormPage from "./pages/TicketFormPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import TicketCategoriesPage from "./pages/TicketCategoriesPage";
+import DepartmentsPage from "./pages/DepartmentsPage";
 import DashboardPage from "./pages/DashboardPage";
 import TodoListPage from "./pages/TodoListPage";
 import UserManagementPage from "./pages/UserManagementPage";
@@ -68,6 +69,7 @@ export default function App() {
               <Route path="/settings/area-groups" element={<RequirePermission permission={P.SETTINGS.AREA_GROUPS_MANAGE}><AreaGroupSettingsPage /></RequirePermission>} />
               <Route path="/settings/asset-categories" element={<RequirePermission permission={P.SETTINGS.ASSET_CATEGORIES_MANAGE}><AssetCategoriesPage /></RequirePermission>} />
               <Route path="/settings/ticket-categories" element={<RequirePermission permission={P.SETTINGS.TICKET_CATEGORIES_MANAGE}><TicketCategoriesPage /></RequirePermission>} />
+              <Route path="/settings/departments" element={<RequirePermission permission={P.SETTINGS.DEPARTMENTS_MANAGE}><DepartmentsPage /></RequirePermission>} />
               <Route path="/settings/users" element={<RequirePermission permission={P.USERS.VIEW}><UserManagementPage /></RequirePermission>} />
               <Route path="/settings/roles" element={<RequirePermission permission={P.ROLES.VIEW}><RoleManagementPage /></RequirePermission>} />
               <Route path="/reports" element={<RequirePermission permission={P.REPORTS.VIEW}><ReportBuilderPage /></RequirePermission>} />

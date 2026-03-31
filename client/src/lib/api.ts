@@ -145,6 +145,10 @@ export const ticketApi = {
     api.patch(`/tickets/${id}/assign`, { assigneeId }),
   getAssignableUsers: (id: string) =>
     api.get(`/tickets/${id}/assignable-users`),
+  block: (id: string, data: { blockingUserId?: string; departmentId: string; reason: string }) =>
+    api.post(`/tickets/${id}/block`, data),
+  unblock: (id: string, resolvedNote?: string) =>
+    api.post(`/tickets/${id}/unblock`, { resolvedNote }),
 };
 
 // Ticket Category API
@@ -155,6 +159,15 @@ export const ticketCategoryApi = {
     api.put(`/ticket-categories/${id}`, { name }),
   deactivate: (id: string) => api.patch(`/ticket-categories/${id}/deactivate`),
   activate: (id: string) => api.patch(`/ticket-categories/${id}/activate`),
+};
+
+export const departmentApi = {
+  list: () => api.get("/departments"),
+  create: (name: string) => api.post("/departments", { name }),
+  update: (id: string, name: string) => api.put(`/departments/${id}`, { name }),
+  deactivate: (id: string) => api.patch(`/departments/${id}/deactivate`),
+  activate: (id: string) => api.patch(`/departments/${id}/activate`),
+  getUsers: (id: string) => api.get(`/departments/${id}/users`),
 };
 
 // Todo API

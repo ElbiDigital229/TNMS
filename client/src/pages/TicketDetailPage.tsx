@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ticketApi } from "../lib/api";
+import { ticketApi, departmentApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -28,6 +28,8 @@ import {
   ListChecks,
   UserCircle,
   UserPlus,
+  ShieldAlert,
+  ShieldCheck,
 } from "lucide-react";
 
 const DAY_NAMES: Record<string, string> = {
@@ -57,6 +59,18 @@ export default function TicketDetailPage() {
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+
+  // Block / Unblock state
+  const [blockModalOpen, setBlockModalOpen] = useState(false);
+  const [unblockModalOpen, setUnblockModalOpen] = useState(false);
+  const [blockDepts, setBlockDepts] = useState<any[]>([]);
+  const [blockDeptId, setBlockDeptId] = useState("");
+  const [blockDeptUsers, setBlockDeptUsers] = useState<any[]>([]);
+  const [blockingUserId, setBlockingUserId] = useState("");
+  const [blockReason, setBlockReason] = useState("");
+  const [blockingSubmitting, setBlockingSubmitting] = useState(false);
+  const [unblockNote, setUnblockNote] = useState("");
+  const [unblockSubmitting, setUnblockSubmitting] = useState(false);
 
   const fetchTicket = () => {
     ticketApi
@@ -107,6 +121,61 @@ export default function TicketDetailPage() {
       toast.error("Failed to upload image");
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const openBlockModal = async () => {
+    try {
+      const res = await departmentApi.list();
+      setBlockDepts(res.data.data.filter((d: any) => d.status === "ACTIVE"));
+      setBlockDeptId("");
+      setBlockDeptUsers([]);
+      setBlockingUserId("");
+      setBlockReason("");
+      setBlockModalOpen(true);
+    } catch {
+      toast.error("Failed to load departments");
+    }
+  };
+
+  useEffect(() => {
+    if (!blockDeptId) { setBlockDeptUsers([]); setBlockingUserId(""); return; }
+    departmentApi.getUsers(blockDeptId).then((res) => {
+      setBlockDeptUsers(res.data.data);
+      setBlockingUserId("");
+    }).catch(() => toast.error("Failed to load users"));
+  }, [blockDeptId]);
+
+  const handleBlock = async () => {
+    if (!blockDeptId || !blockReason.trim()) {
+      toast.error("Department and reason are required");
+      return;
+    }
+    setBlockingSubmitting(true);
+    try {
+      await ticketApi.block(id!, { blockingUserId: blockingUserId || undefined, departmentId: blockDeptId, reason: blockReason.trim() });
+      toast.success("Ticket blocked — notification sent");
+      setBlockModalOpen(false);
+      fetchTicket();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to block ticket");
+    } finally {
+      setBlockingSubmitting(false);
+    }
+  };
+
+  const handleUnblock = async () => {
+    setUnblockSubmitting(true);
+    try {
+      await ticketApi.unblock(id!, unblockNote.trim() || undefined);
+      toast.success("Ticket unblocked");
+      setUnblockModalOpen(false);
+      setUnblockNote("");
+      fetchTicket();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to unblock ticket");
+    } finally {
+      setUnblockSubmitting(false);
     }
   };
 
@@ -163,6 +232,8 @@ export default function TicketDetailPage() {
         return "bg-blue-50 text-blue-600";
       case "IN_PROGRESS":
         return "bg-yellow-50 text-yellow-600";
+      case "BLOCKED":
+        return "bg-orange-100 text-orange-700";
       case "COMPLETED":
         return "bg-green-50 text-green-600";
       default:
@@ -255,8 +326,55 @@ export default function TicketDetailPage() {
               Reopen
             </button>
           )}
+          {/* Block / Unblock */}
+          {ticket.status !== "COMPLETED" && ticket.status !== "BLOCKED" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+            <button
+              onClick={openBlockModal}
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 shadow-sm transition-all duration-200 ring-1 ring-orange-200"
+            >
+              <ShieldAlert size={16} />
+              Report Blocker
+            </button>
+          )}
+          {ticket.status === "BLOCKED" && (
+            user?.id === ticket.blocks?.[0]?.blockedBy?.id ||
+            user?.id === ticket.blocks?.[0]?.blockingUser?.id ||
+            hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)
+          ) && (
+            <button
+              onClick={() => { setUnblockNote(""); setUnblockModalOpen(true); }}
+              className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 shadow-sm transition-all duration-200 ring-1 ring-green-200"
+            >
+              <ShieldCheck size={16} />
+              Unblock
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Blocked Banner */}
+      {ticket.status === "BLOCKED" && ticket.blocks?.[0] && (
+        <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
+          <div className="flex items-start gap-3">
+            <ShieldAlert size={20} className="mt-0.5 flex-shrink-0 text-orange-500" />
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-orange-800">This ticket is blocked</p>
+              <p className="mt-1 text-sm text-orange-700">
+                <span className="font-medium">Waiting on:</span>{" "}
+                {ticket.blocks[0].blockingUser
+                  ? `${ticket.blocks[0].blockingUser.fullName || ticket.blocks[0].blockingUser.username} — ${ticket.blocks[0].department?.name}`
+                  : ticket.blocks[0].department?.name}
+              </p>
+              <p className="mt-1 text-sm text-orange-700">
+                <span className="font-medium">Reason:</span> {ticket.blocks[0].reason}
+              </p>
+              <p className="mt-1 text-xs text-orange-500">
+                Reported by {ticket.blocks[0].blockedBy?.fullName || ticket.blocks[0].blockedBy?.username} · {new Date(ticket.blocks[0].createdAt).toLocaleString()}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
@@ -402,25 +520,28 @@ export default function TicketDetailPage() {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {ticket.activities?.map((a: any) => (
-                        <div
-                          key={a.id}
-                          className="flex items-start gap-3 text-sm"
-                        >
-                          <div className="mt-1.5 h-2 w-2 flex-shrink-0 rounded-full bg-primary-500" />
-                          <div>
-                            <p className="font-medium text-gray-700">
-                              {a.action.replace(/_/g, " ")}
-                            </p>
-                            {a.details && (
-                              <p className="text-gray-500">{a.details}</p>
-                            )}
-                            <p className="text-xs text-gray-400">
-                              {new Date(a.createdAt).toLocaleString()}
-                            </p>
+                      {ticket.activities?.map((a: any) => {
+                        const isBlock = a.action === "BLOCKED";
+                        const isUnblock = a.action === "UNBLOCKED";
+                        const dotColor = isBlock ? "bg-orange-500" : isUnblock ? "bg-green-500" : "bg-primary-500";
+                        return (
+                          <div key={a.id} className="flex items-start gap-3 text-sm">
+                            <div className={`mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${dotColor}`} />
+                            <div>
+                              <p className="font-medium text-gray-700">
+                                {a.action.replace(/_/g, " ")}
+                                {a.performedBy && (
+                                  <span className="ml-1 font-normal text-gray-500">
+                                    by {a.performedBy.fullName || a.performedBy.username}
+                                  </span>
+                                )}
+                              </p>
+                              {a.details && <p className="text-gray-500">{a.details}</p>}
+                              <p className="text-xs text-gray-400">{new Date(a.createdAt).toLocaleString()}</p>
+                            </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>
@@ -592,6 +713,41 @@ export default function TicketDetailPage() {
             </div>
           )}
 
+          {/* Block History */}
+          {ticket.blocks?.length > 0 && (
+            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+              <h3 className="mb-3 text-[13px] font-semibold text-gray-900">Block History</h3>
+              <div className="space-y-3">
+                {ticket.blocks.map((b: any) => (
+                  <div key={b.id} className={`rounded-lg p-3 text-sm ${b.resolvedAt ? "bg-gray-50 ring-1 ring-gray-100" : "bg-orange-50 ring-1 ring-orange-200"}`}>
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-medium text-gray-800">
+                        {b.blockingUser
+                          ? `${b.blockingUser.fullName || b.blockingUser.username} (${b.department?.name})`
+                          : b.department?.name}
+                      </span>
+                      {b.resolvedAt ? (
+                        <span className="text-xs text-green-600 font-medium">Resolved</span>
+                      ) : (
+                        <span className="text-xs text-orange-600 font-medium">Active</span>
+                      )}
+                    </div>
+                    <p className="mt-1 text-gray-600">"{b.reason}"</p>
+                    <p className="mt-1 text-xs text-gray-400">
+                      Raised by {b.blockedBy?.fullName || b.blockedBy?.username} · {new Date(b.createdAt).toLocaleDateString()}
+                    </p>
+                    {b.resolvedAt && (
+                      <p className="mt-1 text-xs text-green-700">
+                        Resolved by {b.resolvedBy?.fullName || b.resolvedBy?.username} · {new Date(b.resolvedAt).toLocaleDateString()}
+                        {b.resolvedNote && ` — "${b.resolvedNote}"`}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Tagged Assets */}
           {ticket.assets?.length > 0 && (
             <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
@@ -615,6 +771,91 @@ export default function TicketDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Block Modal */}
+      <Modal isOpen={blockModalOpen} onClose={() => setBlockModalOpen(false)} title="Report Blocker">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">Select the department and person who is blocking your progress, then describe what you need.</p>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Department</label>
+            <select
+              value={blockDeptId}
+              onChange={(e) => setBlockDeptId(e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+            >
+              <option value="">Select department...</option>
+              {blockDepts.map((d: any) => (
+                <option key={d.id} value={d.id}>{d.name}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              Person to notify <span className="text-gray-400 font-normal">(optional)</span>
+            </label>
+            <select
+              value={blockingUserId}
+              onChange={(e) => setBlockingUserId(e.target.value)}
+              disabled={!blockDeptId}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:bg-gray-50 disabled:text-gray-400"
+            >
+              <option value="">Whole department (no specific person)</option>
+              {blockDeptUsers.map((u: any) => (
+                <option key={u.id} value={u.id}>{u.fullName || u.username}{u.role ? ` (${u.role.name})` : ""}</option>
+              ))}
+            </select>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Reason / What you need</label>
+            <textarea
+              value={blockReason}
+              onChange={(e) => setBlockReason(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              placeholder="e.g. Need funds approved to purchase replacement parts..."
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={() => setBlockModalOpen(false)} className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">Cancel</button>
+            <button
+              onClick={handleBlock}
+              disabled={blockingSubmitting || !blockDeptId || !blockReason.trim()}
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-700 disabled:opacity-50 transition-all duration-200"
+            >
+              <ShieldAlert size={15} />
+              {blockingSubmitting ? "Blocking..." : "Report Blocker"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Unblock Modal */}
+      <Modal isOpen={unblockModalOpen} onClose={() => setUnblockModalOpen(false)} title="Unblock Ticket">
+        <div className="space-y-4">
+          <p className="text-sm text-gray-500">Confirm you have resolved the blocker. Optionally leave a note (e.g. "Funds approved and transferred").</p>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Resolution note (optional)</label>
+            <textarea
+              value={unblockNote}
+              onChange={(e) => setUnblockNote(e.target.value)}
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              placeholder="e.g. Funds approved, transferred to technician..."
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-1">
+            <button onClick={() => setUnblockModalOpen(false)} className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50">Cancel</button>
+            <button
+              onClick={handleUnblock}
+              disabled={unblockSubmitting}
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-green-700 disabled:opacity-50 transition-all duration-200"
+            >
+              <ShieldCheck size={15} />
+              {unblockSubmitting ? "Unblocking..." : "Unblock Ticket"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       {/* Assign Modal */}
       <Modal

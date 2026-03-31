@@ -43,6 +43,7 @@ export const userService = {
           isSuperAdmin: true,
           role: { select: { id: true, name: true, level: true } },
           reportsTo: { select: { id: true, username: true, fullName: true } },
+          department: { select: { id: true, name: true } },
           _count: { select: { propertyAssignments: true, subordinates: true } },
         },
         orderBy: { createdAt: "desc" },
@@ -87,6 +88,7 @@ export const userService = {
       where: { id },
       include: {
         role: true,
+        department: true,
         reportsTo: { select: { id: true, username: true, fullName: true } },
         propertyAssignments: {
           include: {
@@ -115,6 +117,7 @@ export const userService = {
     reportsToId?: string;
     allProperties?: boolean;
     propertyIds?: string[];
+    departmentId?: string | null;
   }) {
     // Auto-inherit manager's properties if reportsTo is set
     let effectivePropertyIds = data.propertyIds ?? [];
@@ -186,6 +189,7 @@ export const userService = {
       reportsToId?: string;
       allProperties?: boolean;
       propertyIds?: string[];
+      departmentId?: string | null;
     }
   ) {
     const existing = await prisma.user.findUnique({ where: { id } });

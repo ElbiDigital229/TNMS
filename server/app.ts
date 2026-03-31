@@ -14,6 +14,7 @@ import { assetCategoryRoutes } from "./modules/asset-category/asset-category.rou
 import { areaGroupRoutes } from "./modules/area-group/area-group.routes.js";
 import { ticketRoutes } from "./modules/ticket/ticket.routes.js";
 import { ticketCategoryRoutes } from "./modules/ticket-category/ticket-category.routes.js";
+import { departmentRoutes } from "./modules/department/department.routes.js";
 import { dashboardRoutes } from "./modules/dashboard/dashboard.routes.js";
 import { todoRoutes } from "./modules/todo/todo.routes.js";
 import { permissionRoutes } from "./modules/permission/permission.routes.js";
@@ -78,6 +79,7 @@ app.use("/api/asset-categories", assetCategoryRoutes);
 app.use("/api/area-groups", areaGroupRoutes);
 app.use("/api/tickets", ticketRoutes);
 app.use("/api/ticket-categories", ticketCategoryRoutes);
+app.use("/api/departments", departmentRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/todos", todoRoutes);
 app.use("/api/permissions", permissionRoutes);

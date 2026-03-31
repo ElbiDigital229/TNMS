@@ -7,4 +7,4 @@ import { PERMISSIONS } from "../../../shared/permissions.js";
 export const reportRoutes = Router();
 reportRoutes.use(authenticate);
 
-reportRoutes.post("/query", requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.query);
+reportRoutes.post("/query", requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.runQuery);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { userApi, roleApi, propertyApi, areaGroupApi } from "../lib/api";
+import { userApi, roleApi, propertyApi, areaGroupApi, departmentApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -10,6 +10,12 @@ import { Users, Plus, Edit2, Power, Search, Shield, KeyRound, Upload } from "luc
 interface Role {
   id: string;
   name: string;
+}
+
+interface Department {
+  id: string;
+  name: string;
+  status: string;
 }
 
 interface AreaGroup {
@@ -38,6 +44,8 @@ interface User {
   allProperties: boolean;
   isSuperAdmin: boolean;
   properties?: Property[];
+  department?: { id: string; name: string } | null;
+  departmentId?: string | null;
   _count?: { propertyAssignments: number; subordinates: number };
   status: string;
 }
@@ -52,6 +60,7 @@ const emptyForm = {
   phone: "",
   roleId: "",
   reportsToId: "",
+  departmentId: "",
   allProperties: true,
   propertyIds: [] as string[],
   accessMode: "all" as AccessMode,
@@ -64,6 +73,7 @@ export default function UserManagementPage() {
   const [roles, setRoles] = useState<Role[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
   const [areaGroups, setAreaGroups] = useState<AreaGroup[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -110,11 +120,19 @@ export default function UserManagementPage() {
       .catch(() => {});
   };
 
+  const fetchDepartments = () => {
+    departmentApi
+      .list()
+      .then((res) => setDepartments(res.data.data.filter((d: Department) => d.status === "ACTIVE")))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchRoles();
     fetchProperties();
     fetchAreaGroups();
+    fetchDepartments();
   }, []);
 
   const filteredUsers = users.filter((u) => {
@@ -167,6 +185,7 @@ export default function UserManagementPage() {
       phone: user.phone || "",
       roleId: user.role?.id || user.roleId || "",
       reportsToId: user.reportsToId || user.reportsTo?.id || "",
+      departmentId: user.department?.id || "",
       allProperties: user.allProperties ?? true,
       propertyIds: user.properties?.map((p) => p.id) || [],
       accessMode: mode,
@@ -227,6 +246,7 @@ export default function UserManagementPage() {
         phone: form.phone,
         roleId: form.roleId || undefined,
         reportsToId: form.reportsToId || null,
+        departmentId: form.departmentId || null,
         allProperties: derivedAllProperties,
         propertyIds: derivedAllProperties ? [] : derivedPropertyIds,
       };
@@ -446,6 +466,9 @@ export default function UserManagementPage() {
                     Properties
                   </th>
                   <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                    Department
+                  </th>
+                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                     Reports To
                   </th>
                   <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -482,6 +505,9 @@ export default function UserManagementPage() {
                       {user.allProperties
                         ? "All"
                         : user._count?.propertyAssignments ?? user.properties?.length ?? 0}
+                    </td>
+                    <td className="px-5 py-3.5 text-gray-600">
+                      {user.department?.name || "-"}
                     </td>
                     <td className="px-5 py-3.5 text-gray-600">
                       {user.reportsTo
@@ -668,6 +694,27 @@ export default function UserManagementPage() {
             </select>
           </div>
 
+          {/* Department */}
+          {departments.length > 0 && (
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              Department
+            </label>
+            <select
+              value={form.departmentId}
+              onChange={(e) => updateForm("departmentId", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+            >
+              <option value="">No department</option>
+              {departments.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          )}
+
           {/* Reports To — only for Supervisor/Technician */}
           {(() => {
             const sel = roles.find((r) => r.id === form.roleId);
@@ -682,11 +729,18 @@ export default function UserManagementPage() {
               onChange={(e) => updateForm("reportsToId", e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
             >
-              <option value="">Select a Facility Manager</option>
+              <option value="">Select manager</option>
               {users
                 .filter((u) => {
                   if (editing && u.id === editing.id) return false;
-                  return u.role?.name === "Facility Manager";
+                  const selectedRole = roles.find((r) => r.id === form.roleId);
+                  if (selectedRole?.name === "Technician") {
+                    return u.departmentId === form.departmentId && u.role?.name === "Supervisor";
+                  }
+                  if (selectedRole?.name === "Supervisor") {
+                    return u.departmentId === form.departmentId && u.role?.name === "Manager";
+                  }
+                  return false;
                 })
                 .map((u) => (
                   <option key={u.id} value={u.id}>

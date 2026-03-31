@@ -51,6 +51,7 @@ export const PERMISSIONS = {
     AREA_GROUPS_MANAGE: "settings.area_groups.manage",
     ASSET_CATEGORIES_MANAGE: "settings.asset_categories.manage",
     TICKET_CATEGORIES_MANAGE: "settings.ticket_categories.manage",
+    DEPARTMENTS_MANAGE: "settings.departments.manage",
   },
   USERS: {
     VIEW: "users.view",
@@ -128,6 +129,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.SETTINGS.AREA_GROUPS_MANAGE, module: "settings", description: "Manage area groups" },
   { key: PERMISSIONS.SETTINGS.ASSET_CATEGORIES_MANAGE, module: "settings", description: "Manage asset categories" },
   { key: PERMISSIONS.SETTINGS.TICKET_CATEGORIES_MANAGE, module: "settings", description: "Manage ticket categories" },
+  { key: PERMISSIONS.SETTINGS.DEPARTMENTS_MANAGE, module: "settings", description: "Manage departments" },
   // Users
   { key: PERMISSIONS.USERS.VIEW, module: "users", description: "View user list" },
   { key: PERMISSIONS.USERS.CREATE, module: "users", description: "Create new users" },

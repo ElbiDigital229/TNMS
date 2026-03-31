@@ -276,7 +276,9 @@ export const notificationTrigger = {
     const overdueTickets = await prisma.ticket.findMany({
       where: {
         dueDate: { lt: now },
-        status: { in: ["OPEN", "IN_PROGRESS"] },
+        status: { in: ["OPEN", "IN_PROGRESS"] }, // BLOCKED excluded intentionally
+        // Skip tickets unblocked within the last 24h — give the assignee time to raise next block or act
+        NOT: { blocks: { some: { resolvedAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } } } },
       },
       select: {
         id: true,
@@ -360,7 +362,7 @@ export const notificationTrigger = {
     const dueSoonTickets = await prisma.ticket.findMany({
       where: {
         dueDate: { gt: now, lte: in24h },
-        status: { in: ["OPEN", "IN_PROGRESS"] },
+        status: { in: ["OPEN", "IN_PROGRESS"] }, // BLOCKED excluded intentionally
         assignedToId: { not: null },
       },
       select: {
@@ -408,6 +410,48 @@ export const notificationTrigger = {
     }
 
     return dueSoonTickets.length;
+  },
+
+  /** Ticket blocked — notify the blocking user */
+  async onTicketBlocked(ticketId: string, blockedById: string, blockingUserId: string, reason: string) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { ticketNumber: true, name: true, property: { select: { name: true } } },
+    });
+    if (!ticket) return;
+
+    const blockedByName = await getUserName(blockedById);
+
+    await notificationService.create({
+      userId: blockingUserId,
+      type: "TICKET_BLOCKED" as NotificationType,
+      title: "Action Required — Ticket Blocked",
+      message: `${blockedByName} is blocked on ${ticket.ticketNumber} — "${ticket.name}" and needs your help: ${reason}`,
+      linkUrl: `/tickets/${ticketId}`,
+      metadata: { ticketId, ticketNumber: ticket.ticketNumber, blockedById, reason },
+    });
+  },
+
+  /** Ticket unblocked — notify the person who raised the block */
+  async onTicketUnblocked(ticketId: string, resolvedById: string, blockedById: string) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { ticketNumber: true, name: true },
+    });
+    if (!ticket) return;
+
+    if (resolvedById === blockedById) return; // no need to notify yourself
+
+    const resolvedByName = await getUserName(resolvedById);
+
+    await notificationService.create({
+      userId: blockedById,
+      type: "TICKET_UNBLOCKED" as NotificationType,
+      title: "Ticket Unblocked",
+      message: `${resolvedByName} resolved the block on ${ticket.ticketNumber} — "${ticket.name}"`,
+      linkUrl: `/tickets/${ticketId}`,
+      metadata: { ticketId, ticketNumber: ticket.ticketNumber, resolvedById },
+    });
   },
 
   // ─── ASSET EVENTS ───────────────────────────────────────

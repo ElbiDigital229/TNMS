@@ -53,6 +53,7 @@ enum Priority {
 enum TicketStatus {
   OPEN
   IN_PROGRESS
+  BLOCKED
   COMPLETED
 }
 
@@ -77,6 +78,8 @@ enum NotificationType {
   TICKET_OVERDUE
   TICKET_DUE_SOON
   TICKET_OVERDUE_ESCALATION
+  TICKET_BLOCKED
+  TICKET_UNBLOCKED
   ASSET_CONDITION_POOR
   PROPERTY_DEACTIVATED
   USER_ACCOUNT_CHANGED
@@ -164,12 +167,19 @@ model User {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  departmentId        String
+  department          Department @relation(fields: [departmentId], references: [id])
+
   todos               Todo[]
   propertyAssignments  UserPropertyAssignment[]
   auditLogs           AuditLog[]
   notifications       Notification[]
   createdTickets      Ticket[]  @relation("TicketCreator")
   assignedTickets     Ticket[]  @relation("TicketAssignee")
+  blocksRaised        TicketBlock[] @relation("BlockRaisedBy")
+  blocksOnMe          TicketBlock[] @relation("BlockingUser")
+  blocksResolved      TicketBlock[] @relation("BlockResolvedBy")
+  ticketActivities    TicketActivity[] @relation("ActivityPerformedBy")
 }
 
 model AreaGroup {
@@ -280,17 +290,21 @@ model Ticket {
   createdBy       User?         @relation("TicketCreator", fields: [createdById], references: [id])
   assignedToId    String?
   assignedTo      User?         @relation("TicketAssignee", fields: [assignedToId], references: [id])
+  departmentId    String
+  department      Department    @relation(fields: [departmentId], references: [id])
   isRecurring     Boolean       @default(false)
   recurringType   RecurringType?
   recurringDay    Int?
   recurringDueDays Int?
   imagePath       String?
+  completedAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   assets          TicketAsset[]
   comments        TicketComment[]
   activities      TicketActivity[]
+  blocks          TicketBlock[]
 }
 
 model TicketAsset {
@@ -312,12 +326,14 @@ model TicketComment {
 }
 
 model TicketActivity {
-  id        String   @id @default(uuid())
-  ticketId  String
-  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
-  action    String
-  details   String?
-  createdAt DateTime @default(now())
+  id             String   @id @default(uuid())
+  ticketId       String
+  ticket         Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  action         String
+  details        String?
+  performedById  String?
+  performedBy    User?    @relation("ActivityPerformedBy", fields: [performedById], references: [id])
+  createdAt      DateTime @default(now())
 }
 
 model TicketCategory {
@@ -328,6 +344,37 @@ model TicketCategory {
   updatedAt DateTime @updatedAt
 
   tickets Ticket[]
+}
+
+model Department {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  status    Status   @default(ACTIVE)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users        User[]
+  tickets      Ticket[]
+  ticketBlocks TicketBlock[]
+}
+
+model TicketBlock {
+  id              String       @id @default(uuid())
+  ticketId        String
+  ticket          Ticket       @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  blockedById     String
+  blockedBy       User         @relation("BlockRaisedBy", fields: [blockedById], references: [id])
+  blockingUserId  String?
+  blockingUser    User?        @relation("BlockingUser", fields: [blockingUserId], references: [id])
+  departmentId    String
+  department      Department   @relation(fields: [departmentId], references: [id])
+  reason          String
+  previousStatus  TicketStatus
+  resolvedAt      DateTime?
+  resolvedById    String?
+  resolvedBy      User?        @relation("BlockResolvedBy", fields: [resolvedById], references: [id])
+  resolvedNote    String?
+  createdAt       DateTime     @default(now())
 }
 
 model AssetCategory {

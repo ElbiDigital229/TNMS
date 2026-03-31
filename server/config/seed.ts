@@ -252,6 +252,17 @@ export async function seed() {
   }
   console.log(`Seeded ${ticketCatNames.length} ticket categories`);
 
+  // ─── Seed Departments ────────────────────────────────────
+  const departmentNames = ["Operations", "Maintenance", "Cleaning", "Security", "Administration", "Finance"];
+  for (const name of departmentNames) {
+    await prisma.department.upsert({
+      where: { name },
+      update: {},
+      create: { name },
+    });
+  }
+  console.log(`Seeded ${departmentNames.length} departments`);
+
   // ─── 7. Seed Properties, Floors, Units, Assets ──────────
   const lahore = await prisma.areaGroup.findUnique({ where: { city: "LAHORE" } });
   const islamabad = await prisma.areaGroup.findUnique({ where: { city: "ISLAMABAD" } });
