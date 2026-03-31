@@ -7,7 +7,9 @@
     "build": "vite build && tsc -p tsconfig.server.json",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "db:seed": "tsx server/config/seed.ts"
+    "db:seed": "tsx server/config/seed.ts",
+    "setup": "bash setup.sh",
+    "postinstall": "prisma generate"
   },
   "dependencies": {
     "@prisma/client": "^6.9.0",
