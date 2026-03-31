@@ -1,18 +1,38 @@
 import { useState, useEffect } from "react";
 import { useParams } from "react-router-dom";
-import { assetApi } from "../lib/api";
+import { assetApi, assetCategoryApi } from "../lib/api";
+import { useAuth } from "../contexts/AuthContext";
+import { useToast } from "../components/ui/Toast";
+import Modal from "../components/ui/Modal";
 import { CONDITION_LABELS } from "../../../shared/types";
-import { Building2, Download, Layers, MapPin, Package } from "lucide-react";
+import { Building2, Download, Edit2, Layers, MapPin, Package } from "lucide-react";
+
+const CONDITIONS = ["EXCELLENT", "GOOD", "FAIR", "POOR"] as const;
+const UNITS_OF_MEASURE = ["NOS", "MTR", "SFT", "SET", "LOT", "KG", "LTR", "PKT", "BOX", "ROLL"] as const;
 
 export default function AssetDetailPage() {
   const { code } = useParams();
+  const { user } = useAuth();
+  const toast = useToast();
   const [asset, setAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [editOpen, setEditOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [categories, setCategories] = useState<{ id: string; name: string }[]>([]);
+  const [editForm, setEditForm] = useState({
+    name: "",
+    categoryId: "",
+    unitOfMeasure: "",
+    condition: "",
+    serialNumber: "",
+    additionalInfo: "",
+  });
 
-  useEffect(() => {
+  const canEdit = user?.isSuperAdmin || user?.permissions?.includes("assets.edit");
+
+  const fetchAsset = () => {
     if (!code) return;
-
     assetApi
       .getByCode(code)
       .then((res) => {
@@ -24,7 +44,45 @@ export default function AssetDetailPage() {
       })
       .catch(() => setError("Failed to load asset"))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchAsset();
+    assetCategoryApi.list().then((res) => setCategories(res.data.data)).catch(() => {});
   }, [code]);
+
+  const openEdit = () => {
+    setEditForm({
+      name: asset.name || "",
+      categoryId: asset.category?.id || asset.categoryId || "",
+      unitOfMeasure: asset.unitOfMeasure || "",
+      condition: asset.condition || "",
+      serialNumber: asset.serialNumber || "",
+      additionalInfo: asset.additionalInfo || "",
+    });
+    setEditOpen(true);
+  };
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      const formData = new FormData();
+      formData.append("name", editForm.name);
+      formData.append("categoryId", editForm.categoryId);
+      formData.append("unitOfMeasure", editForm.unitOfMeasure);
+      formData.append("condition", editForm.condition);
+      formData.append("serialNumber", editForm.serialNumber);
+      formData.append("additionalInfo", editForm.additionalInfo);
+      await assetApi.update(asset.id, formData);
+      toast.success("Asset updated");
+      setEditOpen(false);
+      fetchAsset();
+    } catch (err: any) {
+      toast.error(err.response?.data?.error || "Failed to update asset");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -56,15 +114,26 @@ export default function AssetDetailPage() {
                 {asset.code}
               </p>
             </div>
-            <span
-              className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
-                asset.status === "ACTIVE"
-                  ? "bg-green-50 text-green-600"
-                  : "bg-red-50 text-red-600"
-              }`}
-            >
-              {asset.status}
-            </span>
+            <div className="flex items-center gap-2">
+              {canEdit && (
+                <button
+                  onClick={openEdit}
+                  className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-primary-700 transition-colors"
+                >
+                  <Edit2 size={13} />
+                  Edit
+                </button>
+              )}
+              <span
+                className={`inline-flex rounded-full px-3 py-1 text-xs font-medium ${
+                  asset.status === "ACTIVE"
+                    ? "bg-green-50 text-green-600"
+                    : "bg-red-50 text-red-600"
+                }`}
+              >
+                {asset.status}
+              </span>
+            </div>
           </div>
 
           {/* Breadcrumb */}
@@ -178,6 +247,93 @@ export default function AssetDetailPage() {
           )}
         </div>
       </div>
+
+      {/* Edit Modal */}
+      <Modal isOpen={editOpen} onClose={() => setEditOpen(false)} title="Edit Asset">
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Name</label>
+            <input
+              value={editForm.name}
+              onChange={(e) => setEditForm((f) => ({ ...f, name: e.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Category</label>
+            <select
+              value={editForm.categoryId}
+              onChange={(e) => setEditForm((f) => ({ ...f, categoryId: e.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+            >
+              <option value="">Select category</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Condition</label>
+              <select
+                value={editForm.condition}
+                onChange={(e) => setEditForm((f) => ({ ...f, condition: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              >
+                {CONDITIONS.map((c) => (
+                  <option key={c} value={c}>{CONDITION_LABELS[c]}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Unit of Measure</label>
+              <select
+                value={editForm.unitOfMeasure}
+                onChange={(e) => setEditForm((f) => ({ ...f, unitOfMeasure: e.target.value }))}
+                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              >
+                {UNITS_OF_MEASURE.map((u) => (
+                  <option key={u} value={u}>{u}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Serial Number</label>
+            <input
+              value={editForm.serialNumber}
+              onChange={(e) => setEditForm((f) => ({ ...f, serialNumber: e.target.value }))}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              placeholder="Optional"
+            />
+          </div>
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Additional Info</label>
+            <textarea
+              value={editForm.additionalInfo}
+              onChange={(e) => setEditForm((f) => ({ ...f, additionalInfo: e.target.value }))}
+              rows={3}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              placeholder="Optional"
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button
+              onClick={() => setEditOpen(false)}
+              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSave}
+              disabled={saving || !editForm.name.trim()}
+              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-primary-700 disabled:opacity-50"
+            >
+              {saving ? "Saving..." : "Save Changes"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

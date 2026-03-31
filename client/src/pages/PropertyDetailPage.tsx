@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { propertyApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { PERMISSIONS } from "../../../shared/permissions";
 import LocationDisplay from "../components/map/LocationDisplay";
 import FloorsTab from "../components/property/FloorsTab";
 import UnitsTab from "../components/property/UnitsTab";
@@ -39,6 +41,8 @@ export default function PropertyDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const P = PERMISSIONS;
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("floors");
@@ -125,6 +129,7 @@ export default function PropertyDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {hasPermission(P.PROPERTIES.EDIT) && (
           <Link
             to={`/properties/${property.id}/edit`}
             className="inline-flex items-center gap-2 rounded-lg border border-gray-300 px-4 py-2 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50"
@@ -132,6 +137,8 @@ export default function PropertyDetailPage() {
             <Pencil size={16} />
             Edit
           </Link>
+          )}
+          {hasPermission(P.PROPERTIES.DEACTIVATE) && (
           <button
             onClick={handleToggleStatus}
             className={`rounded-lg px-4 py-2 text-sm font-medium shadow-sm transition-all duration-200 ${
@@ -142,6 +149,7 @@ export default function PropertyDetailPage() {
           >
             {property.status === "ACTIVE" ? "Deactivate" : "Activate"}
           </button>
+          )}
         </div>
       </div>
 

@@ -70,6 +70,7 @@ export default function TicketFormPage() {
   const [recurringDueDays, setRecurringDueDays] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+  const [assetSearch, setAssetSearch] = useState("");
 
   // Load properties and categories
   useEffect(() => {
@@ -125,21 +126,19 @@ export default function TicketFormPage() {
     });
   }, [propertyId]);
 
-  // Load assets when unit changes
+  // Load assets when property changes
   useEffect(() => {
-    if (!unitId || !propertyId) {
+    if (!propertyId) {
       setAssets([]);
       if (!isEdit) setSelectedAssetIds([]);
       return;
     }
     assetApi.listByProperty(propertyId).then((res) => {
-      const unitAssets = res.data.data.filter(
-        (a: AssetItem & { unitId: string }) =>
-          a.unitId === unitId && a.status === "ACTIVE"
+      setAssets(
+        res.data.data.filter((a: AssetItem) => a.status === "ACTIVE")
       );
-      setAssets(unitAssets);
     });
-  }, [unitId, propertyId]);
+  }, [propertyId]);
 
   const toggleAsset = (assetId: string) => {
     setSelectedAssetIds((prev) =>
@@ -282,30 +281,67 @@ export default function TicketFormPage() {
             </select>
           </div>
 
-          {/* Assets (optional, multi-select) */}
-          {assets.length > 0 && (
+          {/* Assets (optional, multi-select with search) */}
+          {propertyId && assets.length > 0 && (
             <div>
               <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Tag Assets <span className="text-gray-400">(optional)</span>
+                Tag Assets
+                {selectedAssetIds.length > 0 && (
+                  <span className="ml-2 inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
+                    {selectedAssetIds.length} selected
+                  </span>
+                )}
+                <span className="ml-1 text-gray-400">(optional)</span>
               </label>
-              <div className="max-h-40 space-y-1 overflow-y-auto rounded-lg ring-1 ring-gray-200 shadow-sm p-3">
-                {assets.map((asset) => (
-                  <label
-                    key={asset.id}
-                    className="flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-gray-50"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={selectedAssetIds.includes(asset.id)}
-                      onChange={() => toggleAsset(asset.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                    />
-                    <span className="font-mono text-xs text-primary-600">
-                      {asset.code}
-                    </span>
-                    <span>{asset.name}</span>
-                  </label>
-                ))}
+              <div className="rounded-lg ring-1 ring-gray-200 shadow-sm overflow-hidden">
+                <div className="border-b border-gray-200 px-3 py-2">
+                  <input
+                    type="text"
+                    value={assetSearch}
+                    onChange={(e) => setAssetSearch(e.target.value)}
+                    placeholder="Search assets by name or code..."
+                    className="w-full text-sm bg-transparent outline-none placeholder-gray-400"
+                  />
+                </div>
+                <div className="max-h-48 space-y-0.5 overflow-y-auto p-2">
+                  {(() => {
+                    const q = assetSearch.toLowerCase();
+                    const filtered = q
+                      ? assets.filter(
+                          (a) =>
+                            a.name.toLowerCase().includes(q) ||
+                            a.code.toLowerCase().includes(q)
+                        )
+                      : assets;
+                    return filtered.length === 0 ? (
+                      <p className="px-2 py-3 text-center text-[13px] text-gray-400">
+                        No assets found
+                      </p>
+                    ) : (
+                      filtered.map((asset) => (
+                        <label
+                          key={asset.id}
+                          className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                            selectedAssetIds.includes(asset.id)
+                              ? "bg-primary-50"
+                              : "hover:bg-gray-50"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={selectedAssetIds.includes(asset.id)}
+                            onChange={() => toggleAsset(asset.id)}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                          <span className="font-mono text-xs text-primary-600">
+                            {asset.code}
+                          </span>
+                          <span>{asset.name}</span>
+                        </label>
+                      ))
+                    );
+                  })()}
+                </div>
               </div>
             </div>
           )}
@@ -550,6 +586,22 @@ export default function TicketFormPage() {
               onChange={(e) => setImage(e.target.files?.[0] || null)}
               className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-600 hover:file:bg-primary-100"
             />
+            {image && (
+              <div className="mt-3">
+                <img
+                  src={URL.createObjectURL(image)}
+                  alt="Preview"
+                  className="max-h-48 rounded-lg object-cover ring-1 ring-gray-200"
+                />
+                <button
+                  type="button"
+                  onClick={() => setImage(null)}
+                  className="mt-1 text-xs text-red-500 hover:text-red-700"
+                >
+                  Remove
+                </button>
+              </div>
+            )}
           </div>
 
           {/* Actions */}

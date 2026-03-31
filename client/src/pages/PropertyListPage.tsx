@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { propertyApi, areaGroupApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { PERMISSIONS } from "../../../shared/permissions";
 import {
   Plus,
   Search,
@@ -36,6 +38,10 @@ interface AreaGroup {
 export default function PropertyListPage() {
   const navigate = useNavigate();
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const canEdit = hasPermission(PERMISSIONS.PROPERTIES.EDIT);
+  const canDeactivate = hasPermission(PERMISSIONS.PROPERTIES.DEACTIVATE);
+  const canCreate = hasPermission(PERMISSIONS.PROPERTIES.CREATE);
   const [properties, setProperties] = useState<Property[]>([]);
   const [areaGroups, setAreaGroups] = useState<AreaGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,6 +121,7 @@ export default function PropertyListPage() {
             {pagination.total} {pagination.total === 1 ? "property" : "properties"} total
           </p>
         </div>
+        {canCreate && (
         <Link
           to="/properties/new"
           className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
@@ -122,6 +129,7 @@ export default function PropertyListPage() {
           <Plus size={18} />
           Add Property
         </Link>
+        )}
       </div>
 
       {/* Filters */}
@@ -299,6 +307,7 @@ export default function PropertyListPage() {
                         >
                           <Eye size={16} />
                         </Link>
+                        {canEdit && (
                         <Link
                           to={`/properties/${p.id}/edit`}
                           className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
@@ -306,6 +315,8 @@ export default function PropertyListPage() {
                         >
                           <Pencil size={16} />
                         </Link>
+                        )}
+                        {canDeactivate && (
                         <button
                           onClick={() => handleToggleStatus(p)}
                           className={`rounded px-2 py-0.5 text-xs font-medium transition-colors duration-150 ${
@@ -316,6 +327,7 @@ export default function PropertyListPage() {
                         >
                           {p.status === "ACTIVE" ? "Deactivate" : "Activate"}
                         </button>
+                        )}
                       </div>
                     </td>
                   </tr>

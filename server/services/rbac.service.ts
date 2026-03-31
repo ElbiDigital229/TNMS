@@ -25,11 +25,16 @@ export const rbacService = {
   async getUserPropertyIds(userId: string): Promise<string[] | "all"> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isSuperAdmin: true, allProperties: true },
+      select: { isSuperAdmin: true, allProperties: true, reportsToId: true },
     });
 
     if (!user) return [];
     if (user.isSuperAdmin || user.allProperties) return "all";
+
+    // If user reports to someone, inherit manager's properties
+    if (user.reportsToId) {
+      return this.getUserPropertyIds(user.reportsToId);
+    }
 
     const assignments = await prisma.userPropertyAssignment.findMany({
       where: { userId },
@@ -57,6 +62,12 @@ export const rbacService = {
     }
 
     return result;
+  },
+
+  /** Check if a user has access to a specific property (respects inheritance) */
+  async userHasPropertyAccess(userId: string, propertyId: string): Promise<boolean> {
+    const propIds = await this.getUserPropertyIds(userId);
+    return propIds === "all" || propIds.includes(propertyId);
   },
 
   async canAssignTo(
@@ -110,27 +121,15 @@ export const rbacService = {
       return { allowed: false, reason: "Your role is not eligible for ticket assignment" };
     }
 
-    // 5. Check assignee is in assigner's subordinate chain
-    const subordinateIds = await this.getUserSubordinateIds(assignerId);
-    if (!subordinateIds.includes(assigneeId)) {
-      return { allowed: false, reason: "You can only assign to people in your reporting chain" };
+    // 5. Check assignee role level is at or below assigner's level
+    if (assignee.role.level < assigner.role.level) {
+      return { allowed: false, reason: "You cannot assign to someone above your role level" };
     }
 
-    // 6. Check level cap
-    if (
-      assigner.role.canAssignToMaxLevel !== null &&
-      assignee.role.level > assigner.role.canAssignToMaxLevel
-    ) {
-      return {
-        allowed: false,
-        reason: `Your role can only assign to level ${assigner.role.canAssignToMaxLevel} and above`,
-      };
-    }
-
-    // 7. Check assignee has access to the property
+    // 6. Check assignee has access to the property
     const assigneePropertyIds = await this.getUserPropertyIds(assigneeId);
     if (assigneePropertyIds !== "all" && !assigneePropertyIds.includes(propertyId)) {
-      return { allowed: false, reason: "Assignee is not assigned to this property" };
+      return { allowed: false, reason: "Assignee does not have access to this property" };
     }
 
     return { allowed: true };
@@ -144,64 +143,69 @@ export const rbacService = {
 
     if (!assigner) return [];
 
-    // Super admin can assign to anyone eligible on the property
+    // Build candidate list
+    let candidateIds: string[];
+
     if (assigner.isSuperAdmin) {
-      const users = await prisma.user.findMany({
+      // Super admin: all active eligible users
+      const allUsers = await prisma.user.findMany({
         where: {
           status: "ACTIVE",
           role: {
             permissions: {
-              some: {
-                permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE },
-              },
+              some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
             },
           },
-          OR: [
-            { allProperties: true },
-            { propertyAssignments: { some: { propertyId } } },
-          ],
         },
-        include: { role: { select: { id: true, name: true, level: true } } },
-        orderBy: [{ role: { level: "asc" } }, { fullName: "asc" }],
+        select: { id: true },
       });
-      return users.map((u) => ({
-        id: u.id,
-        username: u.username,
-        fullName: u.fullName,
-        role: u.role,
-      }));
-    }
-
-    // Get subordinates
-    const subordinateIds = await this.getUserSubordinateIds(assignerId);
-
-    // Include self if assignee-eligible
-    const assignerPerms = await this.getUserPermissions(assignerId);
-    const candidateIds = [...subordinateIds];
-    if (assignerPerms.includes(PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE)) {
-      candidateIds.push(assignerId);
+      candidateIds = allUsers.map((u) => u.id);
+    } else {
+      // Get all eligible users at same or lower level (FM, Supervisor, Technician etc.)
+      const allEligible = await prisma.user.findMany({
+        where: {
+          status: "ACTIVE",
+          role: {
+            level: { gte: assigner.role.level },
+            permissions: {
+              some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
+            },
+          },
+        },
+        select: { id: true },
+      });
+      candidateIds = allEligible.map((u) => u.id);
+      // Also include self if eligible
+      const assignerPerms = await this.getUserPermissions(assignerId);
+      if (assignerPerms.includes(PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE) && !candidateIds.includes(assignerId)) {
+        candidateIds.push(assignerId);
+      }
     }
 
     if (candidateIds.length === 0) return [];
 
+    // Filter candidates by property access (respects inheritance)
+    const withAccess: string[] = [];
+    for (const cid of candidateIds) {
+      if (await this.userHasPropertyAccess(cid, propertyId)) {
+        withAccess.push(cid);
+      }
+    }
+
+    if (withAccess.length === 0) return [];
+
     const users = await prisma.user.findMany({
       where: {
-        id: { in: candidateIds },
+        id: { in: withAccess },
         status: "ACTIVE",
         role: {
-          level: assigner.role.canAssignToMaxLevel !== null
+          level: !assigner.isSuperAdmin && assigner.role.canAssignToMaxLevel !== null
             ? { lte: assigner.role.canAssignToMaxLevel }
             : undefined,
           permissions: {
-            some: {
-              permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE },
-            },
+            some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
           },
         },
-        OR: [
-          { allProperties: true },
-          { propertyAssignments: { some: { propertyId } } },
-        ],
       },
       include: { role: { select: { id: true, name: true, level: true } } },
       orderBy: [{ role: { level: "asc" } }, { fullName: "asc" }],

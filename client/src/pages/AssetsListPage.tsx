@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { assetApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { PERMISSIONS } from "../../../shared/permissions";
 import { CONDITION_LABELS } from "../../../shared/types";
 import {
   Search,
@@ -24,6 +26,7 @@ interface Asset {
 
 export default function AssetsListPage() {
   const toast = useToast();
+  const { hasPermission } = useAuth();
   const [assets, setAssets] = useState<Asset[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchInput, setSearchInput] = useState("");
@@ -201,10 +204,12 @@ export default function AssetsListPage() {
                       </span>
                     </td>
                     <td className="px-5 py-3.5 text-gray-600">
-                      {asset.unit.name}
-                      <span className="ml-1 text-xs text-gray-400">
-                        ({asset.unit.code})
-                      </span>
+                      {asset.unit?.name || "—"}
+                      {asset.unit?.code && (
+                        <span className="ml-1 text-xs text-gray-400">
+                          ({asset.unit.code})
+                        </span>
+                      )}
                     </td>
                     <td className="px-5 py-3.5">
                       <span
@@ -241,18 +246,20 @@ export default function AssetsListPage() {
                         >
                           <Eye size={16} />
                         </Link>
-                        <button
-                          onClick={() => handleToggleStatus(asset)}
-                          className={`rounded px-2 py-0.5 text-xs font-medium ${
-                            asset.status === "ACTIVE"
-                              ? "text-red-600 hover:bg-red-50"
-                              : "text-green-600 hover:bg-green-50"
-                          }`}
-                        >
-                          {asset.status === "ACTIVE"
-                            ? "Deactivate"
-                            : "Activate"}
-                        </button>
+                        {hasPermission(PERMISSIONS.ASSETS.DEACTIVATE) && (
+                          <button
+                            onClick={() => handleToggleStatus(asset)}
+                            className={`rounded px-2 py-0.5 text-xs font-medium ${
+                              asset.status === "ACTIVE"
+                                ? "text-red-600 hover:bg-red-50"
+                                : "text-green-600 hover:bg-green-50"
+                            }`}
+                          >
+                            {asset.status === "ACTIVE"
+                              ? "Deactivate"
+                              : "Activate"}
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

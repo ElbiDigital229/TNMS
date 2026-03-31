@@ -3,6 +3,8 @@ import { floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import { Plus, Pencil, Layers } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { PERMISSIONS } from "../../../../shared/permissions";
 
 interface Floor {
   id: string;
@@ -17,6 +19,8 @@ interface FloorsTabProps {
 
 export default function FloorsTab({ propertyId, onUpdate }: FloorsTabProps) {
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const P = PERMISSIONS;
   const [floors, setFloors] = useState<Floor[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -95,13 +99,15 @@ export default function FloorsTab({ propertyId, onUpdate }: FloorsTabProps) {
   return (
     <div>
       <div className="mb-4 flex justify-end">
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-        >
-          <Plus size={16} />
-          Add Floor
-        </button>
+        {hasPermission(P.FLOORS.CREATE) && (
+          <button
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+          >
+            <Plus size={16} />
+            Add Floor
+          </button>
+        )}
       </div>
 
       {floors.length === 0 ? (
@@ -130,15 +136,19 @@ export default function FloorsTab({ propertyId, onUpdate }: FloorsTabProps) {
                 </td>
                 <td className="px-5 py-3.5">
                   <div className="flex items-center gap-2">
-                    <button onClick={() => openEdit(floor)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
-                      <Pencil size={16} />
-                    </button>
-                    <button
-                      onClick={() => handleToggleStatus(floor)}
-                      className={`rounded px-2 py-0.5 text-xs font-medium ${floor.status === "ACTIVE" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
-                    >
-                      {floor.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                    </button>
+                    {hasPermission(P.FLOORS.EDIT) && (
+                      <button onClick={() => openEdit(floor)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                        <Pencil size={16} />
+                      </button>
+                    )}
+                    {hasPermission(P.FLOORS.DEACTIVATE) && (
+                      <button
+                        onClick={() => handleToggleStatus(floor)}
+                        className={`rounded px-2 py-0.5 text-xs font-medium ${floor.status === "ACTIVE" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
+                      >
+                        {floor.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>

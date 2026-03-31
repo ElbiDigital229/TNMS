@@ -106,20 +106,6 @@ export async function seed() {
       ],
     },
     {
-      // Line Manager — tickets + view-only access to property details
-      name: "Line Manager",
-      level: 4,
-      canAssignToMaxLevel: 6,
-      permissions: [
-        P.PROPERTIES.VIEW,
-        P.FLOORS.VIEW,
-        P.UNITS.VIEW,
-        P.ASSETS.VIEW,
-        P.TICKETS.VIEW_ALL, P.TICKETS.ASSIGN,
-        ...TICKETS_ONLY_BASE,
-      ],
-    },
-    {
       // Supervisor — tickets only: see line manager's tickets, assign to technicians
       name: "Supervisor",
       level: 5,
@@ -147,6 +133,10 @@ export async function seed() {
     });
 
     if (existingRole) {
+      // Role already exists — don't overwrite permissions (preserves manual changes)
+      console.log(`  Skipped role: ${roleDef.name} (already exists)`);
+      continue;
+      /* OLD CODE — was wiping manual permission changes on every restart:
       await prisma.role.update({
         where: { id: existingRole.id },
         data: {
@@ -156,19 +146,7 @@ export async function seed() {
         },
       });
 
-      // Sync permissions
-      await prisma.rolePermission.deleteMany({
-        where: { roleId: existingRole.id },
-      });
-
-      if (roleDef.permissions.length > 0) {
-        await prisma.rolePermission.createMany({
-          data: getPermIds(roleDef.permissions).map((permId) => ({
-            roleId: existingRole.id,
-            permissionId: permId,
-          })),
-        });
-      }
+      */
     } else {
       const permIds = getPermIds(roleDef.permissions);
       await prisma.role.create({
@@ -198,7 +176,7 @@ export async function seed() {
 
   // ─── 3. Fetch roles for user assignment ─────────────────
   const roleMap: Record<string, string> = {};
-  for (const name of ["Super Admin", "CEO", "OPS Lead", "Community Executive", "Line Manager", "Supervisor", "Technician"]) {
+  for (const name of ["Super Admin", "CEO", "OPS Lead", "Community Executive", "Facility Manager", "Supervisor", "Technician"]) {
     const role = await prisma.role.findUnique({ where: { name } });
     if (role) roleMap[name] = role.id;
   }
@@ -479,25 +457,25 @@ export async function seed() {
     reportsToUsername: "opslead",
   });
 
-  // Line Manager 1 — under CE Ali, same properties
+  // Facility Manager 1 — under CE Ali, same properties
   await upsertUser({
     username: "lm_hassan",
     fullName: "Hassan Javed",
     email: "hassan@propmgmt.com",
     phone: "0304-5678901",
-    roleName: "Line Manager",
+    roleName: "Facility Manager",
     allProperties: false,
     propertyCodeAssignments: ["PROP-001", "PROP-003"],
     reportsToUsername: "ce_ali",
   });
 
-  // Line Manager 2 — under CE Sara, Blue Area Tower
+  // Facility Manager 2 — under CE Sara, Blue Area Tower
   await upsertUser({
     username: "lm_ayesha",
     fullName: "Ayesha Tariq",
     email: "ayesha@propmgmt.com",
     phone: "0305-6789012",
-    roleName: "Line Manager",
+    roleName: "Facility Manager",
     allProperties: false,
     propertyCodeAssignments: ["PROP-002"],
     reportsToUsername: "ce_sara",

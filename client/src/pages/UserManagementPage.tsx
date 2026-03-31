@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
-import { userApi, roleApi, propertyApi } from "../lib/api";
+import { userApi, roleApi, propertyApi, areaGroupApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { PERMISSIONS } from "../../../shared/permissions";
 import Modal from "../components/ui/Modal";
 import BulkImportModal from "../components/ui/BulkImportModal";
 import { Users, Plus, Edit2, Power, Search, Shield, KeyRound, Upload } from "lucide-react";
@@ -10,9 +12,17 @@ interface Role {
   name: string;
 }
 
+interface AreaGroup {
+  id: string;
+  city: string;
+  groupName: string;
+}
+
 interface Property {
   id: string;
   name: string;
+  areaGroupId?: string;
+  areaGroup?: AreaGroup;
 }
 
 interface User {
@@ -32,6 +42,8 @@ interface User {
   status: string;
 }
 
+type AccessMode = "all" | "specific" | string; // string for area group IDs
+
 const emptyForm = {
   username: "",
   password: "",
@@ -42,13 +54,16 @@ const emptyForm = {
   reportsToId: "",
   allProperties: true,
   propertyIds: [] as string[],
+  accessMode: "all" as AccessMode,
 };
 
 export default function UserManagementPage() {
   const toast = useToast();
+  const { hasPermission } = useAuth();
   const [users, setUsers] = useState<User[]>([]);
   const [roles, setRoles] = useState<Role[]>([]);
   const [properties, setProperties] = useState<Property[]>([]);
+  const [areaGroups, setAreaGroups] = useState<AreaGroup[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -68,7 +83,7 @@ export default function UserManagementPage() {
 
   const fetchUsers = () => {
     userApi
-      .list()
+      .list({ limit: 100 })
       .then((res) => setUsers(res.data.data.data))
       .catch(() => toast.error("Failed to load users"))
       .finally(() => setLoading(false));
@@ -88,10 +103,18 @@ export default function UserManagementPage() {
       .catch(() => toast.error("Failed to load properties"));
   };
 
+  const fetchAreaGroups = () => {
+    areaGroupApi
+      .list()
+      .then((res) => setAreaGroups(res.data.data))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchRoles();
     fetchProperties();
+    fetchAreaGroups();
   }, []);
 
   const filteredUsers = users.filter((u) => {
@@ -113,18 +136,40 @@ export default function UserManagementPage() {
     setModalOpen(true);
   };
 
+  const deriveAccessMode = (user: User): AccessMode => {
+    if (user.allProperties) return "all";
+    const userPropIds = new Set(user.properties?.map((p) => p.id) || []);
+    if (userPropIds.size === 0) return "specific";
+    // Check if user's properties exactly match an area group
+    for (const ag of areaGroups) {
+      const groupPropIds = properties
+        .filter((p) => p.areaGroupId === ag.id)
+        .map((p) => p.id);
+      if (
+        groupPropIds.length > 0 &&
+        groupPropIds.length === userPropIds.size &&
+        groupPropIds.every((id) => userPropIds.has(id))
+      ) {
+        return ag.id;
+      }
+    }
+    return "specific";
+  };
+
   const openEdit = (user: User) => {
     setEditing(user);
+    const mode = deriveAccessMode(user);
     setForm({
       username: user.username,
       password: "",
       fullName: user.fullName || "",
-      email: user.email || "",
+      email: user.email || user.username || "",
       phone: user.phone || "",
       roleId: user.role?.id || user.roleId || "",
       reportsToId: user.reportsToId || user.reportsTo?.id || "",
       allProperties: user.allProperties ?? true,
       propertyIds: user.properties?.map((p) => p.id) || [],
+      accessMode: mode,
     });
     const managerId = user.reportsToId || user.reportsTo?.id;
     if (managerId) {
@@ -142,8 +187,8 @@ export default function UserManagementPage() {
   };
 
   const handleSave = async () => {
-    if (!form.username.trim()) {
-      toast.error("Username is required");
+    if (!form.email.trim()) {
+      toast.error("Email is required");
       return;
     }
     if (!editing && !form.password.trim()) {
@@ -151,8 +196,30 @@ export default function UserManagementPage() {
       return;
     }
 
+    const selectedRole = roles.find((r) => r.id === form.roleId);
+    const requiresManager = selectedRole && ["Supervisor", "Technician"].includes(selectedRole.name);
+    if (requiresManager && !form.reportsToId) {
+      toast.error(`${selectedRole.name} must have a reporting manager`);
+      return;
+    }
+
     setSaving(true);
     try {
+      // Derive allProperties and propertyIds from accessMode
+      let derivedAllProperties = false;
+      let derivedPropertyIds: string[] = [];
+
+      if (form.accessMode === "all") {
+        derivedAllProperties = true;
+      } else if (form.accessMode === "specific") {
+        derivedPropertyIds = form.propertyIds;
+      } else {
+        // Area group ID — select all properties in that group
+        derivedPropertyIds = properties
+          .filter((p) => p.areaGroupId === form.accessMode)
+          .map((p) => p.id);
+      }
+
       const payload: Record<string, unknown> = {
         username: form.username,
         fullName: form.fullName,
@@ -160,14 +227,14 @@ export default function UserManagementPage() {
         phone: form.phone,
         roleId: form.roleId || undefined,
         reportsToId: form.reportsToId || null,
-        allProperties: form.allProperties,
-        propertyIds: form.allProperties ? [] : form.propertyIds,
+        allProperties: derivedAllProperties,
+        propertyIds: derivedAllProperties ? [] : derivedPropertyIds,
       };
 
       if (editing) {
         await userApi.update(editing.id, payload);
-        if (!form.allProperties) {
-          await userApi.updateProperties(editing.id, form.propertyIds);
+        if (!derivedAllProperties) {
+          await userApi.updateProperties(editing.id, derivedPropertyIds);
         }
         toast.success("User updated");
       } else {
@@ -289,20 +356,24 @@ export default function UserManagementPage() {
           </p>
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setBulkOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-          >
-            <Upload size={18} />
-            Bulk Import
-          </button>
-          <button
-            onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-          >
-            <Plus size={18} />
-            Add User
-          </button>
+          {hasPermission(PERMISSIONS.USERS.IMPORT) && (
+            <button
+              onClick={() => setBulkOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            >
+              <Upload size={18} />
+              Bulk Import
+            </button>
+          )}
+          {hasPermission(PERMISSIONS.USERS.CREATE) && (
+            <button
+              onClick={openAdd}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+            >
+              <Plus size={18} />
+              Add User
+            </button>
+          )}
         </div>
       </div>
 
@@ -366,9 +437,6 @@ export default function UserManagementPage() {
                     Full Name
                   </th>
                   <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Username
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
                     Email
                   </th>
                   <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
@@ -398,10 +466,7 @@ export default function UserManagementPage() {
                       {user.fullName || "-"}
                     </td>
                     <td className="px-5 py-3.5 text-gray-600">
-                      {user.username}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {user.email || "-"}
+                      {user.email || user.username}
                     </td>
                     <td className="px-5 py-3.5">
                       {user.role ? (
@@ -439,14 +504,16 @@ export default function UserManagementPage() {
                     <td className="px-5 py-3.5">
                       {!user.isSuperAdmin && (
                       <div className="flex items-center gap-1">
-                        <button
-                          onClick={() => openEdit(user)}
-                          className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                          title="Edit"
-                        >
-                          <Edit2 size={16} />
-                        </button>
-                        {user.status === "ACTIVE" && (
+                        {hasPermission(PERMISSIONS.USERS.EDIT) && (
+                          <button
+                            onClick={() => openEdit(user)}
+                            className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            title="Edit"
+                          >
+                            <Edit2 size={16} />
+                          </button>
+                        )}
+                        {hasPermission(PERMISSIONS.USERS.DEACTIVATE) && user.status === "ACTIVE" && (
                           <>
                             <button
                               onClick={() => handleBlock(user)}
@@ -464,7 +531,7 @@ export default function UserManagementPage() {
                             </button>
                           </>
                         )}
-                        {(user.status === "INACTIVE" || user.status === "BLOCKED") && (
+                        {hasPermission(PERMISSIONS.USERS.DEACTIVATE) && (user.status === "INACTIVE" || user.status === "BLOCKED") && (
                           <button
                             onClick={() => handleActivate(user)}
                             className="rounded px-2 py-0.5 text-xs font-medium text-green-600 hover:bg-green-50"
@@ -491,20 +558,37 @@ export default function UserManagementPage() {
         title={editing ? "Edit User" : "Add User"}
       >
         <div className="space-y-4">
-          {/* Username */}
+          {/* Full Name */}
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Username <span className="text-red-500">*</span>
+              Full Name
             </label>
             <input
               type="text"
-              value={form.username}
-              onChange={(e) => updateForm("username", e.target.value)}
+              value={form.fullName}
+              onChange={(e) => updateForm("fullName", e.target.value)}
+              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              placeholder="Enter full name"
+            />
+          </div>
+
+          {/* Email (used as username) */}
+          <div>
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              Email <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              value={form.email}
+              onChange={(e) => {
+                const val = e.target.value;
+                setForm((prev) => ({ ...prev, email: val, username: val }));
+              }}
               readOnly={!!editing}
               className={`w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 ${
                 editing ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""
               }`}
-              placeholder="Enter username"
+              placeholder="Enter email address"
             />
           </div>
 
@@ -542,34 +626,6 @@ export default function UserManagementPage() {
             </div>
           )}
 
-          {/* Full Name */}
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Full Name
-            </label>
-            <input
-              type="text"
-              value={form.fullName}
-              onChange={(e) => updateForm("fullName", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-              placeholder="Enter full name"
-            />
-          </div>
-
-          {/* Email */}
-          <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Email
-            </label>
-            <input
-              type="text"
-              value={form.email}
-              onChange={(e) => updateForm("email", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-              placeholder="Enter email address"
-            />
-          </div>
-
           {/* Phone */}
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
@@ -591,7 +647,16 @@ export default function UserManagementPage() {
             </label>
             <select
               value={form.roleId}
-              onChange={(e) => updateForm("roleId", e.target.value)}
+              onChange={(e) => {
+                const newRoleId = e.target.value;
+                const newRole = roles.find((r) => r.id === newRoleId);
+                const needsManager = newRole && ["Supervisor", "Technician"].includes(newRole.name);
+                setForm((prev) => ({
+                  ...prev,
+                  roleId: newRoleId,
+                  reportsToId: needsManager ? prev.reportsToId : "",
+                }));
+              }}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
             >
               <option value="">Select a role</option>
@@ -603,52 +668,119 @@ export default function UserManagementPage() {
             </select>
           </div>
 
-          {/* Reports To */}
+          {/* Reports To — only for Supervisor/Technician */}
+          {(() => {
+            const sel = roles.find((r) => r.id === form.roleId);
+            return sel && ["Supervisor", "Technician"].includes(sel.name);
+          })() && (
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Reports To
+              Reports To <span className="text-red-500">*</span>
             </label>
             <select
               value={form.reportsToId}
               onChange={(e) => updateForm("reportsToId", e.target.value)}
               className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
             >
-              <option value="">None</option>
+              <option value="">Select a Facility Manager</option>
               {users
-                .filter((u) => !editing || u.id !== editing.id)
+                .filter((u) => {
+                  if (editing && u.id === editing.id) return false;
+                  return u.role?.name === "Facility Manager";
+                })
                 .map((u) => (
                   <option key={u.id} value={u.id}>
                     {u.fullName || u.username}
-                    {u.role ? ` (${u.role.name})` : ""}
                   </option>
                 ))}
             </select>
           </div>
+          )}
 
-          {/* All Properties Toggle */}
+          {/* Property Access — inherited if reporting to someone or role requires manager */}
+          {(() => {
+            const sel = roles.find((r) => r.id === form.roleId);
+            const mustInherit = sel && ["Supervisor", "Technician"].includes(sel.name);
+            return mustInherit || form.reportsToId;
+          })() ? (
+            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
+              <p className="text-sm text-blue-700 font-medium">Property access inherited from manager</p>
+              <p className="text-xs text-blue-600 mt-1">This user will automatically have access to the same properties as their reporting manager.</p>
+            </div>
+          ) : (<>
           <div>
-            <label className="flex items-center gap-2 text-[13px] font-medium text-gray-700 cursor-pointer">
-              <input
-                type="checkbox"
-                checked={form.allProperties}
-                onChange={(e) => updateForm("allProperties", e.target.checked)}
-                disabled={managerPropertyIds !== null && managerPropertyIds !== "all"}
-                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
-              />
-              Access to all properties
+            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              Property Access
             </label>
             {managerPropertyIds !== null && managerPropertyIds !== "all" && (
-              <p className="mt-1 text-xs text-amber-600">
+              <p className="mb-2 text-xs text-amber-600">
                 Manager has access to specific properties only — this user inherits that scope.
               </p>
             )}
+            <div className="space-y-2 rounded-lg border border-gray-300 p-3">
+              {/* All properties */}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="accessMode"
+                  checked={form.accessMode === "all"}
+                  onChange={() => {
+                    setForm((prev) => ({ ...prev, accessMode: "all", allProperties: true, propertyIds: [] }));
+                  }}
+                  disabled={managerPropertyIds !== null && managerPropertyIds !== "all"}
+                  className="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                />
+                <span className="font-medium text-gray-700">Access to all properties</span>
+              </label>
+
+              {/* Area group options */}
+              {areaGroups.map((ag) => {
+                const groupProps = properties.filter((p) => p.areaGroupId === ag.id);
+                if (groupProps.length === 0) return null;
+                // If manager has limited access, only show groups where manager has at least one property
+                if (managerPropertyIds && managerPropertyIds !== "all") {
+                  const hasAccess = groupProps.some((p) => managerPropertyIds.includes(p.id));
+                  if (!hasAccess) return null;
+                }
+                return (
+                  <label key={ag.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                    <input
+                      type="radio"
+                      name="accessMode"
+                      checked={form.accessMode === ag.id}
+                      onChange={() => {
+                        const ids = groupProps.map((p) => p.id);
+                        setForm((prev) => ({ ...prev, accessMode: ag.id, allProperties: false, propertyIds: ids }));
+                      }}
+                      className="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500"
+                    />
+                    <span className="font-medium text-gray-700">Access to {ag.groupName} only</span>
+                    <span className="text-xs text-gray-400">({groupProps.map((p) => p.name).join(", ")})</span>
+                  </label>
+                );
+              })}
+
+              {/* Specific properties */}
+              <label className="flex items-center gap-2 text-sm cursor-pointer">
+                <input
+                  type="radio"
+                  name="accessMode"
+                  checked={form.accessMode === "specific"}
+                  onChange={() => {
+                    setForm((prev) => ({ ...prev, accessMode: "specific", allProperties: false }));
+                  }}
+                  className="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+                <span className="font-medium text-gray-700">Access to specific properties</span>
+              </label>
+            </div>
           </div>
 
-          {/* Property Multi-select */}
-          {!form.allProperties && (
+          {/* Property Multi-select — only when "specific" is chosen */}
+          {form.accessMode === "specific" && (
             <div>
               <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Assigned Properties
+                Select Properties
               </label>
               <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2 space-y-1">
                 {(() => {
@@ -674,7 +806,10 @@ export default function UserManagementPage() {
                           onChange={() => toggleProperty(p.id)}
                           className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
-                        {p.name}
+                        <span>{p.name}</span>
+                        {p.areaGroup && (
+                          <span className="text-xs text-gray-400">({p.areaGroup.groupName})</span>
+                        )}
                       </label>
                     ))
                   );
@@ -682,6 +817,7 @@ export default function UserManagementPage() {
               </div>
             </div>
           )}
+          </>)}
 
           {/* Actions */}
           <div className="flex justify-end gap-3 pt-2">

@@ -1,5 +1,6 @@
 import { prisma } from "../config/db.js";
 import { notificationService } from "../modules/notification/notification.service.js";
+import { rbacService } from "./rbac.service.js";
 import type { NotificationType } from "@prisma/client";
 
 // Helper: get display name
@@ -12,40 +13,30 @@ async function getUserName(userId: string): Promise<string> {
 }
 
 // Helper: get users with tickets.view_all for a property (+ super admins)
+// Respects inherited property access via reporting chain
 async function getPropertyTicketViewers(
   propertyId: string,
   excludeUserId?: string
 ): Promise<string[]> {
-  const [viewers, superAdmins] = await Promise.all([
-    prisma.user.findMany({
-      where: {
-        status: "ACTIVE",
-        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
-        role: {
-          permissions: { some: { permission: { key: "tickets.view_all" } } },
-        },
-        OR: [
-          { allProperties: true },
-          { propertyAssignments: { some: { propertyId } } },
-        ],
-      },
-      select: { id: true },
-    }),
-    prisma.user.findMany({
-      where: {
-        status: "ACTIVE",
-        isSuperAdmin: true,
-        ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
-      },
-      select: { id: true },
-    }),
-  ]);
+  const candidates = await prisma.user.findMany({
+    where: {
+      status: "ACTIVE",
+      ...(excludeUserId ? { id: { not: excludeUserId } } : {}),
+      OR: [
+        { isSuperAdmin: true },
+        { role: { permissions: { some: { permission: { key: "tickets.view_all" } } } } },
+      ],
+    },
+    select: { id: true, isSuperAdmin: true },
+  });
 
-  const ids = new Set([
-    ...viewers.map((u) => u.id),
-    ...superAdmins.map((u) => u.id),
-  ]);
-  return [...ids];
+  const ids: string[] = [];
+  for (const c of candidates) {
+    if (c.isSuperAdmin || await rbacService.userHasPropertyAccess(c.id, propertyId)) {
+      ids.push(c.id);
+    }
+  }
+  return ids;
 }
 
 /**

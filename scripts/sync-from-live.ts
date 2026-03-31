@@ -42,7 +42,7 @@ async function login(): Promise<string> {
   });
   if (!res.ok) throw new Error(`Login failed: ${res.status}`);
   const data = await res.json();
-  return data.token;
+  return data.data?.token ?? data.token;
 }
 
 async function main() {
@@ -128,7 +128,7 @@ async function main() {
 
   // ── 4. Seed permissions (from shared constants) ──
   console.log("[5/8] Seeding permissions...");
-  const { PERMISSION_DEFINITIONS } = await import("../../shared/permissions.js");
+  const { PERMISSION_DEFINITIONS } = await import("../shared/permissions.js");
   for (const perm of PERMISSION_DEFINITIONS) {
     await prisma.permission.create({
       data: { key: perm.key, module: perm.module, description: perm.description },
@@ -143,7 +143,7 @@ async function main() {
 
   for (const ag of areaGroups) {
     await prisma.areaGroup.create({
-      data: { id: ag.id, city: ag.city, groupName: ag.groupName, status: ag.status || "ACTIVE" },
+      data: { id: ag.id, city: ag.city, groupName: ag.groupName },
     });
   }
 
@@ -213,9 +213,10 @@ async function main() {
       data: {
         id: unit.id,
         name: unit.name,
+        code: unit.code || unit.name,
         floorId: unit.floorId,
         propertyId: unit.propertyId,
-        type: unit.type || "OFFICE",
+        unitType: unit.type || unit.unitType || null,
         status: unit.status || "ACTIVE",
       },
     });

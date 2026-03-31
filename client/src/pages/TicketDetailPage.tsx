@@ -24,7 +24,6 @@ import {
   Activity,
   Send,
   CheckCircle2,
-  PlayCircle,
   Inbox,
   ListChecks,
   UserCircle,
@@ -45,7 +44,7 @@ export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
   const toast = useToast();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [ticket, setTicket] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState("");
@@ -57,6 +56,7 @@ export default function TicketDetailPage() {
   const [assignableUsers, setAssignableUsers] = useState<any[]>([]);
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [assigning, setAssigning] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
 
   const fetchTicket = () => {
     ticketApi
@@ -94,6 +94,23 @@ export default function TicketDetailPage() {
       setSendingComment(false);
     }
   };
+
+  const handleImageUpload = async (file: File) => {
+    setUploadingImage(true);
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      await ticketApi.update(id!, formData);
+      toast.success("Image uploaded");
+      fetchTicket();
+    } catch {
+      toast.error("Failed to upload image");
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const isAssignee = user?.id === ticket?.assignedTo?.id;
 
   const openAssignModal = async () => {
     try {
@@ -203,13 +220,15 @@ export default function TicketDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Link
-            to={`/tickets/${ticket.id}/edit`}
-            className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
-          >
-            <Pencil size={16} />
-            Edit
-          </Link>
+          {hasPermission(PERMISSIONS.TICKETS.EDIT) && (
+            <Link
+              to={`/tickets/${ticket.id}/edit`}
+              className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+            >
+              <Pencil size={16} />
+              Edit
+            </Link>
+          )}
           {hasPermission(PERMISSIONS.TICKETS.ASSIGN) && (
             <button
               onClick={openAssignModal}
@@ -219,16 +238,7 @@ export default function TicketDetailPage() {
               {ticket.assignedTo ? "Reassign" : "Assign"}
             </button>
           )}
-          {ticket.status === "OPEN" && (
-            <button
-              onClick={() => handleStatusChange("IN_PROGRESS")}
-              className="inline-flex items-center gap-2 rounded-lg bg-yellow-50 px-4 py-2 text-sm font-medium text-yellow-700 hover:bg-yellow-100 shadow-sm transition-all duration-200"
-            >
-              <PlayCircle size={16} />
-              Start
-            </button>
-          )}
-          {ticket.status !== "COMPLETED" && (
+          {hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS) && ticket.status !== "COMPLETED" && (
             <button
               onClick={() => handleStatusChange("COMPLETED")}
               className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 shadow-sm transition-all duration-200"
@@ -237,7 +247,7 @@ export default function TicketDetailPage() {
               Complete
             </button>
           )}
-          {ticket.status === "COMPLETED" && (
+          {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
             <button
               onClick={() => handleStatusChange("OPEN")}
               className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 shadow-sm transition-all duration-200"
@@ -263,18 +273,38 @@ export default function TicketDetailPage() {
           </div>
 
           {/* Image */}
-          {ticket.imagePath && (
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-              <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
-                Image
-              </h3>
+          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+            <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
+              Image
+            </h3>
+            {ticket.imagePath ? (
               <img
                 src={`/${ticket.imagePath}`}
                 alt="Ticket"
                 className="w-full rounded-lg object-cover"
               />
-            </div>
-          )}
+            ) : (
+              <p className="text-sm text-gray-400">No image attached</p>
+            )}
+            {isAssignee && (
+              <div className="mt-3">
+                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 transition-colors">
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                  {uploadingImage ? "Uploading..." : ticket.imagePath ? "Replace Image" : "Upload Image"}
+                </label>
+              </div>
+            )}
+          </div>
 
           {/* Comments & Activity Tabs */}
           <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
@@ -312,28 +342,30 @@ export default function TicketDetailPage() {
               {activeTab === "comments" && (
                 <div>
                   {/* Add comment */}
-                  <div className="mb-4 flex gap-2">
-                    <input
-                      type="text"
-                      value={comment}
-                      onChange={(e) => setComment(e.target.value)}
-                      placeholder="Add a comment..."
-                      className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" && !e.shiftKey) {
-                          e.preventDefault();
-                          handleAddComment();
-                        }
-                      }}
-                    />
-                    <button
-                      onClick={handleAddComment}
-                      disabled={sendingComment || !comment.trim()}
-                      className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-all duration-200"
-                    >
-                      <Send size={14} />
-                    </button>
-                  </div>
+                  {hasPermission(PERMISSIONS.TICKETS.COMMENT) && (
+                    <div className="mb-4 flex gap-2">
+                      <input
+                        type="text"
+                        value={comment}
+                        onChange={(e) => setComment(e.target.value)}
+                        placeholder="Add a comment..."
+                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
+                            handleAddComment();
+                          }
+                        }}
+                      />
+                      <button
+                        onClick={handleAddComment}
+                        disabled={sendingComment || !comment.trim()}
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-all duration-200"
+                      >
+                        <Send size={14} />
+                      </button>
+                    </div>
+                  )}
 
                   {/* Comments list */}
                   {ticket.comments?.length === 0 ? (

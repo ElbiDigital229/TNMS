@@ -25,8 +25,22 @@ import ReportBuilderPage from "./pages/ReportBuilderPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { PERMISSIONS } from "../../shared/permissions";
+import { useAuth } from "./contexts/AuthContext";
 
 const P = PERMISSIONS;
+
+function SmartRedirect() {
+  const { hasPermission, hasAnyPermission } = useAuth();
+
+  // Same order as sidebar
+  if (hasPermission(P.DASHBOARD.VIEW)) return <DashboardPage />;
+  if (hasAnyPermission(P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED)) return <Navigate to="/tickets" replace />;
+  if (hasPermission(P.PROPERTIES.VIEW)) return <Navigate to="/properties" replace />;
+  if (hasPermission(P.ASSETS.VIEW)) return <Navigate to="/assets" replace />;
+  if (hasPermission(P.TODOS.ACCESS)) return <Navigate to="/todos" replace />;
+  if (hasPermission(P.REPORTS.VIEW)) return <Navigate to="/reports" replace />;
+  return <Navigate to="/notifications" replace />;
+}
 
 export default function App() {
   return (
@@ -38,7 +52,7 @@ export default function App() {
 
           <Route element={<ProtectedRoute />}>
             <Route element={<DashboardLayout />}>
-              <Route path="/" element={<RequirePermission permission={P.DASHBOARD.VIEW}><DashboardPage /></RequirePermission>} />
+              <Route path="/" element={<SmartRedirect />} />
               <Route path="/properties" element={<RequirePermission permission={P.PROPERTIES.VIEW}><PropertyListPage /></RequirePermission>} />
               <Route path="/properties/new" element={<RequirePermission permission={P.PROPERTIES.CREATE}><PropertyFormPage /></RequirePermission>} />
               <Route path="/properties/:id" element={<RequirePermission permission={P.PROPERTIES.VIEW}><PropertyDetailPage /></RequirePermission>} />

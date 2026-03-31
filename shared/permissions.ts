@@ -39,6 +39,7 @@ export const PERMISSIONS = {
     ASSIGNEE_ELIGIBLE: "tickets.assignee_eligible",
     COMMENT: "tickets.comment",
     EXPORT: "tickets.export",
+    REOPEN: "tickets.reopen",
   },
   TODOS: {
     ACCESS: "todos.access",
@@ -118,6 +119,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE, module: "tickets", description: "Can be assigned tickets" },
   { key: PERMISSIONS.TICKETS.COMMENT, module: "tickets", description: "Add comments to tickets" },
   { key: PERMISSIONS.TICKETS.EXPORT, module: "tickets", description: "Export ticket data" },
+  { key: PERMISSIONS.TICKETS.REOPEN, module: "tickets", description: "Reopen completed tickets" },
   // Todos
   { key: PERMISSIONS.TODOS.ACCESS, module: "todos", description: "Access to-do list feature" },
   // Dashboard

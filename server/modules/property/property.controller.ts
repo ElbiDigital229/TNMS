@@ -34,6 +34,10 @@ export const propertyController = {
       const { page, limit, search, city, type, status, areaGroupId } =
         req.query;
 
+      // Get user's accessible property IDs
+      const { rbacService } = await import("../../services/rbac.service.js");
+      const userPropertyIds = await rbacService.getUserPropertyIds(req.user!.id);
+
       const result = await propertyService.findAll({
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
@@ -42,6 +46,7 @@ export const propertyController = {
         type: type as any,
         status: status as any,
         areaGroupId: areaGroupId as string,
+        propertyIds: userPropertyIds === "all" ? undefined : userPropertyIds,
       });
 
       sendSuccess(res, result);

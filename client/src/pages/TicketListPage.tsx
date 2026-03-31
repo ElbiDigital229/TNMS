@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { ticketApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { useAuth } from "../contexts/AuthContext";
+import { PERMISSIONS } from "../../../shared/permissions";
 import {
   TASK_TYPE_LABELS,
   PRIORITY_LABELS,
@@ -35,6 +37,7 @@ interface Ticket {
 
 export default function TicketListPage() {
   const toast = useToast();
+  const { hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
   const [tickets, setTickets] = useState<Ticket[]>([]);
   const [loading, setLoading] = useState(true);
@@ -120,13 +123,15 @@ export default function TicketListPage() {
             total
           </p>
         </div>
-        <Link
-          to="/tickets/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-        >
-          <Plus size={18} />
-          Create Ticket
-        </Link>
+        {hasPermission(PERMISSIONS.TICKETS.CREATE) && (
+          <Link
+            to="/tickets/new"
+            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+          >
+            <Plus size={18} />
+            Create Ticket
+          </Link>
+        )}
       </div>
 
       {/* Filters */}

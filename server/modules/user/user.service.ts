@@ -3,6 +3,7 @@ import { prisma } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import type { Status } from "@prisma/client";
 import { notificationTrigger } from "../../services/notificationTrigger.service.js";
+import { rbacService } from "../../services/rbac.service.js";
 
 export const userService = {
   async findAll(params: {
@@ -51,8 +52,27 @@ export const userService = {
       prisma.user.count({ where }),
     ]);
 
+    // Resolve inherited property counts for users who report to someone
+    const enriched = await Promise.all(
+      data.map(async (u: any) => {
+        if (u.allProperties || u.isSuperAdmin) return u;
+        if (u._count.propertyAssignments === 0 && u.reportsTo) {
+          // Inherited — resolve from manager
+          const propIds = await rbacService.getUserPropertyIds(u.id);
+          return {
+            ...u,
+            _count: {
+              ...u._count,
+              propertyAssignments: propIds === "all" ? -1 : propIds.length,
+            },
+          };
+        }
+        return u;
+      })
+    );
+
     return {
-      data,
+      data: enriched,
       pagination: {
         page,
         limit,

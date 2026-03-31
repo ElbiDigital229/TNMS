@@ -5,6 +5,8 @@ import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
 import { Plus, Eye, Pencil, Package, Upload, Download, Trash2 } from "lucide-react";
 import { CONDITION_LABELS } from "../../../../shared/types";
+import { useAuth } from "../../contexts/AuthContext";
+import { PERMISSIONS } from "../../../../shared/permissions";
 
 interface Asset {
   id: string;
@@ -46,6 +48,8 @@ export default function AssetsTab({
   onUpdate,
 }: AssetsTabProps) {
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const P = PERMISSIONS;
   const [assets, setAssets] = useState<Asset[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -250,7 +254,7 @@ export default function AssetsTab({
     <div>
       <div className="mb-4 flex justify-between">
         <div>
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && hasPermission(P.ASSETS.DEACTIVATE) && (
             <button
               onClick={handleBulkDelete}
               disabled={deleting}
@@ -262,20 +266,24 @@ export default function AssetsTab({
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setBulkOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-          >
-            <Upload size={16} />
-            Bulk Import
-          </button>
-          <button
-            onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-          >
-            <Plus size={16} />
-            Add Asset
-          </button>
+          {hasPermission(P.ASSETS.IMPORT) && (
+            <button
+              onClick={() => setBulkOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            >
+              <Upload size={16} />
+              Bulk Import
+            </button>
+          )}
+          {hasPermission(P.ASSETS.CREATE) && (
+            <button
+              onClick={openAdd}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+            >
+              <Plus size={16} />
+              Add Asset
+            </button>
+          )}
         </div>
       </div>
 
@@ -380,13 +388,15 @@ export default function AssetsTab({
                       >
                         <Eye size={16} />
                       </button>
-                      <button
-                        onClick={() => openEdit(asset)}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                        title="Edit Asset"
-                      >
-                        <Pencil size={16} />
-                      </button>
+                      {hasPermission(P.ASSETS.EDIT) && (
+                        <button
+                          onClick={() => openEdit(asset)}
+                          className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                          title="Edit Asset"
+                        >
+                          <Pencil size={16} />
+                        </button>
+                      )}
                       <a
                         href={`/asset-view/${asset.code}`}
                         target="_blank"
@@ -395,16 +405,18 @@ export default function AssetsTab({
                       >
                         QR Page
                       </a>
-                      <button
-                        onClick={() => handleToggleStatus(asset)}
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${
-                          asset.status === "ACTIVE"
-                            ? "text-red-600 hover:bg-red-50"
-                            : "text-green-600 hover:bg-green-50"
-                        }`}
-                      >
-                        {asset.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                      </button>
+                      {hasPermission(P.ASSETS.DEACTIVATE) && (
+                        <button
+                          onClick={() => handleToggleStatus(asset)}
+                          className={`rounded px-2 py-0.5 text-xs font-medium ${
+                            asset.status === "ACTIVE"
+                              ? "text-red-600 hover:bg-red-50"
+                              : "text-green-600 hover:bg-green-50"
+                          }`}
+                        >
+                          {asset.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

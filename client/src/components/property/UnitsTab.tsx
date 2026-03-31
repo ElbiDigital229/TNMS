@@ -4,6 +4,8 @@ import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
 import { Plus, Pencil, Building2, Upload, Trash2 } from "lucide-react";
+import { useAuth } from "../../contexts/AuthContext";
+import { PERMISSIONS } from "../../../../shared/permissions";
 
 interface Unit {
   id: string;
@@ -28,6 +30,8 @@ interface UnitsTabProps {
 
 export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
   const toast = useToast();
+  const { hasPermission } = useAuth();
+  const P = PERMISSIONS;
   const [units, setUnits] = useState<Unit[]>([]);
   const [floors, setFloors] = useState<Floor[]>([]);
   const [loading, setLoading] = useState(true);
@@ -169,7 +173,7 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
     <div>
       <div className="mb-4 flex items-center justify-between">
         <div>
-          {selectedIds.size > 0 && (
+          {selectedIds.size > 0 && hasPermission(P.UNITS.DEACTIVATE) && (
             <button
               onClick={handleBulkDelete}
               disabled={deleting}
@@ -181,20 +185,24 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
           )}
         </div>
         <div className="flex gap-2">
-          <button
-            onClick={() => setBulkOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-          >
-            <Upload size={16} />
-            Bulk Import
-          </button>
-          <button
-            onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-          >
-            <Plus size={16} />
-            Add Unit
-          </button>
+          {hasPermission(P.UNITS.IMPORT) && (
+            <button
+              onClick={() => setBulkOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            >
+              <Upload size={16} />
+              Bulk Import
+            </button>
+          )}
+          {hasPermission(P.UNITS.CREATE) && (
+            <button
+              onClick={openAdd}
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+            >
+              <Plus size={16} />
+              Add Unit
+            </button>
+          )}
         </div>
       </div>
 
@@ -247,15 +255,19 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
                   </td>
                   <td className="px-5 py-3.5">
                     <div className="flex items-center gap-2">
-                      <button onClick={() => openEdit(unit)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
-                        <Pencil size={16} />
-                      </button>
-                      <button
-                        onClick={() => handleToggleStatus(unit)}
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${unit.status === "ACTIVE" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
-                      >
-                        {unit.status === "ACTIVE" ? "Deactivate" : "Activate"}
-                      </button>
+                      {hasPermission(P.UNITS.EDIT) && (
+                        <button onClick={() => openEdit(unit)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
+                          <Pencil size={16} />
+                        </button>
+                      )}
+                      {hasPermission(P.UNITS.DEACTIVATE) && (
+                        <button
+                          onClick={() => handleToggleStatus(unit)}
+                          className={`rounded px-2 py-0.5 text-xs font-medium ${unit.status === "ACTIVE" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
+                        >
+                          {unit.status === "ACTIVE" ? "Deactivate" : "Activate"}
+                        </button>
+                      )}
                     </div>
                   </td>
                 </tr>

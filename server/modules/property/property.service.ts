@@ -56,12 +56,14 @@ export const propertyService = {
     type?: PropertyType;
     status?: Status;
     areaGroupId?: string;
+    propertyIds?: string[];
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    if (params.propertyIds) where.id = { in: params.propertyIds };
 
     if (params.search) {
       where.OR = [
