@@ -59,6 +59,16 @@ npm run db:seed
 npm run dev
 ```
 
+## Sync Live Data
+
+After setup, pull all real data (properties, floors, units, assets, roles, users) from the live server:
+
+```bash
+npm run sync-live
+```
+
+This connects to the production API, fetches everything, and populates your local database. All users get password `admin` locally.
+
 ## Scripts
 
 | Command | Description |
@@ -66,6 +76,7 @@ npm run dev
 | `npm run dev` | Start dev server (backend + frontend) |
 | `npm run build` | Build for production |
 | `npm run setup` | Full automated setup |
+| `npm run sync-live` | Sync all data from live server |
 | `npm run db:seed` | Seed/reset database with defaults |
 | `npm run db:push` | Push schema changes (no migration) |
 

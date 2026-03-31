@@ -9,6 +9,7 @@
     "db:generate": "prisma generate",
     "db:seed": "tsx server/config/seed.ts",
     "setup": "bash setup.sh",
+    "sync-live": "tsx scripts/sync-from-live.ts",
     "postinstall": "prisma generate"
   },
   "dependencies": {
