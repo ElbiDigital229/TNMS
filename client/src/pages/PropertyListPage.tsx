@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Building2,
+  Download,
 } from "lucide-react";
 import {
   CITY_LABELS,
@@ -42,6 +43,7 @@ export default function PropertyListPage() {
   const canEdit = hasPermission(PERMISSIONS.PROPERTIES.EDIT);
   const canDeactivate = hasPermission(PERMISSIONS.PROPERTIES.DEACTIVATE);
   const canCreate = hasPermission(PERMISSIONS.PROPERTIES.CREATE);
+  const canExport = hasPermission(PERMISSIONS.PROPERTIES.EXPORT);
   const [properties, setProperties] = useState<Property[]>([]);
   const [areaGroups, setAreaGroups] = useState<AreaGroup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -96,6 +98,27 @@ export default function PropertyListPage() {
     return () => clearTimeout(timeout);
   }, [searchInput]);
 
+  const handleExport = async () => {
+    try {
+      const params: Record<string, string> = {};
+      if (search) params.search = search;
+      if (cityFilter) params.city = cityFilter;
+      if (typeFilter) params.type = typeFilter;
+      if (statusFilter) params.status = statusFilter;
+      if (groupFilter) params.areaGroupId = groupFilter;
+
+      const res = await propertyApi.exportCsv(params);
+      const url = URL.createObjectURL(new Blob([res.data], { type: "text/csv" }));
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `properties_${Date.now()}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error("Failed to export properties");
+    }
+  };
+
   const handleToggleStatus = async (property: Property) => {
     try {
       if (property.status === "ACTIVE") {
@@ -121,15 +144,26 @@ export default function PropertyListPage() {
             {pagination.total} {pagination.total === 1 ? "property" : "properties"} total
           </p>
         </div>
-        {canCreate && (
-        <Link
-          to="/properties/new"
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-        >
-          <Plus size={18} />
-          Add Property
-        </Link>
-        )}
+        <div className="flex items-center gap-2">
+          {canExport && (
+            <button
+              onClick={handleExport}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 transition-all duration-200 hover:bg-gray-50"
+            >
+              <Download size={16} />
+              Export
+            </button>
+          )}
+          {canCreate && (
+            <Link
+              to="/properties/new"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+            >
+              <Plus size={18} />
+              Add Property
+            </Link>
+          )}
+        </div>
       </div>
 
       {/* Filters */}

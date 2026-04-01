@@ -108,4 +108,50 @@ export const propertyController = {
       sendError(res, error.message || "Failed to activate property");
     }
   },
+
+  async exportCsv(req: Request, res: Response) {
+    try {
+      const { search, city, type, status, areaGroupId } = req.query;
+      const { rbacService } = await import("../../services/rbac.service.js");
+      const userPropertyIds = await rbacService.getUserPropertyIds(req.user!.id);
+
+      const properties = await propertyService.findAllForExport({
+        search: search as string,
+        city: city as any,
+        type: type as any,
+        status: status as any,
+        areaGroupId: areaGroupId as string,
+        propertyIds: userPropertyIds === "all" ? undefined : userPropertyIds,
+      });
+
+      const escape = (v: any) => {
+        const s = v == null ? "" : String(v);
+        return s.includes(",") || s.includes('"') || s.includes("\n")
+          ? `"${s.replace(/"/g, '""')}"`
+          : s;
+      };
+
+      const headers = ["Code", "Name", "Type", "City", "Area Group", "Status", "Floors", "Units", "Assets", "Description"];
+      const rows = properties.map((p) => [
+        p.code,
+        p.name,
+        p.type,
+        p.city,
+        p.areaGroup?.groupName ?? "",
+        p.status,
+        p._count.floors,
+        p._count.units,
+        p._count.assets,
+        p.description ?? "",
+      ].map(escape).join(","));
+
+      const csv = [headers.join(","), ...rows].join("\n");
+
+      res.setHeader("Content-Type", "text/csv");
+      res.setHeader("Content-Disposition", `attachment; filename="properties_${Date.now()}.csv"`);
+      res.send(csv);
+    } catch (error: any) {
+      sendError(res, error.message || "Failed to export properties");
+    }
+  },
 };

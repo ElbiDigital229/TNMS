@@ -212,4 +212,35 @@ export const propertyService = {
       include: { areaGroup: true },
     });
   },
+
+  async findAllForExport(params: {
+    search?: string;
+    city?: City;
+    type?: PropertyType;
+    status?: Status;
+    areaGroupId?: string;
+    propertyIds?: string[];
+  }) {
+    const where: any = {};
+    if (params.propertyIds) where.id = { in: params.propertyIds };
+    if (params.search) {
+      where.OR = [
+        { name: { contains: params.search, mode: "insensitive" } },
+        { code: { contains: params.search, mode: "insensitive" } },
+      ];
+    }
+    if (params.city) where.city = params.city;
+    if (params.type) where.type = params.type;
+    if (params.status) where.status = params.status;
+    if (params.areaGroupId) where.areaGroupId = params.areaGroupId;
+
+    return prisma.property.findMany({
+      where,
+      include: {
+        areaGroup: true,
+        _count: { select: { floors: true, units: true, assets: true } },
+      },
+      orderBy: { createdAt: "desc" },
+    });
+  },
 };

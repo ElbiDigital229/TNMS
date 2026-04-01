@@ -50,6 +50,8 @@ export const propertyApi = {
     }),
   deactivate: (id: string) => api.patch(`/properties/${id}/deactivate`),
   activate: (id: string) => api.patch(`/properties/${id}/activate`),
+  exportCsv: (params?: Record<string, string>) =>
+    api.get("/properties/export", { params, responseType: "blob" }),
 };
 
 // Floor API
