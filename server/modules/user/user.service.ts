@@ -482,10 +482,10 @@ export const userService = {
       fullName?: string;
       email?: string;
       phone?: string;
-      roleName: string;
-      reportsToUsername?: string;
-      allProperties?: string;
-      propertyNames?: string;
+      role: string;
+      department?: string;
+      reportsTo?: string;
+      propertyAccess?: string;
     }[]
   ) {
     const roles = await prisma.role.findMany({
@@ -494,24 +494,38 @@ export const userService = {
     });
     const roleMap = new Map(roles.map((r) => [r.name.toLowerCase(), r.id]));
 
-    const existingUsers = await prisma.user.findMany({
-      select: { id: true, username: true },
-    });
-    const userMap = new Map(existingUsers.map((u) => [u.username.toLowerCase(), u.id]));
-
-    const allProperties = await prisma.property.findMany({
+    const departments = await prisma.department.findMany({
       where: { status: "ACTIVE" },
       select: { id: true, name: true },
     });
-    const propertyMap = new Map(allProperties.map((p) => [p.name.toLowerCase(), p.id]));
+    const departmentMap = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
+
+    const existingUsers = await prisma.user.findMany({
+      select: { id: true, username: true, email: true },
+    });
+    const userByEmailMap = new Map(
+      existingUsers.filter((u) => u.email).map((u) => [u.email!.toLowerCase(), u.id])
+    );
+    const userMap = new Map(existingUsers.map((u) => [u.username.toLowerCase(), u.id]));
+
+    const allProps = await prisma.property.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, areaGroupId: true },
+    });
+    const propertyById = new Map(allProps.map((p) => [p.id, p]));
+
+    const areaGroups = await prisma.areaGroup.findMany({
+      select: { id: true, groupName: true },
+    });
+    const areaGroupMap = new Map(areaGroups.map((ag) => [ag.groupName.toLowerCase(), ag.id]));
 
     const results: { row: number; status: string; username: string; error?: string }[] = [];
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
       try {
-        if (!item.username || !item.password || !item.roleName) {
-          results.push({ row: i + 1, status: "error", username: item.username || "", error: "username, password, and roleName are required" });
+        if (!item.username || !item.password || !item.role) {
+          results.push({ row: i + 1, status: "error", username: item.username || "", error: "Username, Password, and Role are required" });
           continue;
         }
 
@@ -520,56 +534,78 @@ export const userService = {
           continue;
         }
 
-        const roleId = roleMap.get(item.roleName.toLowerCase());
+        const roleId = roleMap.get(item.role.toLowerCase());
         if (!roleId) {
-          results.push({ row: i + 1, status: "error", username: item.username, error: `Role "${item.roleName}" not found` });
+          results.push({ row: i + 1, status: "error", username: item.username, error: `Role "${item.role}" not found` });
           continue;
         }
 
-        let reportsToId: string | undefined;
-        if (item.reportsToUsername) {
-          reportsToId = userMap.get(item.reportsToUsername.toLowerCase());
-          if (!reportsToId) {
-            results.push({ row: i + 1, status: "error", username: item.username, error: `Reports-to user "${item.reportsToUsername}" not found` });
+        let departmentId: string | undefined;
+        if (item.department) {
+          departmentId = departmentMap.get(item.department.toLowerCase());
+          if (!departmentId) {
+            results.push({ row: i + 1, status: "error", username: item.username, error: `Department "${item.department}" not found` });
             continue;
           }
         }
 
-        const isAllProps = item.allProperties?.toLowerCase() === "yes" || item.allProperties?.toLowerCase() === "true";
+        let reportsToId: string | undefined;
+        if (item.reportsTo) {
+          reportsToId = userByEmailMap.get(item.reportsTo.toLowerCase());
+          if (!reportsToId) {
+            results.push({ row: i + 1, status: "error", username: item.username, error: `Reports-to user with email "${item.reportsTo}" not found` });
+            continue;
+          }
+        }
+
+        // Resolve propertyAccess: "All" | area group name | property ID
+        let isAllProperties = false;
         let propertyIds: string[] = [];
 
-        if (!isAllProps && item.propertyNames) {
-          const names = item.propertyNames.split(";").map((n) => n.trim());
-          for (const name of names) {
-            const pid = propertyMap.get(name.toLowerCase());
-            if (!pid) {
-              results.push({ row: i + 1, status: "error", username: item.username, error: `Property "${name}" not found` });
-              break;
+        const access = item.propertyAccess?.trim();
+        if (!access || access.toLowerCase() === "all") {
+          isAllProperties = true;
+        } else {
+          const areaGroupId = areaGroupMap.get(access.toLowerCase());
+          if (areaGroupId) {
+            // Area group name — assign all properties in that group
+            propertyIds = allProps
+              .filter((p) => p.areaGroupId === areaGroupId)
+              .map((p) => p.id);
+            if (propertyIds.length === 0) {
+              results.push({ row: i + 1, status: "error", username: item.username, error: `No active properties found in area group "${access}"` });
+              continue;
             }
-            propertyIds.push(pid);
+          } else if (propertyById.has(access)) {
+            // Direct property ID
+            propertyIds = [access];
+          } else {
+            results.push({ row: i + 1, status: "error", username: item.username, error: `Property access "${access}" is not "All", a valid area group name, or a valid property ID` });
+            continue;
           }
-          if (results[results.length - 1]?.row === i + 1 && results[results.length - 1]?.status === "error") continue;
         }
 
         const passwordHash = await bcrypt.hash(item.password, env.BCRYPT_SALT_ROUNDS);
 
-        const user = await prisma.user.create({
-          data: {
-            username: item.username,
-            passwordHash,
-            fullName: item.fullName || undefined,
-            email: item.email || undefined,
-            phone: item.phone || undefined,
-            roleId,
-            reportsToId,
-            allProperties: isAllProps,
-          },
-        });
+        const createData: Record<string, unknown> = {
+          username: item.username,
+          passwordHash,
+          fullName: item.fullName || null,
+          email: item.email || null,
+          phone: item.phone || null,
+          roleId,
+          allProperties: isAllProperties,
+        };
+        if (departmentId) createData.departmentId = departmentId;
+        if (reportsToId) createData.reportsToId = reportsToId;
 
-        // Track new user for subsequent rows that may reference it
+        const user = await prisma.user.create({ data: createData as any });
+
+        // Track new user so subsequent rows can reference them as manager
         userMap.set(item.username.toLowerCase(), user.id);
+        if (item.email) userByEmailMap.set(item.email.toLowerCase(), user.id);
 
-        if (!isAllProps && propertyIds.length > 0) {
+        if (!isAllProperties && propertyIds.length > 0) {
           await prisma.userPropertyAssignment.createMany({
             data: propertyIds.map((propertyId) => ({
               userId: user.id,

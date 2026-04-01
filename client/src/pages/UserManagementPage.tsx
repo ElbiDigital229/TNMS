@@ -949,15 +949,15 @@ export default function UserManagementPage() {
         onClose={() => setBulkOpen(false)}
         title="Bulk Import Users"
         columns={[
-          { key: "username", label: "Username", required: true, example: "john_doe" },
-          { key: "password", label: "Password", required: true, example: "password123" },
-          { key: "fullName", label: "Full Name", required: false, example: "John Doe" },
-          { key: "email", label: "Email", required: false, example: "john@example.com" },
+          { key: "fullName", label: "Full Name", required: true, example: "John Smith" },
+          { key: "username", label: "Username", required: true, example: "john.smith" },
+          { key: "password", label: "Password", required: true, example: "Welcome@123" },
+          { key: "email", label: "Email", required: false, example: "john@company.com" },
           { key: "phone", label: "Phone", required: false, example: "+923001234567" },
-          { key: "roleName", label: "Role Name", required: true, example: "Technician" },
-          { key: "reportsToUsername", label: "Reports To", required: false, example: "admin" },
-          { key: "allProperties", label: "All Properties", required: false, example: "yes" },
-          { key: "propertyNames", label: "Property Names", required: false, example: "Gulberg Heights;Blue Area Tower" },
+          { key: "role", label: "Role", required: true, example: "Technician" },
+          { key: "department", label: "Department", required: false, example: "Civil" },
+          { key: "reportsTo", label: "Reports To", required: false, example: "ahmed@company.com" },
+          { key: "propertyAccess", label: "Property Access", required: false, example: "All" },
         ]}
         onImport={async (items) => {
           const res = await userApi.bulkImport(items);
