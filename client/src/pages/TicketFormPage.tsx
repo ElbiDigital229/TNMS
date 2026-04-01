@@ -185,7 +185,6 @@ export default function TicketFormPage() {
       !dueDate ||
       !taskType ||
       !subTaskType ||
-      !categoryId ||
       !departmentId ||
       !priority
     ) {
@@ -202,7 +201,7 @@ export default function TicketFormPage() {
     formData.append("dueDate", dueDate);
     formData.append("taskType", taskType);
     formData.append("subTaskType", subTaskType);
-    formData.append("categoryId", categoryId);
+    if (categoryId) formData.append("categoryId", categoryId);
     formData.append("departmentId", departmentId);
     if (assignedToId) formData.append("assignedToId", assignedToId);
     formData.append("priority", priority);
@@ -481,7 +480,7 @@ export default function TicketFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Category <span className="text-red-500">*</span>
+                Category <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <select
                 value={categoryId}

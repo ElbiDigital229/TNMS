@@ -53,7 +53,7 @@ enum Priority {
 enum TicketStatus {
   OPEN
   IN_PROGRESS
-  BLOCKED
+  OVERDUE
   COMPLETED
 }
 

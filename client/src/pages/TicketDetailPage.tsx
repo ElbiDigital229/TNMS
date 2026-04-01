@@ -232,8 +232,8 @@ export default function TicketDetailPage() {
         return "bg-blue-50 text-blue-600";
       case "IN_PROGRESS":
         return "bg-yellow-50 text-yellow-600";
-      case "BLOCKED":
-        return "bg-orange-100 text-orange-700";
+      case "OVERDUE":
+        return "bg-red-100 text-red-700";
       case "COMPLETED":
         return "bg-green-50 text-green-600";
       default:
@@ -327,7 +327,7 @@ export default function TicketDetailPage() {
             </button>
           )}
           {/* Block / Unblock */}
-          {ticket.status !== "COMPLETED" && ticket.status !== "BLOCKED" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+          {ticket.status !== "COMPLETED" && !ticket.blocks?.some((b: any) => !b.resolvedAt) && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
             <button
               onClick={openBlockModal}
               className="inline-flex items-center gap-2 rounded-lg bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 shadow-sm transition-all duration-200 ring-1 ring-orange-200"
@@ -336,7 +336,7 @@ export default function TicketDetailPage() {
               Report Blocker
             </button>
           )}
-          {ticket.status === "BLOCKED" && (
+          {ticket.blocks?.some((b: any) => !b.resolvedAt) && (
             user?.id === ticket.blocks?.[0]?.blockedBy?.id ||
             user?.id === ticket.blocks?.[0]?.blockingUser?.id ||
             hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)
@@ -353,7 +353,7 @@ export default function TicketDetailPage() {
       </div>
 
       {/* Blocked Banner */}
-      {ticket.status === "BLOCKED" && ticket.blocks?.[0] && (
+      {ticket.blocks?.some((b: any) => !b.resolvedAt) && ticket.blocks?.[0] && (
         <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
           <div className="flex items-start gap-3">
             <ShieldAlert size={20} className="mt-0.5 flex-shrink-0 text-orange-500" />
@@ -559,6 +559,19 @@ export default function TicketDetailPage() {
             </h3>
             <dl className="space-y-3.5 text-sm">
               <div className="flex items-center justify-between">
+                <dt className="text-gray-500">Ticket ID</dt>
+                <dd className="flex items-center gap-1.5">
+                  <span className="font-mono font-semibold text-primary-600">{ticket.ticketNumber}</span>
+                  <button
+                    onClick={() => { navigator.clipboard.writeText(ticket.ticketNumber); toast.success("Copied!"); }}
+                    className="text-gray-400 hover:text-gray-600"
+                    title="Copy ticket number"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  </button>
+                </dd>
+              </div>
+              <div className="flex items-center justify-between">
                 <dt className="flex items-center gap-1.5 text-gray-500">
                   <Building2 size={14} />
                   Property
@@ -590,13 +603,21 @@ export default function TicketDetailPage() {
                   <dd className="font-medium">{ticket.unit.floor.name}</dd>
                 </div>
               )}
-              <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <Tag size={14} />
-                  Category
-                </dt>
-                <dd className="font-medium">{ticket.category?.name}</dd>
-              </div>
+              {ticket.department && (
+                <div className="flex items-center justify-between">
+                  <dt className="text-gray-500">Department</dt>
+                  <dd className="font-medium">{ticket.department.name}</dd>
+                </div>
+              )}
+              {ticket.category && (
+                <div className="flex items-center justify-between">
+                  <dt className="flex items-center gap-1.5 text-gray-500">
+                    <Tag size={14} />
+                    Category
+                  </dt>
+                  <dd className="font-medium">{ticket.category.name}</dd>
+                </div>
+              )}
               <div className="flex items-center justify-between">
                 <dt className="text-gray-500">Task Type</dt>
                 <dd className="font-medium">
@@ -619,7 +640,9 @@ export default function TicketDetailPage() {
                 >
                   {new Date(ticket.dueDate).toLocaleDateString()}
                   {isOverdue && (
-                    <span className="ml-1 text-xs">(Overdue)</span>
+                    <span className="ml-1 text-xs">
+                      ({Math.ceil((new Date().getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d overdue)
+                    </span>
                   )}
                 </dd>
               </div>

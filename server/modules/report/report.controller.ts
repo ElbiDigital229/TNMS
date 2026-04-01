@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { reportService } from "./report.service.js";
+import { reportService, entityReportService } from "./report.service.js";
 import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 
 export const reportController = {
@@ -24,6 +24,66 @@ export const reportController = {
         return sendError(res, error.message, error.status);
       }
       sendError(res, error.message || "Failed to run report");
+    }
+  },
+
+  async getUserReport(req: Request, res: Response) {
+    try {
+      const result = await entityReportService.getUser(
+        req.params.userId,
+        req.user!.id,
+        req.user!.isSuperAdmin,
+        req.user!.allProperties,
+      );
+      sendSuccess(res, result);
+    } catch (error: any) {
+      if (error.status) return sendError(res, error.message, error.status);
+      sendError(res, error.message || "Failed to generate report");
+    }
+  },
+
+  async getDepartmentReport(req: Request, res: Response) {
+    try {
+      const result = await entityReportService.getDepartment(
+        req.params.departmentId,
+        req.user!.id,
+        req.user!.isSuperAdmin,
+        req.user!.allProperties,
+      );
+      sendSuccess(res, result);
+    } catch (error: any) {
+      if (error.status) return sendError(res, error.message, error.status);
+      sendError(res, error.message || "Failed to generate report");
+    }
+  },
+
+  async getPropertyReport(req: Request, res: Response) {
+    try {
+      const result = await entityReportService.getProperty(
+        req.params.propertyId,
+        req.user!.id,
+        req.user!.isSuperAdmin,
+        req.user!.allProperties,
+      );
+      sendSuccess(res, result);
+    } catch (error: any) {
+      if (error.status) return sendError(res, error.message, error.status);
+      sendError(res, error.message || "Failed to generate report");
+    }
+  },
+
+  async getAssetReport(req: Request, res: Response) {
+    try {
+      const result = await entityReportService.getAsset(
+        req.params.assetId,
+        req.user!.id,
+        req.user!.isSuperAdmin,
+        req.user!.allProperties,
+      );
+      sendSuccess(res, result);
+    } catch (error: any) {
+      if (error.status) return sendError(res, error.message, error.status);
+      sendError(res, error.message || "Failed to generate report");
     }
   },
 };

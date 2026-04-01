@@ -43,7 +43,7 @@ export const PRIORITY_LABELS: Record<string, string> = {
 export const TICKET_STATUS_LABELS: Record<string, string> = {
   OPEN: "Open",
   IN_PROGRESS: "In Progress",
-  BLOCKED: "Blocked",
+  OVERDUE: "Overdue",
   COMPLETED: "Completed",
 };
 

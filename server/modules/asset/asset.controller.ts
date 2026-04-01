@@ -187,4 +187,29 @@ export const assetController = {
       sendError(res, error.message);
     }
   },
+
+  async findTickets(req: Request, res: Response) {
+    try {
+      const { prisma } = await import("../../config/db.js");
+      const rows = await prisma.ticketAsset.findMany({
+        where: { assetId: req.params.id },
+        include: {
+          ticket: {
+            select: {
+              id: true, ticketNumber: true, name: true, status: true, priority: true,
+              dueDate: true, completedAt: true, createdAt: true,
+              property: { select: { name: true } },
+              assignedTo: { select: { fullName: true, username: true } },
+              category: { select: { name: true } },
+              blocks: { where: { resolvedAt: null }, take: 1, select: { id: true } },
+            },
+          },
+        },
+        orderBy: { ticket: { createdAt: "desc" } },
+      });
+      sendSuccess(res, rows.map((r) => ({ ...r.ticket, isBlocked: r.ticket.blocks.length > 0 })));
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
 };

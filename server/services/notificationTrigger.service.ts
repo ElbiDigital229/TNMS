@@ -273,12 +273,16 @@ export const notificationTrigger = {
   /** #6 Ticket overdue — notify assignee + creator + assignee's manager */
   async checkOverdueTickets() {
     const now = new Date();
+    // First: promote any OPEN/IN_PROGRESS tickets past due date to OVERDUE status
+    await prisma.ticket.updateMany({
+      where: { dueDate: { lt: now }, status: { in: ["OPEN", "IN_PROGRESS"] } },
+      data: { status: "OVERDUE" },
+    });
+
     const overdueTickets = await prisma.ticket.findMany({
       where: {
         dueDate: { lt: now },
-        status: { in: ["OPEN", "IN_PROGRESS"] }, // BLOCKED excluded intentionally
-        // Skip tickets unblocked within the last 24h — give the assignee time to raise next block or act
-        NOT: { blocks: { some: { resolvedAt: { gte: new Date(now.getTime() - 24 * 60 * 60 * 1000) } } } },
+        status: "OVERDUE",
       },
       select: {
         id: true,
@@ -362,7 +366,7 @@ export const notificationTrigger = {
     const dueSoonTickets = await prisma.ticket.findMany({
       where: {
         dueDate: { gt: now, lte: in24h },
-        status: { in: ["OPEN", "IN_PROGRESS"] }, // BLOCKED excluded intentionally
+        status: { in: ["OPEN", "IN_PROGRESS"] },
         assignedToId: { not: null },
       },
       select: {

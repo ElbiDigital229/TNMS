@@ -22,7 +22,8 @@ import TodoListPage from "./pages/TodoListPage";
 import UserManagementPage from "./pages/UserManagementPage";
 import RoleManagementPage from "./pages/RoleManagementPage";
 import AuditLogPage from "./pages/AuditLogPage";
-import ReportBuilderPage from "./pages/ReportBuilderPage";
+import ReportPage from "./pages/ReportPage";
+import EntityReportPage from "./pages/EntityReportPage";
 import NotificationsPage from "./pages/NotificationsPage";
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { PERMISSIONS } from "../../shared/permissions";
@@ -72,7 +73,8 @@ export default function App() {
               <Route path="/settings/departments" element={<RequirePermission permission={P.SETTINGS.DEPARTMENTS_MANAGE}><DepartmentsPage /></RequirePermission>} />
               <Route path="/settings/users" element={<RequirePermission permission={P.USERS.VIEW}><UserManagementPage /></RequirePermission>} />
               <Route path="/settings/roles" element={<RequirePermission permission={P.ROLES.VIEW}><RoleManagementPage /></RequirePermission>} />
-              <Route path="/reports" element={<RequirePermission permission={P.REPORTS.VIEW}><ReportBuilderPage /></RequirePermission>} />
+              <Route path="/reports" element={<RequirePermission permission={P.REPORTS.VIEW}><ReportPage /></RequirePermission>} />
+              <Route path="/reports/:entityType/:entityId" element={<RequirePermission permission={P.REPORTS.VIEW}><EntityReportPage /></RequirePermission>} />
               <Route path="/settings/audit-logs" element={<RequirePermission permission={P.AUDIT.VIEW}><AuditLogPage /></RequirePermission>} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>

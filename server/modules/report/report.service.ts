@@ -235,10 +235,10 @@ async function queryBreakdown(prismaGroupByField: string, groupBy: string, where
     g.total++;
     if (ticket.status === "COMPLETED") {
       g.completed++;
-    } else if (ticket.status !== "BLOCKED") {
+    } else {
       if (ticket.status === "OPEN") g.open++;
       if (ticket.status === "IN_PROGRESS") g.inProgress++;
-      if (ticket.dueDate < tomorrow) g.overdue++;
+      if (ticket.status === "OVERDUE") g.overdue++;
     }
   }
 
@@ -260,7 +260,7 @@ async function queryBreakdown(prismaGroupByField: string, groupBy: string, where
 
 async function queryOverdueCount(prismaGroupByField: string, groupBy: string, where: any, sortOrder: SortOrder, limit: number) {
   const tomorrow = getTomorrow();
-  const overdueWhere = { ...where, status: { notIn: ["COMPLETED", "BLOCKED"] as const }, dueDate: { lt: tomorrow } };
+  const overdueWhere = { ...where, status: "OVERDUE" as const };
 
   const grouped = await prisma.ticket.groupBy({
     by: [prismaGroupByField as any],
@@ -624,5 +624,207 @@ export const reportService = {
     }));
 
     return { data, type: "standard" };
+  },
+};
+
+// ─── Entity Report Types ─────────────────────────────────────────────────
+
+export interface ReportTicketRow {
+  id: string;
+  ticketNumber: string;
+  name: string;
+  status: string;
+  priority: string;
+  taskType: string;
+  subTaskType: string;
+  isBlocked: boolean;
+  property: { id: string; name: string };
+  unit: { id: string; name: string } | null;
+  category: { id: string; name: string } | null;
+  assignedTo: { id: string; fullName: string | null; username: string } | null;
+  dueDate: string;
+  completedAt: string | null;
+  createdAt: string;
+}
+
+export interface EntityReportResponse {
+  entityType: "user" | "department" | "property" | "asset";
+  meta: Record<string, any>;
+  tickets: ReportTicketRow[];
+}
+
+// ─── Shared helpers ──────────────────────────────────────────────────────
+
+const TICKET_REPORT_INCLUDE = {
+  property: { select: { id: true, name: true } },
+  unit: { select: { id: true, name: true } },
+  category: { select: { id: true, name: true } },
+  assignedTo: { select: { id: true, fullName: true, username: true } },
+  blocks: { select: { resolvedAt: true, blockingUserId: true, departmentId: true } },
+} as const;
+
+function mapTicketRow(t: any): ReportTicketRow {
+  return {
+    id: t.id,
+    ticketNumber: t.ticketNumber,
+    name: t.name,
+    status: t.status,
+    priority: t.priority,
+    taskType: t.taskType,
+    subTaskType: t.subTaskType,
+    isBlocked: t.blocks.some((b: any) => !b.resolvedAt),
+    property: t.property,
+    unit: t.unit ?? null,
+    category: t.category ?? null,
+    assignedTo: t.assignedTo ?? null,
+    dueDate: t.dueDate instanceof Date ? t.dueDate.toISOString() : t.dueDate,
+    completedAt: t.completedAt ? (t.completedAt instanceof Date ? t.completedAt.toISOString() : t.completedAt) : null,
+    createdAt: t.createdAt instanceof Date ? t.createdAt.toISOString() : t.createdAt,
+  };
+}
+
+async function getPropertyScope(userId: string, isSuperAdmin: boolean, allProperties: boolean): Promise<Record<string, any>> {
+  if (isSuperAdmin || allProperties) return {};
+  const ids = await rbacService.getUserPropertyIds(userId);
+  if (ids === "all") return {};
+  return { propertyId: { in: ids as string[] } };
+}
+
+// ─── Entity report service ────────────────────────────────────────────────
+
+export const entityReportService = {
+  async getUser(targetUserId: string, requestingUserId: string, isSuperAdmin: boolean, allProperties: boolean): Promise<EntityReportResponse> {
+    const user = await prisma.user.findUniqueOrThrow({
+      where: { id: targetUserId },
+      select: {
+        id: true, fullName: true, username: true, status: true,
+        role: { select: { name: true } },
+        department: { select: { id: true, name: true } },
+      },
+    });
+
+    const scopeFilter = await getPropertyScope(requestingUserId, isSuperAdmin, allProperties);
+
+    const tickets = await prisma.ticket.findMany({
+      where: {
+        ...scopeFilter,
+        OR: [{ assignedToId: targetUserId }, { createdById: targetUserId }],
+      },
+      include: TICKET_REPORT_INCLUDE,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const wasBlockerCount = await prisma.ticketBlock.count({
+      where: { blockingUserId: targetUserId },
+    });
+
+    return {
+      entityType: "user",
+      meta: { ...user, wasBlockerCount },
+      tickets: tickets.map(mapTicketRow),
+    };
+  },
+
+  async getDepartment(departmentId: string, requestingUserId: string, isSuperAdmin: boolean, allProperties: boolean): Promise<EntityReportResponse> {
+    const dept = await prisma.department.findUniqueOrThrow({
+      where: { id: departmentId },
+      select: {
+        id: true, name: true,
+        _count: { select: { users: true } },
+      },
+    });
+
+    const scopeFilter = await getPropertyScope(requestingUserId, isSuperAdmin, allProperties);
+
+    const tickets = await prisma.ticket.findMany({
+      where: { departmentId, ...scopeFilter },
+      include: TICKET_REPORT_INCLUDE,
+      orderBy: { createdAt: "desc" },
+    });
+
+    const wasBlockerCount = await prisma.ticketBlock.count({
+      where: { departmentId },
+    });
+
+    return {
+      entityType: "department",
+      meta: { id: dept.id, name: dept.name, memberCount: dept._count.users, wasBlockerCount },
+      tickets: tickets.map(mapTicketRow),
+    };
+  },
+
+  async getProperty(propertyId: string, requestingUserId: string, isSuperAdmin: boolean, allProperties: boolean): Promise<EntityReportResponse> {
+    const hasAccess = isSuperAdmin || allProperties || await rbacService.userHasPropertyAccess(requestingUserId, propertyId);
+    if (!hasAccess) throw { status: 403, message: "Access denied to this property" };
+
+    const property = await prisma.property.findUniqueOrThrow({
+      where: { id: propertyId },
+      select: {
+        id: true, name: true, code: true, type: true, city: true,
+        _count: { select: { floors: true, units: true, assets: true } },
+      },
+    });
+
+    const tickets = await prisma.ticket.findMany({
+      where: { propertyId },
+      include: TICKET_REPORT_INCLUDE,
+      orderBy: { createdAt: "desc" },
+    });
+
+    return {
+      entityType: "property",
+      meta: {
+        id: property.id, name: property.name, code: property.code,
+        type: property.type, city: property.city,
+        floorCount: property._count.floors,
+        unitCount: property._count.units,
+        assetCount: property._count.assets,
+        wasBlockerCount: 0,
+      },
+      tickets: tickets.map(mapTicketRow),
+    };
+  },
+
+  async getAsset(assetId: string, requestingUserId: string, isSuperAdmin: boolean, allProperties: boolean): Promise<EntityReportResponse> {
+    const asset = await prisma.asset.findUniqueOrThrow({
+      where: { id: assetId },
+      select: {
+        id: true, name: true, code: true, serialNumber: true, condition: true,
+        propertyId: true,
+        category: { select: { name: true } },
+        property: { select: { id: true, name: true } },
+      },
+    });
+
+    const hasAccess = isSuperAdmin || allProperties || await rbacService.userHasPropertyAccess(requestingUserId, asset.propertyId);
+    if (!hasAccess) throw { status: 403, message: "Access denied to this asset" };
+
+    const links = await prisma.ticketAsset.findMany({
+      where: { assetId },
+      select: { ticketId: true },
+    });
+
+    const ticketIds = links.map((l: any) => l.ticketId);
+
+    const tickets = ticketIds.length > 0
+      ? await prisma.ticket.findMany({
+          where: { id: { in: ticketIds } },
+          include: TICKET_REPORT_INCLUDE,
+          orderBy: { createdAt: "desc" },
+        })
+      : [];
+
+    return {
+      entityType: "asset",
+      meta: {
+        id: asset.id, name: asset.name, code: asset.code,
+        serialNumber: asset.serialNumber ?? null,
+        condition: asset.condition,
+        category: asset.category,
+        property: asset.property,
+        wasBlockerCount: 0,
+      },
+      tickets: tickets.map(mapTicketRow),
+    };
   },
 };

@@ -94,6 +94,7 @@ export const assetApi = {
     api.put(`/assets/${id}`, data, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  getTickets: (id: string) => api.get(`/assets/${id}/tickets`),
   deactivate: (id: string) => api.patch(`/assets/${id}/deactivate`),
   activate: (id: string) => api.patch(`/assets/${id}/activate`),
   bulkImport: (propertyId: string, items: Record<string, string>[]) =>
@@ -231,6 +232,8 @@ export const auditApi = {
 export const reportApi = {
   runQuery: (query: Record<string, unknown>) =>
     api.post("/reports/query", query),
+  getEntityReport: (entityType: string, entityId: string) =>
+    api.get(`/reports/entity/${entityType}/${entityId}`),
 };
 
 // Notification API

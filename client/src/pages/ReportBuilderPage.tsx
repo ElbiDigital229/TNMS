@@ -132,7 +132,7 @@ const FILTER_FIELD_OPTIONS: Record<Entity, { value: string; label: string }[]> =
 };
 
 const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  "tickets.status": [{ value: "OPEN", label: "Open" }, { value: "IN_PROGRESS", label: "In Progress" }, { value: "BLOCKED", label: "Blocked" }, { value: "COMPLETED", label: "Completed" }],
+  "tickets.status": [{ value: "OPEN", label: "Open" }, { value: "IN_PROGRESS", label: "In Progress" }, { value: "OVERDUE", label: "Overdue" }, { value: "COMPLETED", label: "Completed" }],
   "tickets.priority": [{ value: "CRITICAL", label: "Critical" }, { value: "HIGH", label: "High" }, { value: "MEDIUM", label: "Medium" }, { value: "LOW", label: "Low" }],
   "assets.status": [{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }],
   "assets.condition": [{ value: "EXCELLENT", label: "Excellent" }, { value: "GOOD", label: "Good" }, { value: "FAIR", label: "Fair" }, { value: "POOR", label: "Poor" }],
@@ -760,18 +760,16 @@ export default function ReportBuilderPage() {
                             <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Completed</th>
                             <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Overdue</th>
                           </>
+                        ) : measure === "completed_late" ? (
+                          <>
+                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Late Tickets</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Avg Days Late</th>
+                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Avg Days Blocked</th>
+                          </>
                         ) : (
-                          {measure === "completed_late" ? (
-                            <>
-                              <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Late Tickets</th>
-                              <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Avg Days Late</th>
-                              <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Avg Days Blocked</th>
-                            </>
-                          ) : (
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
-                              {measure === "avg_completion_time" ? "Avg Hours" : measure === "overdue_count" ? "Overdue" : "Count"}
-                            </th>
-                          )}
+                          <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
+                            {measure === "avg_completion_time" ? "Avg Hours" : measure === "overdue_count" ? "Overdue" : "Count"}
+                          </th>
                         )}
                       </tr>
                     </thead>

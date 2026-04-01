@@ -7,7 +7,7 @@ import { PERMISSIONS } from "../../../shared/permissions.js";
 export const ticketController = {
   async findAll(req: Request, res: Response) {
     try {
-      const { page, limit, search, status, priority, taskType, propertyId } =
+      const { page, limit, search, status, priority, taskType, propertyId, assigneeId, createdById, createdFrom, createdTo, dueDateFrom, dueDateTo, blocked } =
         req.query;
 
       // Determine view mode based on permissions
@@ -26,10 +26,26 @@ export const ticketController = {
         taskType: taskType as any,
         propertyId: propertyId as string,
         propertyIds: userPropertyIds === "all" ? undefined : userPropertyIds,
+        assigneeId: assigneeId as string,
+        createdById: createdById as string,
+        createdFrom: createdFrom as string,
+        createdTo: createdTo as string,
+        dueDateFrom: dueDateFrom as string,
+        dueDateTo: dueDateTo as string,
+        blocked: blocked as string,
         viewMode,
         userId: req.user!.id,
       });
-      sendSuccess(res, result);
+      // Flatten blocks[0] → activeBlock for the list
+      const mapped = {
+        ...result,
+        data: result.data.map((t: any) => ({
+          ...t,
+          activeBlock: t.blocks?.[0] ?? null,
+          blocks: undefined,
+        })),
+      };
+      sendSuccess(res, mapped);
     } catch (error: any) {
       sendError(res, error.message);
     }
@@ -80,7 +96,7 @@ export const ticketController = {
         assetIds,
       } = req.body;
 
-      if (!name || !description || !propertyId || !unitId || !dueDate || !taskType || !subTaskType || !categoryId || !departmentId || !priority) {
+      if (!name || !description || !propertyId || !unitId || !dueDate || !taskType || !subTaskType || !departmentId || !priority) {
         return sendError(res, "Missing required fields", 400);
       }
 

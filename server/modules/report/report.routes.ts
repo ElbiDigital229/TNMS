@@ -8,3 +8,7 @@ export const reportRoutes = Router();
 reportRoutes.use(authenticate);
 
 reportRoutes.post("/query", requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.runQuery);
+reportRoutes.get("/entity/user/:userId",             requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.getUserReport);
+reportRoutes.get("/entity/department/:departmentId", requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.getDepartmentReport);
+reportRoutes.get("/entity/property/:propertyId",     requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.getPropertyReport);
+reportRoutes.get("/entity/asset/:assetId",           requirePermission(PERMISSIONS.REPORTS.VIEW), reportController.getAssetReport);

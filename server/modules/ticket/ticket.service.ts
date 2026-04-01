@@ -33,6 +33,13 @@ export const ticketService = {
     taskType?: TaskType;
     propertyId?: string;
     propertyIds?: string[];
+    assigneeId?: string;
+    createdById?: string;
+    createdFrom?: string;
+    createdTo?: string;
+    dueDateFrom?: string;
+    dueDateTo?: string;
+    blocked?: string;
     viewMode?: "all" | "assigned";
     userId?: string;
   }) {
@@ -52,6 +59,20 @@ export const ticketService = {
     if (params.taskType) where.taskType = params.taskType;
     if (params.propertyId) where.propertyId = params.propertyId;
     if (params.propertyIds) where.propertyId = { in: params.propertyIds };
+    if (params.assigneeId) where.assignedToId = params.assigneeId;
+    if (params.createdById) where.createdById = params.createdById;
+    if (params.createdFrom || params.createdTo) {
+      where.createdAt = {};
+      if (params.createdFrom) where.createdAt.gte = new Date(params.createdFrom);
+      if (params.createdTo) where.createdAt.lte = new Date(params.createdTo + "T23:59:59Z");
+    }
+    if (params.dueDateFrom || params.dueDateTo) {
+      where.dueDate = {};
+      if (params.dueDateFrom) where.dueDate.gte = new Date(params.dueDateFrom);
+      if (params.dueDateTo) where.dueDate.lte = new Date(params.dueDateTo + "T23:59:59Z");
+    }
+    if (params.blocked === "yes") where.blocks = { some: { resolvedAt: null } };
+    if (params.blocked === "no") where.blocks = { none: { resolvedAt: null } };
     if (params.viewMode === "assigned" && params.userId) {
       where.assignedToId = params.userId;
     }
@@ -68,6 +89,14 @@ export const ticketService = {
           assignedTo: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
           assets: {
             include: { asset: { select: { id: true, name: true, code: true } } },
+          },
+          blocks: {
+            where: { resolvedAt: null },
+            take: 1,
+            select: {
+              blockingUser: { select: { fullName: true, username: true } },
+              department: { select: { name: true } },
+            },
           },
           _count: { select: { comments: true } },
         },
@@ -357,8 +386,10 @@ export const ticketService = {
   async block(ticketId: string, data: { blockingUserId?: string; departmentId: string; reason: string }, blockedById: string) {
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true, status: true } });
     if (!ticket) throw new Error("Ticket not found");
-    if (ticket.status === "BLOCKED") throw new Error("Ticket is already blocked");
     if (ticket.status === "COMPLETED") throw new Error("Cannot block a completed ticket");
+
+    const existingBlock = await prisma.ticketBlock.findFirst({ where: { ticketId, resolvedAt: null } });
+    if (existingBlock) throw new Error("Ticket already has an active block");
 
     await prisma.ticketBlock.create({
       data: {
@@ -370,8 +401,6 @@ export const ticketService = {
         previousStatus: ticket.status,
       },
     });
-
-    await prisma.ticket.update({ where: { id: ticketId }, data: { status: "BLOCKED" } });
 
     // Resolve display names for activity log
     const [blockedByUser, blockingUserRecord, deptRecord] = await Promise.all([
@@ -399,13 +428,9 @@ export const ticketService = {
   },
 
   async unblock(ticketId: string, resolvedNote: string | undefined, resolvedById: string) {
-    const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true, status: true } });
-    if (!ticket) throw new Error("Ticket not found");
-    if (ticket.status !== "BLOCKED") throw new Error("Ticket is not blocked");
-
     const activeBlock = await prisma.ticketBlock.findFirst({
       where: { ticketId, resolvedAt: null },
-      select: { id: true, blockedById: true, previousStatus: true },
+      select: { id: true, blockedById: true },
     });
     if (!activeBlock) throw new Error("No active block found");
 
@@ -413,8 +438,6 @@ export const ticketService = {
       where: { id: activeBlock.id },
       data: { resolvedAt: new Date(), resolvedById, resolvedNote: resolvedNote || null },
     });
-
-    await prisma.ticket.update({ where: { id: ticketId }, data: { status: activeBlock.previousStatus } });
 
     const resolvedByUser = await prisma.user.findUnique({ where: { id: resolvedById }, select: { fullName: true, username: true } });
     const resolvedByName = resolvedByUser?.fullName || resolvedByUser?.username || "Unknown";
