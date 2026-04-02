@@ -3,7 +3,7 @@ import { unitApi, floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
-import { Plus, Pencil, Building2, Upload, Trash2 } from "lucide-react";
+import { Plus, Pencil, Building2, Upload, Trash2, Download } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { PERMISSIONS } from "../../../../shared/permissions";
 
@@ -25,10 +25,11 @@ interface Floor {
 
 interface UnitsTabProps {
   propertyId: string;
+  propertyName?: string;
   onUpdate: () => void;
 }
 
-export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
+export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTabProps) {
   const toast = useToast();
   const { hasPermission } = useAuth();
   const P = PERMISSIONS;
@@ -185,6 +186,23 @@ export default function UnitsTab({ propertyId, onUpdate }: UnitsTabProps) {
           )}
         </div>
         <div className="flex gap-2">
+          {units.length > 0 && hasPermission(P.UNITS.EXPORT) && (
+            <button
+              onClick={() => {
+                const escape = (v: any) => { const s = String(v ?? ""); return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s; };
+                const rows = [["Code", "Name", "Type", "Floor", "Status"], ...units.map(u => [u.code, u.name, u.unitType ?? "", u.floor?.name ?? "", u.status])];
+                const csv = rows.map(r => r.map(escape).join(",")).join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+                a.download = `${propertyName ?? "property"}_units.csv`;
+                a.click();
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            >
+              <Download size={16} />
+              Export
+            </button>
+          )}
           {hasPermission(P.UNITS.IMPORT) && (
             <button
               onClick={() => setBulkOpen(true)}

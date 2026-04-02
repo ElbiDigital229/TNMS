@@ -266,6 +266,26 @@ export default function AssetsTab({
           )}
         </div>
         <div className="flex gap-2">
+          {assets.length > 0 && hasPermission(P.ASSETS.EXPORT) && (
+            <button
+              onClick={() => {
+                const escape = (v: any) => { const s = String(v ?? ""); return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s; };
+                const rows = [
+                  ["Code", "Name", "Category", "Floor", "Condition", "Quantity", "Unit of Measure", "Serial Number", "Purchase Date", "Status"],
+                  ...assets.map(a => [a.code, a.name, a.category?.name ?? "", a.floor?.name ?? "", a.condition, a.quantity, a.unitOfMeasure, a.serialNumber ?? "", a.purchaseDate ? a.purchaseDate.slice(0, 10) : "", a.status]),
+                ];
+                const csv = rows.map(r => r.map(escape).join(",")).join("\n");
+                const a = document.createElement("a");
+                a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+                a.download = `${propertyName}_assets.csv`;
+                a.click();
+              }}
+              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+            >
+              <Download size={16} />
+              Export
+            </button>
+          )}
           {hasPermission(P.ASSETS.IMPORT) && (
             <button
               onClick={() => setBulkOpen(true)}

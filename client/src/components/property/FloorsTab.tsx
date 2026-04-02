@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
-import { Plus, Pencil, Layers } from "lucide-react";
+import { Plus, Pencil, Layers, Download } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { PERMISSIONS } from "../../../../shared/permissions";
 
@@ -14,10 +14,11 @@ interface Floor {
 
 interface FloorsTabProps {
   propertyId: string;
+  propertyName?: string;
   onUpdate: () => void;
 }
 
-export default function FloorsTab({ propertyId, onUpdate }: FloorsTabProps) {
+export default function FloorsTab({ propertyId, propertyName, onUpdate }: FloorsTabProps) {
   const toast = useToast();
   const { hasPermission } = useAuth();
   const P = PERMISSIONS;
@@ -98,7 +99,24 @@ export default function FloorsTab({ propertyId, onUpdate }: FloorsTabProps) {
 
   return (
     <div>
-      <div className="mb-4 flex justify-end">
+      <div className="mb-4 flex justify-end gap-2">
+        {floors.length > 0 && hasPermission(P.FLOORS.VIEW) && (
+          <button
+            onClick={() => {
+              const escape = (v: any) => { const s = String(v ?? ""); return s.includes(",") || s.includes('"') || s.includes("\n") ? `"${s.replace(/"/g, '""')}"` : s; };
+              const rows = [["Floor Name", "Status"], ...floors.map(f => [f.name, f.status])];
+              const csv = rows.map(r => r.map(escape).join(",")).join("\n");
+              const a = document.createElement("a");
+              a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
+              a.download = `${propertyName ?? "property"}_floors.csv`;
+              a.click();
+            }}
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+          >
+            <Download size={16} />
+            Export
+          </button>
+        )}
         {hasPermission(P.FLOORS.CREATE) && (
           <button
             onClick={openAdd}

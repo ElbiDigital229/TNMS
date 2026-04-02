@@ -255,12 +255,14 @@ export default function PropertyDetailPage() {
           {activeTab === "floors" && (
             <FloorsTab
               propertyId={property.id}
+              propertyName={property.name}
               onUpdate={fetchProperty}
             />
           )}
           {activeTab === "units" && (
             <UnitsTab
               propertyId={property.id}
+              propertyName={property.name}
               onUpdate={fetchProperty}
             />
           )}
