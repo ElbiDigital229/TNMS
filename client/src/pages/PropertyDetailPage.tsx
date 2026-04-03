@@ -198,7 +198,7 @@ export default function PropertyDetailPage() {
             <img
               src={`/${property.imagePath}`}
               alt={property.name}
-              className="h-40 w-full rounded-lg object-cover"
+              className="h-40 w-full rounded-lg object-contain bg-gray-50"
             />
           ) : (
             <div className="flex h-40 flex-col items-center justify-center rounded-lg bg-gray-100 text-gray-400">

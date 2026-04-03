@@ -1,4 +1,4 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, Link } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   LayoutDashboard,
@@ -65,12 +65,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       >
         {/* Header */}
         <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-5">
-          <div className="flex items-center gap-2.5">
+          <Link to="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
               <Building2 size={16} className="text-white" />
             </div>
             <span className="text-[15px] font-semibold text-white">TNMS</span>
-          </div>
+          </Link>
           <button onClick={onClose} className="text-gray-500 hover:text-gray-300 lg:hidden">
             <X size={18} />
           </button>
@@ -107,6 +107,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavLink to="/assets" className={linkClass} onClick={onClose}>
                 <Package size={18} />
                 Assets
+              </NavLink>
+            )}
+
+            {hasPermission(P.UNITS.VIEW) && (
+              <NavLink to="/units" className={linkClass} onClick={onClose}>
+                <Layers size={18} />
+                Units
               </NavLink>
             )}
 

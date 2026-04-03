@@ -1,19 +1,69 @@
 import { prisma } from "../../config/db.js";
+import { rbacService } from "../../services/rbac.service.js";
 
 export const unitService = {
   async generateCode(): Promise<string> {
-    const lastUnit = await prisma.unit.findFirst({
-      orderBy: { code: "desc" },
-      select: { code: true },
-    });
+    const result = await prisma.$queryRaw<{ max_num: number }[]>`
+      SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM 4) AS INTEGER)), 0) AS max_num
+      FROM "Unit" WHERE code ~ '^UNT[0-9]+$'
+    `;
+    const nextNum = (result[0]?.max_num ?? 0) + 1;
+    return `UNT${String(nextNum).padStart(4, "0")}`;
+  },
 
-    let nextNum = 1;
-    if (lastUnit) {
-      const numPart = parseInt(lastUnit.code.slice(3), 10);
-      nextNum = numPart + 1;
+
+  async findAll(params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    userId?: string;
+    allProperties?: boolean;
+  }) {
+    const page = params.page || 1;
+    const limit = params.limit || 10;
+    const skip = (page - 1) * limit;
+
+    const where: any = {};
+    if (params.search) {
+      where.OR = [
+        { name: { contains: params.search, mode: "insensitive" } },
+        { code: { contains: params.search, mode: "insensitive" } },
+      ];
+    }
+    if (params.status) where.status = params.status;
+
+    // Filter by user's assigned properties unless they have access to all
+    if (params.userId && !params.allProperties) {
+      const propertyIds = await rbacService.getUserPropertyIds(params.userId);
+      if (propertyIds !== "all") {
+        where.propertyId = { in: propertyIds };
+      }
     }
 
-    return `UNT${String(nextNum).padStart(3, "0")}`;
+    const [data, total] = await Promise.all([
+      prisma.unit.findMany({
+        where,
+        include: {
+          floor: { select: { id: true, name: true } },
+          property: { select: { id: true, name: true, code: true } },
+        },
+        orderBy: { createdAt: "desc" },
+        skip,
+        take: limit,
+      }),
+      prisma.unit.count({ where }),
+    ]);
+
+    return {
+      data,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit),
+      },
+    };
   },
 
   async findByProperty(propertyId: string) {
@@ -149,6 +199,13 @@ export const unitService = {
     // Also track names within this import batch
     const batchNames = new Set<string>();
 
+    // Pre-compute next code number to avoid collisions within batch
+    const codeResult = await prisma.$queryRaw<{ max_num: number }[]>`
+      SELECT COALESCE(MAX(CAST(SUBSTRING(code FROM 4) AS INTEGER)), 0) AS max_num
+      FROM "Unit" WHERE code ~ '^UNT[0-9]+$'
+    `;
+    let nextCode = (codeResult[0]?.max_num ?? 0) + 1;
+
     const results: { row: number; status: string; name: string; error?: string }[] = [];
 
     for (let i = 0; i < items.length; i++) {
@@ -185,7 +242,7 @@ export const unitService = {
           floorId = resolved;
         }
 
-        const code = await this.generateCode();
+        const code = `UNT${String(nextCode++).padStart(4, "0")}`;
         await prisma.unit.create({
           data: {
             code,

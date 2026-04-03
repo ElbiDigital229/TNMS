@@ -10,6 +10,7 @@ import PropertyFormPage from "./pages/PropertyFormPage";
 import PropertyDetailPage from "./pages/PropertyDetailPage";
 import AssetDetailPage from "./pages/AssetDetailPage";
 import AssetsListPage from "./pages/AssetsListPage";
+import UnitListPage from "./pages/UnitListPage";
 import AreaGroupSettingsPage from "./pages/AreaGroupSettingsPage";
 import AssetCategoriesPage from "./pages/AssetCategoriesPage";
 import TicketListPage from "./pages/TicketListPage";
@@ -60,6 +61,7 @@ export default function App() {
               <Route path="/properties/:id" element={<RequirePermission permission={P.PROPERTIES.VIEW}><PropertyDetailPage /></RequirePermission>} />
               <Route path="/properties/:id/edit" element={<RequirePermission permission={P.PROPERTIES.EDIT}><PropertyFormPage /></RequirePermission>} />
               <Route path="/assets" element={<RequirePermission permission={P.ASSETS.VIEW}><AssetsListPage /></RequirePermission>} />
+              <Route path="/units" element={<RequirePermission permission={P.UNITS.VIEW}><UnitListPage /></RequirePermission>} />
               <Route path="/todos" element={<RequirePermission permission={P.TODOS.ACCESS}><TodoListPage /></RequirePermission>} />
               <Route path="/assets/:code" element={<RequirePermission permission={P.ASSETS.VIEW}><AssetDetailPage /></RequirePermission>} />
               <Route path="/asset-view/:code" element={<RequirePermission permission={P.ASSETS.VIEW}><AssetDetailPage /></RequirePermission>} />

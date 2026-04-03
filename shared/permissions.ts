@@ -11,6 +11,8 @@ export const PERMISSIONS = {
     CREATE: "floors.create",
     EDIT: "floors.edit",
     DEACTIVATE: "floors.deactivate",
+    IMPORT: "floors.import",
+    DELETE: "floors.delete",
   },
   UNITS: {
     VIEW: "units.view",
@@ -95,6 +97,8 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.FLOORS.CREATE, module: "floors", description: "Add floors" },
   { key: PERMISSIONS.FLOORS.EDIT, module: "floors", description: "Edit floors" },
   { key: PERMISSIONS.FLOORS.DEACTIVATE, module: "floors", description: "Deactivate/reactivate floors" },
+  { key: PERMISSIONS.FLOORS.IMPORT, module: "floors", description: "Bulk import floors" },
+  { key: PERMISSIONS.FLOORS.DELETE, module: "floors", description: "Delete floors" },
   // Units
   { key: PERMISSIONS.UNITS.VIEW, module: "units", description: "View units" },
   { key: PERMISSIONS.UNITS.CREATE, module: "units", description: "Add units" },

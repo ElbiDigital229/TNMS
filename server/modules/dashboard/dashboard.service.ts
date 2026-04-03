@@ -78,10 +78,12 @@ export const dashboardService = {
     });
 
     // Overdue tickets count
+    const now = new Date();
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const overdueTickets = await prisma.ticket.count({
       where: {
         status: { not: "COMPLETED" },
-        dueDate: { lt: new Date() },
+        dueDate: { lt: startOfToday },
       },
     });
 

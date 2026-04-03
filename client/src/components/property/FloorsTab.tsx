@@ -2,7 +2,8 @@ import { useState, useEffect } from "react";
 import { floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
-import { Plus, Pencil, Layers, Download } from "lucide-react";
+import BulkImportModal from "../ui/BulkImportModal";
+import { Plus, Pencil, Layers, Download, Upload, Trash2 } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { PERMISSIONS } from "../../../../shared/permissions";
 
@@ -25,13 +26,16 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
   const [floors, setFloors] = useState<Floor[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [editingFloor, setEditingFloor] = useState<Floor | null>(null);
   const [floorName, setFloorName] = useState("");
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
 
   const fetchFloors = () => {
     floorApi
       .list(propertyId)
-      .then((res) => setFloors(res.data.data))
+      .then((res) => { setFloors(res.data.data); setSelectedIds(new Set()); })
       .catch(() => toast.error("Failed to load floors"))
       .finally(() => setLoading(false));
   };
@@ -90,6 +94,41 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
     }
   };
 
+  const toggleSelect = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === floors.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(floors.map((f) => f.id)));
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedIds.size === 0) return;
+    const count = selectedIds.size;
+    if (!window.confirm(`Are you sure you want to delete ${count} floor${count > 1 ? "s" : ""}? This will also delete all associated units and assets.`)) return;
+
+    setDeleting(true);
+    try {
+      await floorApi.bulkDelete(Array.from(selectedIds));
+      toast.success(`${count} floor${count > 1 ? "s" : ""} deleted`);
+      fetchFloors();
+      onUpdate();
+    } catch {
+      toast.error("Failed to delete floors");
+    } finally {
+      setDeleting(false);
+    }
+  };
+
   if (loading)
     return (
       <div className="flex items-center justify-center py-12">
@@ -99,7 +138,20 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
 
   return (
     <div>
-      <div className="mb-4 flex justify-end gap-2">
+      <div className="mb-4 flex items-center justify-between">
+        <div>
+          {selectedIds.size > 0 && hasPermission(P.FLOORS.DELETE) && (
+            <button
+              onClick={handleBulkDelete}
+              disabled={deleting}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-700 disabled:opacity-50"
+            >
+              <Trash2 size={16} />
+              {deleting ? "Deleting..." : `Delete ${selectedIds.size} selected`}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
         {floors.length > 0 && hasPermission(P.FLOORS.VIEW) && (
           <button
             onClick={() => {
@@ -117,6 +169,15 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
             Export
           </button>
         )}
+        {hasPermission(P.FLOORS.IMPORT) && (
+          <button
+            onClick={() => setBulkOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+          >
+            <Upload size={16} />
+            Import
+          </button>
+        )}
         {hasPermission(P.FLOORS.CREATE) && (
           <button
             onClick={openAdd}
@@ -126,6 +187,7 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
             Add Floor
           </button>
         )}
+        </div>
       </div>
 
       {floors.length === 0 ? (
@@ -138,6 +200,14 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
         <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-gray-200">
+              <th className="px-3 py-3 text-left">
+                <input
+                  type="checkbox"
+                  checked={selectedIds.size === floors.length && floors.length > 0}
+                  onChange={toggleSelectAll}
+                  className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                />
+              </th>
               <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Floor Name</th>
               <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
               <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
@@ -145,7 +215,15 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
           </thead>
           <tbody>
             {floors.map((floor) => (
-              <tr key={floor.id} className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80">
+              <tr key={floor.id} className={`border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80 ${selectedIds.has(floor.id) ? "bg-primary-50/40" : ""}`}>
+                <td className="px-3 py-3.5">
+                  <input
+                    type="checkbox"
+                    checked={selectedIds.has(floor.id)}
+                    onChange={() => toggleSelect(floor.id)}
+                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                  />
+                </td>
                 <td className="px-5 py-3.5 font-medium">{floor.name}</td>
                 <td className="px-5 py-3.5">
                   <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${floor.status === "ACTIVE" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
@@ -210,6 +288,23 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
           </div>
         </div>
       </Modal>
+
+      <BulkImportModal
+        isOpen={bulkOpen}
+        onClose={() => setBulkOpen(false)}
+        title="Bulk Import Floors"
+        columns={[
+          { key: "name", label: "Floor Name", required: true, example: "1st Floor" },
+        ]}
+        onImport={async (items) => {
+          const res = await floorApi.bulkImport(propertyId, items);
+          return res.data.data;
+        }}
+        onComplete={() => {
+          fetchFloors();
+          onUpdate();
+        }}
+      />
     </div>
   );
 }

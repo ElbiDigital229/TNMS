@@ -592,16 +592,42 @@ export default function AssetsTab({
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
               Asset Image
             </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImage(e.target.files?.[0] || null)}
-              className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-600 hover:file:bg-primary-100"
-            />
+            <div className="flex items-center gap-3">
+                <label className="cursor-pointer rounded-lg bg-primary-50 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-100">
+                  Choose File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file && file.size > 5 * 1024 * 1024) {
+                        toast.error("Image must be under 5MB");
+                        e.target.value = "";
+                        return;
+                      }
+                      setImage(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                {image ? (
+                  <span className="text-sm font-medium text-green-600">Photo selected</span>
+                ) : editingAsset?.imagePath ? (
+                  <span className="text-sm text-gray-500">Current photo set</span>
+                ) : (
+                  <span className="text-sm text-gray-400">No image selected</span>
+                )}
+              </div>
             {editingAsset && !image && editingAsset.imagePath && (
-              <p className="mt-1 text-xs text-gray-400">
-                Current image will be kept if no new image is selected.
-              </p>
+              <div className="mb-2">
+                <img src={`/${editingAsset.imagePath}`} alt="Current" className="h-32 w-32 rounded-lg object-cover ring-1 ring-gray-100" />
+                <p className="mt-1 text-xs text-gray-400">Current image will be kept if no new image is selected.</p>
+              </div>
+            )}
+            {image && (
+              <div className="mb-2">
+                <img src={URL.createObjectURL(image)} alt="Preview" className="h-32 w-32 rounded-lg object-cover ring-1 ring-gray-100" />
+              </div>
             )}
           </div>
 

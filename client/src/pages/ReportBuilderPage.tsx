@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   reportApi,
   propertyApi,
@@ -8,7 +9,7 @@ import {
   departmentApi,
 } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
-import { BarChart3, Plus, X, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Plus, X, Download, Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────
 type Entity = "tickets" | "assets" | "properties" | "units" | "users";
@@ -583,10 +584,20 @@ export default function ReportBuilderPage() {
   const isBreakdown = resultType === "breakdown";
   const trendHasMulti = isTrend && results && results.length > 0 && "total" in results[0];
 
-  const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100";
+  const navigate = useNavigate();
+const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100";
 
   return (
     <div>
+      {/* Back Button */}
+      <button
+        onClick={() => navigate(-1)}
+        className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+      >
+        <ArrowLeft size={16} />
+        Back
+      </button>
+
       <div className="mb-6">
         <h1 className="text-xl font-semibold text-gray-900">Report Builder</h1>
         <p className="mt-1 text-[13px] text-gray-500">Build and run custom queries across your data</p>

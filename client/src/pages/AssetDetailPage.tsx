@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom";
 import { assetApi, assetCategoryApi, ticketApi, departmentApi } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../components/ui/Toast";
 import Modal from "../components/ui/Modal";
 import { CONDITION_LABELS, TICKET_STATUS_LABELS, PRIORITY_LABELS } from "../../../shared/types";
 import { PERMISSIONS } from "../../../shared/permissions";
-import { Building2, Download, Edit2, Layers, Package, Plus, ClipboardList, ExternalLink } from "lucide-react";
+import { ArrowLeft, Building2, Download, Edit2, Layers, Package, Plus, ClipboardList, ExternalLink } from "lucide-react";
 import api from "../lib/api";
 
 const CONDITIONS = ["EXCELLENT", "GOOD", "FAIR", "POOR"] as const;
@@ -35,6 +35,7 @@ const priorityColor = (p: string) => {
 export default function AssetDetailPage() {
   const { code } = useParams();
   const { user, hasPermission } = useAuth();
+  const navigate = useNavigate();
   const toast = useToast();
   const [asset, setAsset] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -182,6 +183,15 @@ export default function AssetDetailPage() {
   return (
     <div>
       <div className="mx-auto max-w-2xl">
+        {/* Back Button */}
+        <button
+          onClick={() => navigate(-1)}
+          className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        >
+          <ArrowLeft size={16} />
+          Back
+        </button>
+
         {/* Header */}
         <div className="mb-6 rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5">
           <div className="flex items-start justify-between">

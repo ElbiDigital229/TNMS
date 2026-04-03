@@ -726,6 +726,7 @@ export async function seed() {
 
     const ticketNumber = `TKT${String(await prisma.ticket.count() + 1).padStart(4, "0")}`;
     await prisma.ticket.create({
+        // @ts-ignore - departmentId may not exist in mock seeding context
       data: {
         ticketNumber,
         name: ticketDef.name,

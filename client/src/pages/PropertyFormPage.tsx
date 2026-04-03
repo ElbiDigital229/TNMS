@@ -3,7 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { propertyApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import LocationPicker from "../components/map/LocationPicker";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, X } from "lucide-react";
 
 export default function PropertyFormPage() {
   const { id } = useParams();
@@ -19,6 +19,7 @@ export default function PropertyFormPage() {
   const [description, setDescription] = useState("");
   const [image, setImage] = useState<File | null>(null);
   const [existingImage, setExistingImage] = useState<string | null>(null);
+  const [removeImage, setRemoveImage] = useState(false);
   const [location, setLocation] = useState<{
     lat: number;
     lng: number;
@@ -62,6 +63,7 @@ export default function PropertyFormPage() {
     formData.append("city", city);
     if (description) formData.append("description", description);
     if (image) formData.append("image", image);
+    if (removeImage) formData.append("removeImage", "true");
     if (location) {
       formData.append("latitude", location.lat.toString());
       formData.append("longitude", location.lng.toString());
@@ -182,30 +184,64 @@ export default function PropertyFormPage() {
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
               Image
             </label>
-            {existingImage && !image && (
-              <div className="mb-2">
+            {existingImage && !image && !removeImage && (
+              <div className="relative mb-2 inline-block">
                 <img
                   src={`/${existingImage}`}
                   alt="Current"
                   className="h-32 w-32 rounded-lg object-cover ring-1 ring-gray-100"
                 />
+                <button
+                  type="button"
+                  onClick={() => { setRemoveImage(true); setExistingImage(null); }}
+                  className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
             {image && (
-              <div className="mb-2">
+              <div className="relative mb-2 inline-block">
                 <img
                   src={URL.createObjectURL(image)}
                   alt="Preview"
                   className="h-32 w-32 rounded-lg object-cover ring-1 ring-gray-100"
                 />
+                <button
+                  type="button"
+                  onClick={() => setImage(null)}
+                  className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+                >
+                  <X size={14} />
+                </button>
               </div>
             )}
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImage(e.target.files?.[0] || null)}
-              className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-600 hover:file:bg-primary-100"
-            />
+            <div className="flex items-center gap-3">
+                <label className="cursor-pointer rounded-lg bg-primary-50 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-100">
+                  Choose File
+                  <input
+                    type="file"
+                    accept="image/*"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] || null;
+                      if (file && file.size > 5 * 1024 * 1024) {
+                        toast.error("Image must be under 5MB");
+                        e.target.value = "";
+                        return;
+                      }
+                      setImage(file);
+                    }}
+                    className="hidden"
+                  />
+                </label>
+                {image ? (
+                  <span className="text-sm font-medium text-green-600">Photo selected</span>
+                ) : existingImage ? (
+                  <span className="text-sm text-gray-500">Current photo set</span>
+                ) : (
+                  <span className="text-sm text-gray-400">No image selected</span>
+                )}
+              </div>
           </div>
 
           <div>

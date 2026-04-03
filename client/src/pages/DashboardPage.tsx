@@ -13,7 +13,6 @@ import {
   Package,
   ClipboardList,
   AlertTriangle,
-  Clock,
   CheckCircle2,
   TrendingUp,
   Inbox,
@@ -126,12 +125,7 @@ export default function DashboardPage() {
 
   const totalTickets = stats.totals.tickets;
 
-  const formatAvgTime = (hours: number) => {
-    if (hours < 1) return "< 1 hour";
-    if (hours < 24) return `${hours} hour${hours === 1 ? "" : "s"}`;
-    const days = Math.round(hours / 24);
-    return `${days} day${days === 1 ? "" : "s"}`;
-  };
+
 
   return (
     <div>
@@ -162,7 +156,7 @@ export default function DashboardPage() {
         </Link>
 
         <Link
-          to="/properties"
+          to="/units"
           className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
         >
           <div className="flex items-center justify-between">
@@ -214,7 +208,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Ticket Metrics Row */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
           to="/tickets?status=OPEN"
           className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
@@ -249,24 +243,6 @@ export default function DashboardPage() {
           </div>
         </Link>
 
-        <Link
-          to="/tickets?status=COMPLETED"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-blue-50 p-2">
-              <Clock className="text-blue-600" size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Avg. Completion Time</p>
-              <p className="text-2xl font-semibold text-blue-600">
-                {stats.tickets.avgCompletionTimeHours > 0
-                  ? formatAvgTime(stats.tickets.avgCompletionTimeHours)
-                  : "N/A"}
-              </p>
-            </div>
-          </div>
-        </Link>
       </div>
 
       {/* To-Do Widget */}

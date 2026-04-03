@@ -73,7 +73,7 @@ export const propertyController = {
     try {
       const { name, type, city, description, latitude, longitude } = req.body;
 
-      const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
+      const imagePath = req.file ? `uploads/${req.file.filename}` : req.body.removeImage === "true" ? null : undefined;
 
       const property = await propertyService.update(req.params.id, {
         name,

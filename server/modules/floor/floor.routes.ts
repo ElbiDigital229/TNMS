@@ -10,6 +10,8 @@ floorRoutes.use(authenticate);
 
 floorRoutes.get("/:propertyId/floors", requirePermission(PERMISSIONS.FLOORS.VIEW), floorController.findByProperty);
 floorRoutes.post("/:propertyId/floors", requirePermission(PERMISSIONS.FLOORS.CREATE), floorController.create);
+floorRoutes.post("/:propertyId/floors/bulk-import", requirePermission(PERMISSIONS.FLOORS.IMPORT), floorController.bulkImport);
+floorRoutes.delete("/floors/bulk-delete", requirePermission(PERMISSIONS.FLOORS.DELETE), floorController.bulkDelete);
 floorRoutes.put("/floors/:id", requirePermission(PERMISSIONS.FLOORS.EDIT), floorController.update);
 floorRoutes.patch("/floors/:id/deactivate", requirePermission(PERMISSIONS.FLOORS.DEACTIVATE), floorController.deactivate);
 floorRoutes.patch("/floors/:id/activate", requirePermission(PERMISSIONS.FLOORS.DEACTIVATE), floorController.activate);

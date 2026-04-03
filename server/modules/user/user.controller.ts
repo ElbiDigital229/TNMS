@@ -155,8 +155,8 @@ export const userController = {
       if (!Array.isArray(items) || items.length === 0) {
         return sendError(res, "items array is required", 400);
       }
-      if (items.length > 500) {
-        return sendError(res, "Maximum 500 items per import", 400);
+      if (items.length > 5000) {
+        return sendError(res, "Maximum 5000 items per import", 400);
       }
 
       const results = await userService.bulkCreate(items);

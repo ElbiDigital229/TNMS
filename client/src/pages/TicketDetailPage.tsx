@@ -499,10 +499,11 @@ export default function TicketDetailPage() {
                           key={c.id}
                           className="rounded-lg bg-gray-50/80 ring-1 ring-gray-100 p-3"
                         >
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-xs font-medium text-gray-700">{c.commenter?.fullName || c.commenter?.username || "System"}</p>
+                            <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</p>
+                          </div>
                           <p className="text-sm">{c.content}</p>
-                          <p className="mt-1 text-xs text-gray-400">
-                            {new Date(c.createdAt).toLocaleString()}
-                          </p>
                         </div>
                       ))}
                     </div>

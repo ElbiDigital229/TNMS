@@ -179,15 +179,56 @@ export default function LocationPicker({
         </MapContainer>
       </div>
 
-      {value && (
-        <p className="text-xs text-gray-500">
-          Lat: {value.lat.toFixed(6)}, Lng: {value.lng.toFixed(6)} — Click or
-          drag marker to adjust
-        </p>
-      )}
+      <div className="flex items-center gap-2">
+        <div className="flex-1">
+          <label className="mb-1 block text-xs font-medium text-gray-500">Latitude</label>
+          <input
+            type="number"
+            step="any"
+            value={value?.lat ?? ""}
+            onChange={(e) => {
+              const lat = parseFloat(e.target.value);
+              if (!isNaN(lat)) {
+                const lng = value?.lng ?? 0;
+                onChange({ lat, lng });
+                setMapCenter([lat, lng]);
+              }
+            }}
+            placeholder="e.g. 31.5204"
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="mb-1 block text-xs font-medium text-gray-500">Longitude</label>
+          <input
+            type="number"
+            step="any"
+            value={value?.lng ?? ""}
+            onChange={(e) => {
+              const lng = parseFloat(e.target.value);
+              if (!isNaN(lng)) {
+                const lat = value?.lat ?? 0;
+                onChange({ lat, lng });
+                setMapCenter([lat, lng]);
+              }
+            }}
+            placeholder="e.g. 74.3587"
+            className="w-full rounded-lg border border-gray-300 px-3 py-1.5 text-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+          />
+        </div>
+        {value && (
+          <button
+            type="button"
+            onClick={() => onChange(null)}
+            className="mt-5 rounded-lg px-2 py-1.5 text-xs text-red-500 hover:bg-red-50"
+          >
+            Clear
+          </button>
+        )}
+      </div>
       {!value && (
-        <p className="text-xs text-gray-500">
-          Click on the map or search to place a pin
+        <p className="text-xs text-gray-400">
+          Enter coordinates, click the map, or search to place a pin
         </p>
       )}
     </div>

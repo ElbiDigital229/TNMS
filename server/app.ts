@@ -8,7 +8,7 @@ import { errorHandler } from "./middleware/errorHandler.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { propertyRoutes } from "./modules/property/property.routes.js";
 import { floorRoutes } from "./modules/floor/floor.routes.js";
-import { unitRoutes } from "./modules/unit/unit.routes.js";
+import { unitRoutes, unitGlobalRoutes } from "./modules/unit/unit.routes.js";
 import { assetRoutes, propertyAssetRoutes } from "./modules/asset/asset.routes.js";
 import { assetCategoryRoutes } from "./modules/asset-category/asset-category.routes.js";
 import { areaGroupRoutes } from "./modules/area-group/area-group.routes.js";
@@ -27,6 +27,7 @@ import { notificationRoutes } from "./modules/notification/notification.routes.j
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const app = express();
+app.set("trust proxy", 1);
 
 app.use(cors());
 app.use(express.json({ limit: "5mb" }));
@@ -40,6 +41,7 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
+  validate: { xForwardedForHeader: false },
 });
 
 // Stricter login rate limit: 20 attempts per 15 minutes per IP
@@ -49,6 +51,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many login attempts, please try again later." },
+  validate: { xForwardedForHeader: false },
 });
 
 // Generous rate limit for notification polling (300 req/15min)
@@ -58,6 +61,7 @@ const notificationPollLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many requests, please try again later." },
+  validate: { xForwardedForHeader: false },
 });
 app.use("/api/notifications/unread-count", notificationPollLimiter);
 
@@ -75,6 +79,7 @@ app.use("/api/properties", floorRoutes);
 app.use("/api/properties", unitRoutes);
 app.use("/api/properties", propertyAssetRoutes);
 app.use("/api/assets", assetRoutes);
+app.use("/api/units", unitGlobalRoutes);
 app.use("/api/asset-categories", assetCategoryRoutes);
 app.use("/api/area-groups", areaGroupRoutes);
 app.use("/api/tickets", ticketRoutes);

@@ -118,7 +118,7 @@ export const propertyService = {
       type?: PropertyType;
       city?: City;
       description?: string;
-      imagePath?: string;
+      imagePath?: string | null;
       latitude?: number;
       longitude?: number;
     }

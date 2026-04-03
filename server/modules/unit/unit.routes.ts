@@ -15,3 +15,8 @@ unitRoutes.post("/units/bulk-delete", requirePermission(PERMISSIONS.UNITS.DEACTI
 unitRoutes.put("/units/:id", requirePermission(PERMISSIONS.UNITS.EDIT), unitController.update);
 unitRoutes.patch("/units/:id/deactivate", requirePermission(PERMISSIONS.UNITS.DEACTIVATE), unitController.deactivate);
 unitRoutes.patch("/units/:id/activate", requirePermission(PERMISSIONS.UNITS.DEACTIVATE), unitController.activate);
+
+
+// Global unit routes (mounted under /api/units)
+export const unitGlobalRoutes = Router();
+unitGlobalRoutes.get("/", authenticate, requirePermission(PERMISSIONS.UNITS.VIEW), unitController.findAll);

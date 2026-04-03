@@ -235,7 +235,7 @@ export const assetService = {
       where: { status: "ACTIVE" },
       select: { id: true, name: true },
     });
-    const categoryMap = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
+    const categoryMap = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c.id]));
 
     const floors = await prisma.floor.findMany({
       where: { propertyId, status: "ACTIVE" },

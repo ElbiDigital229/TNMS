@@ -7,6 +7,7 @@ interface ColumnDef {
   label: string;
   required?: boolean;
   example: string;
+  aliases?: string[];
 }
 
 interface ImportResult {
@@ -81,6 +82,7 @@ export default function BulkImportModal({
   const [summary, setSummary] = useState<{ total: number; success: number; errors: number } | null>(null);
   const [importing, setImporting] = useState(false);
   const [error, setError] = useState("");
+  const [dragging, setDragging] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
@@ -99,11 +101,12 @@ export default function BulkImportModal({
     onClose();
   };
 
-  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const processFile = (file: File) => {
+    if (!file.name.endsWith(".csv")) {
+      setError("Please upload a CSV file");
+      return;
+    }
     setError("");
-
     const reader = new FileReader();
     reader.onload = (ev) => {
       try {
@@ -115,14 +118,16 @@ export default function BulkImportModal({
         }
 
         const headers = rows[0].map((h) => h.toLowerCase().replace(/\s+/g, ""));
-        const colKeys = columns.map((c) => c.key.toLowerCase());
 
-        // Map headers to column keys
+        // Map headers to column keys (check key, label, and aliases)
         const headerMap: number[] = [];
         for (const col of columns) {
-          const idx = headers.findIndex(
-            (h) => h === col.key.toLowerCase() || h === col.label.toLowerCase().replace(/\s+/g, "")
-          );
+          const idx = headers.findIndex((h) => {
+            if (h === col.key.toLowerCase()) return true;
+            if (h === col.label.toLowerCase().replace(/\s+/g, "")) return true;
+            if (col.aliases?.some((a) => h === a.toLowerCase().replace(/\s+/g, ""))) return true;
+            return false;
+          });
           headerMap.push(idx);
         }
 
@@ -153,6 +158,32 @@ export default function BulkImportModal({
       }
     };
     reader.readAsText(file);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragging(false);
+    const file = e.dataTransfer.files?.[0];
+    if (file) processFile(file);
+  };
+
+  const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    processFile(file);
   };
 
   const handleImport = async () => {
@@ -199,7 +230,12 @@ export default function BulkImportModal({
               Download CSV Template
             </button>
 
-            <div className="rounded-lg border-2 border-dashed border-gray-300 p-6 text-center">
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              className={`rounded-lg border-2 border-dashed p-6 text-center transition-colors ${dragging ? "border-primary-400 bg-primary-50" : "border-gray-300"}`}
+            >
               <FileSpreadsheet size={40} className="mx-auto mb-2 text-gray-400" />
               <p className="mb-2 text-sm text-gray-500">
                 Choose a CSV file or drag and drop

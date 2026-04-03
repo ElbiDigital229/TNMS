@@ -3,6 +3,23 @@ import { unitService } from "./unit.service.js";
 import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 
 export const unitController = {
+  async findAll(req: Request, res: Response) {
+    try {
+      const { page, limit, search, status } = req.query;
+      const result = await unitService.findAll({
+        page: page ? parseInt(page as string) : undefined,
+        limit: limit ? parseInt(limit as string) : undefined,
+        search: search as string,
+        status: status as string,
+        userId: (req as any).user?.id,
+        allProperties: (req as any).user?.allProperties,
+      });
+      sendSuccess(res, result);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
   async findByProperty(req: Request, res: Response) {
     try {
       const units = await unitService.findByProperty(req.params.propertyId);
@@ -86,8 +103,8 @@ export const unitController = {
       if (!Array.isArray(items) || items.length === 0) {
         return sendError(res, "items array is required", 400);
       }
-      if (items.length > 500) {
-        return sendError(res, "Maximum 500 items per import", 400);
+      if (items.length > 5000) {
+        return sendError(res, "Maximum 5000 items per import", 400);
       }
 
       const results = await unitService.bulkCreate(req.params.propertyId, items);

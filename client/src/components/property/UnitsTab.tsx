@@ -386,8 +386,8 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
         title="Bulk Import Units"
         columns={[
           { key: "name", label: "Name", required: true, example: "Unit 101" },
-          { key: "unitType", label: "Unit Type", required: false, example: "Office" },
-          { key: "floorName", label: "Floor Name", required: false, example: "Ground Floor" },
+          { key: "unitType", label: "Unit Type", required: false, example: "Office", aliases: ["Type"] },
+          { key: "floorName", label: "Floor Name", required: false, example: "Ground Floor", aliases: ["Floor"] },
           { key: "description", label: "Description", required: false, example: "Corner unit" },
         ]}
         onImport={async (items) => {

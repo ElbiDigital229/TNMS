@@ -63,10 +63,16 @@ export const floorApi = {
     api.put(`/properties/floors/${id}`, { name }),
   deactivate: (id: string) => api.patch(`/properties/floors/${id}/deactivate`),
   activate: (id: string) => api.patch(`/properties/floors/${id}/activate`),
+  bulkImport: (propertyId: string, items: Record<string, string>[]) =>
+    api.post(`/properties/${propertyId}/floors/bulk-import`, { items }),
+  bulkDelete: (ids: string[]) =>
+    api.delete("/properties/floors/bulk-delete", { data: { ids } }),
 };
 
 // Unit API
 export const unitApi = {
+  listAll: (params?: Record<string, string | number>) =>
+    api.get("/units", { params }),
   list: (propertyId: string) => api.get(`/properties/${propertyId}/units`),
   create: (propertyId: string, data: Record<string, string | undefined>) =>
     api.post(`/properties/${propertyId}/units`, data),

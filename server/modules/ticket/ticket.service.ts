@@ -138,7 +138,7 @@ export const ticketService = {
         },
         createdBy: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
         assignedTo: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
-        comments: { orderBy: { createdAt: "desc" } },
+        comments: { orderBy: { createdAt: "desc" }, include: { commenter: { select: { id: true, fullName: true, username: true } } } },
         activities: {
           orderBy: { createdAt: "asc" },
           include: { performedBy: { select: { id: true, fullName: true, username: true } } },
@@ -239,6 +239,12 @@ export const ticketService = {
   ) {
     const { assetIds, ...ticketData } = data;
 
+    // Fetch old ticket for change tracking
+    const oldTicket = await prisma.ticket.findUnique({
+      where: { id },
+      include: { assignedTo: { select: { fullName: true } }, category: { select: { name: true } } },
+    });
+
     // Update assets if provided
     if (assetIds !== undefined) {
       await prisma.ticketAsset.deleteMany({ where: { ticketId: id } });
@@ -262,11 +268,32 @@ export const ticketService = {
       },
     });
 
+    // Build specific change details
+    const changes: string[] = [];
+    if (oldTicket) {
+      if (data.name !== undefined && data.name !== oldTicket.name) changes.push(`Name changed to "${data.name}"`);
+      if (data.priority !== undefined && data.priority !== oldTicket.priority) changes.push(`Priority changed from ${oldTicket.priority} to ${data.priority}`);
+      if (data.dueDate !== undefined) {
+        const oldDate = oldTicket.dueDate ? oldTicket.dueDate.toISOString().split("T")[0] : "none";
+        const newDate = new Date(data.dueDate).toISOString().split("T")[0];
+        if (oldDate !== newDate) changes.push(`Due date changed from ${oldDate} to ${newDate}`);
+      }
+      // Note: status and assignedTo changes are tracked by their own methods
+      if (data.categoryId !== undefined && data.categoryId !== oldTicket.categoryId) {
+        const newCategory = data.categoryId ? await prisma.ticketCategory.findUnique({ where: { id: data.categoryId }, select: { name: true } }) : null;
+        changes.push(`Category changed from ${oldTicket.category?.name || "none"} to ${newCategory?.name || "none"}`);
+      }
+      if (data.description !== undefined && data.description !== oldTicket.description) changes.push("Description updated");
+      if (data.taskType !== undefined && data.taskType !== oldTicket.taskType) changes.push(`Task type changed from ${oldTicket.taskType} to ${data.taskType}`);
+      if (data.subTaskType !== undefined && data.subTaskType !== oldTicket.subTaskType) changes.push(`Sub-task type changed from ${oldTicket.subTaskType || "none"} to ${data.subTaskType || "none"}`);
+    }
+    const details = changes.length > 0 ? changes.join(", ") : "Ticket details updated";
+
     await prisma.ticketActivity.create({
       data: {
         ticketId: id,
         action: "UPDATED",
-        details: "Ticket details updated",
+        details,
         performedById: editorUserId || null,
       },
     });
@@ -327,7 +354,7 @@ export const ticketService = {
 
   async addComment(ticketId: string, content: string, commenterId?: string) {
     const comment = await prisma.ticketComment.create({
-      data: { ticketId, content },
+      data: { ticketId, content, commenterId: commenterId || null },
     });
 
     await prisma.ticketActivity.create({
