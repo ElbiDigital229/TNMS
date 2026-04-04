@@ -1,5 +1,6 @@
 import { prisma } from "../../config/db.js";
 import type { NotificationType } from "@prisma/client";
+import { fcmService } from "../../services/fcm.service.js";
 
 export const notificationService = {
   async create(params: {
@@ -10,7 +11,7 @@ export const notificationService = {
     linkUrl?: string;
     metadata?: Record<string, any>;
   }) {
-    return prisma.notification.create({
+    const notification = await prisma.notification.create({
       data: {
         userId: params.userId,
         type: params.type,
@@ -20,6 +21,19 @@ export const notificationService = {
         metadata: params.metadata ?? undefined,
       },
     });
+
+    // Send push notification (fire and forget)
+    fcmService.sendToUser(params.userId, {
+      title: params.title,
+      body: params.message,
+      data: {
+        type: params.type,
+        notificationId: notification.id,
+        ...(params.linkUrl ? { linkUrl: params.linkUrl } : {}),
+      },
+    }).catch(() => {}); // Never block on push failure
+
+    return notification;
   },
 
   async createMany(
@@ -34,7 +48,7 @@ export const notificationService = {
   ) {
     if (notifications.length === 0) return;
 
-    return prisma.notification.createMany({
+    const result = await prisma.notification.createMany({
       data: notifications.map((n) => ({
         userId: n.userId,
         type: n.type,
@@ -44,6 +58,27 @@ export const notificationService = {
         metadata: n.metadata ?? undefined,
       })),
     });
+
+    // Send push notifications to all unique users (fire and forget)
+    const uniqueUserIds = [...new Set(notifications.map((n) => n.userId))];
+    for (const userId of uniqueUserIds) {
+      const userNotifs = notifications.filter((n) => n.userId === userId);
+      const first = userNotifs[0];
+      const body = userNotifs.length > 1
+        ? `${first.message} (+${userNotifs.length - 1} more)`
+        : first.message;
+
+      fcmService.sendToUser(userId, {
+        title: first.title,
+        body,
+        data: {
+          type: first.type,
+          ...(first.linkUrl ? { linkUrl: first.linkUrl } : {}),
+        },
+      }).catch(() => {});
+    }
+
+    return result;
   },
 
   async findByUser(
