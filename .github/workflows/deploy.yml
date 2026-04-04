@@ -17,6 +17,8 @@ jobs:
           script: |
             set -e
             cd /home/ubuntu/TNMS
+            git checkout -- .
+            git clean -fd
             git pull origin main
             npm install
             npx prisma migrate deploy
