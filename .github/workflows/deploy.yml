@@ -21,5 +21,15 @@ jobs:
             npx prisma migrate deploy
             npx prisma generate
             npm run build
-            pm2 restart tnms
+
+            # Install nginx config if changed
+            sudo cp nginx/tnms.conf /etc/nginx/sites-available/tnms
+            sudo ln -sf /etc/nginx/sites-available/tnms /etc/nginx/sites-enabled/tnms
+            sudo nginx -t && sudo systemctl reload nginx
+
+            pm2 restart tnms || pm2 start ecosystem.config.cjs
+
+            # Health check
+            sleep 3
+            curl -sf http://localhost:3000/api/auth/login > /dev/null && echo "Health check passed" || echo "Health check failed"
             echo "Deployed successfully at $(date)"

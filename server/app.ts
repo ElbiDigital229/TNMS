@@ -94,5 +94,13 @@ app.use("/api/audit-logs", auditRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// Serve static frontend files
+app.use(express.static(path.join(process.cwd(), "dist/public")));
+
+// SPA fallback — serve index.html for all non-API routes
+app.get("*", (req, res) => {
+  res.sendFile(path.join(process.cwd(), "dist/public", "index.html"));
+});
+
 // Error handler
 app.use(errorHandler);
