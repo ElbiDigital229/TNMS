@@ -21,6 +21,7 @@ jobs:
             git clean -fd
             git pull origin main
             npm install
+            npx prisma migrate resolve --rolled-back 20260401000000_add_departments_ticket_blocking 2>/dev/null || true
             npx prisma migrate deploy
             npx prisma generate
             npm run build
