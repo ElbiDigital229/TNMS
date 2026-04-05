@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { dashboardApi, todoApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import {
@@ -47,6 +47,7 @@ interface DashboardStats {
 }
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const toast = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [todoStats, setTodoStats] = useState<{ open: number; completed: number; overdue: number; dueToday: number } | null>(null);
@@ -210,7 +211,7 @@ export default function DashboardPage() {
       {/* Ticket Metrics Row */}
       <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Link
-          to="/tickets?status=OPEN"
+          to="/tickets?status=OVERDUE"
           className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
         >
           <div className="flex items-center gap-3">
@@ -469,13 +470,17 @@ export default function DashboardPage() {
                 </thead>
                 <tbody>
                   {stats.recentTickets.map((ticket) => (
-                    <tr key={ticket.id} className="border-b border-gray-50 transition-colors duration-150 hover:bg-gray-50/80">
+                    <tr
+                      key={ticket.id}
+                      onClick={() => navigate(`/tickets/${ticket.id}`)}
+                      className="cursor-pointer border-b border-gray-50 transition-colors duration-150 hover:bg-primary-50/40"
+                    >
                       <td className="px-5 py-3">
-                        <Link to={`/tickets/${ticket.id}`} className="font-mono text-xs font-medium text-primary-600 hover:underline">
+                        <span className="font-mono text-xs font-medium text-primary-600">
                           {ticket.ticketNumber}
-                        </Link>
+                        </span>
                       </td>
-                      <td className="px-5 py-3 font-medium">{ticket.name}</td>
+                      <td className="px-5 py-3 font-medium text-gray-900">{ticket.name}</td>
                       <td className="px-5 py-3 text-gray-600">{ticket.property.name}</td>
                       <td className="px-5 py-3">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(ticket.priority)}`}>

@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useNavigate } from "react-router-dom";
 import { ticketApi, propertyApi, userApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
@@ -15,10 +15,13 @@ import {
   Eye,
   ChevronLeft,
   ChevronRight,
+  ChevronUp,
+  ChevronDown,
   ClipboardList,
   Loader2,
   SlidersHorizontal,
   X,
+  ArrowUpDown,
 } from "lucide-react";
 
 interface Ticket {
@@ -40,6 +43,7 @@ interface Ticket {
 }
 
 export default function TicketListPage() {
+  const navigate = useNavigate();
   const toast = useToast();
   const { hasPermission } = useAuth();
   const [searchParams] = useSearchParams();
@@ -50,6 +54,8 @@ export default function TicketListPage() {
   const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0, page: 1, limit: 10 });
+  const [sortBy, setSortBy] = useState("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   // Advanced filters
   const [filterOpen, setFilterOpen] = useState(false);
@@ -100,7 +106,7 @@ export default function TicketListPage() {
   const fetchTickets = useCallback(async () => {
     setLoading(true);
     try {
-      const params: Record<string, string | number> = { page, limit: 10 };
+      const params: Record<string, string | number> = { page, limit: 10, sortBy, sortOrder };
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
       if (filters.priority) params.priority = filters.priority;
@@ -122,7 +128,7 @@ export default function TicketListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter, filters]);
+  }, [page, search, statusFilter, filters, sortBy, sortOrder]);
 
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
@@ -130,6 +136,21 @@ export default function TicketListPage() {
     const timeout = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
     return () => clearTimeout(timeout);
   }, [searchInput]);
+
+  const toggleSort = (column: string) => {
+    if (sortBy === column) {
+      setSortOrder((o) => (o === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(column);
+      setSortOrder("asc");
+    }
+    setPage(1);
+  };
+
+  const SortIcon = ({ column }: { column: string }) => {
+    if (sortBy !== column) return <ArrowUpDown size={12} className="text-gray-300" />;
+    return sortOrder === "asc" ? <ChevronUp size={12} className="text-primary-600" /> : <ChevronDown size={12} className="text-primary-600" />;
+  };
 
   const priorityColor = (p: string) => {
     switch (p) {
@@ -216,7 +237,7 @@ export default function TicketListPage() {
               </>
             )}
             {filterOpen && (
-              <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl animate-slide-up md:absolute md:inset-auto md:right-0 md:top-full md:z-30 md:mt-2 md:w-80 md:max-h-none md:rounded-xl md:border md:border-gray-200 md:animate-none"
+              <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl animate-slide-up md:absolute md:inset-auto md:right-0 md:top-full md:z-50 md:mt-2 md:w-80 md:max-h-[70vh] md:rounded-xl md:border md:border-gray-200 md:shadow-lg md:animate-none"
                    style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-[13px] font-semibold text-gray-800">Filters</span>
@@ -419,26 +440,45 @@ export default function TicketListPage() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-gray-200">
-                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Ticket #</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Name</th>
+                    <th onClick={() => toggleSort("ticketNumber")} className="cursor-pointer select-none px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hover:text-gray-700">
+                      <span className="inline-flex items-center gap-1">Ticket # <SortIcon column="ticketNumber" /></span>
+                    </th>
+                    <th onClick={() => toggleSort("name")} className="cursor-pointer select-none px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hover:text-gray-700">
+                      <span className="inline-flex items-center gap-1">Name <SortIcon column="name" /></span>
+                    </th>
                     <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Type</th>
                     <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Property</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Priority</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
+                    <th onClick={() => toggleSort("priority")} className="cursor-pointer select-none px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hover:text-gray-700">
+                      <span className="inline-flex items-center gap-1">Priority <SortIcon column="priority" /></span>
+                    </th>
+                    <th onClick={() => toggleSort("status")} className="cursor-pointer select-none px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hover:text-gray-700">
+                      <span className="inline-flex items-center gap-1">Status <SortIcon column="status" /></span>
+                    </th>
                     <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Block</th>
                     <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Assigned To</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Due Date</th>
+                    <th onClick={() => toggleSort("dueDate")} className="cursor-pointer select-none px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 hover:text-gray-700">
+                      <span className="inline-flex items-center gap-1">Due Date <SortIcon column="dueDate" /></span>
+                    </th>
                     <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {tickets.map((ticket) => (
-                    <tr key={ticket.id} className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80">
+                    <tr
+                      key={ticket.id}
+                      onClick={() => navigate(`/tickets/${ticket.id}`)}
+                      className="cursor-pointer border-b border-gray-100/80 transition-colors duration-150 hover:bg-primary-50/40"
+                    >
                       <td className="px-5 py-3.5 font-mono text-xs font-semibold text-primary-600">{ticket.ticketNumber}</td>
-                      <td className="px-5 py-3.5 font-medium">{ticket.name}</td>
+                      <td className="px-5 py-3.5 font-medium text-gray-900">{ticket.name}</td>
                       <td className="px-5 py-3.5 text-gray-600">{TASK_TYPE_LABELS[ticket.taskType]}</td>
                       <td className="px-5 py-3.5">
-                        <Link to={`/properties/${ticket.property.id}`} className="text-primary-600 hover:underline">{ticket.property.name}</Link>
+                        <span
+                          onClick={(e) => { e.stopPropagation(); navigate(`/properties/${ticket.property.id}`); }}
+                          className="text-primary-600 hover:underline cursor-pointer"
+                        >
+                          {ticket.property.name}
+                        </span>
                       </td>
                       <td className="px-5 py-3.5">
                         <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityColor(ticket.priority)}`}>{PRIORITY_LABELS[ticket.priority]}</span>
@@ -485,9 +525,9 @@ export default function TicketListPage() {
                         )}
                       </td>
                       <td className="px-5 py-3.5">
-                        <Link to={`/tickets/${ticket.id}`} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="View">
+                        <span className="inline-flex rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="View">
                           <Eye size={16} />
-                        </Link>
+                        </span>
                       </td>
                     </tr>
                   ))}

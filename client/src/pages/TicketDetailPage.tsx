@@ -325,14 +325,14 @@ export default function TicketDetailPage() {
         </h1>
       </div>
 
-      {/* ── Desktop Back Link ── */}
-      <button
-        onClick={() => navigate("/tickets")}
-        className="mb-4 hidden items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors duration-150 md:flex"
-      >
-        <ArrowLeft size={16} />
-        Back to Tickets
-      </button>
+      {/* ── Desktop Breadcrumbs ── */}
+      <nav className="mb-4 hidden items-center gap-1.5 text-sm md:flex">
+        <Link to="/" className="text-gray-400 hover:text-gray-600 transition-colors">Dashboard</Link>
+        <span className="text-gray-300">/</span>
+        <Link to="/tickets" className="text-gray-400 hover:text-gray-600 transition-colors">Tickets</Link>
+        <span className="text-gray-300">/</span>
+        <span className="font-medium text-gray-700">{ticket.ticketNumber}</span>
+      </nav>
 
       {/* Header — desktop only shows the full action bar */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">

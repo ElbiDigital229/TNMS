@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Bell,
@@ -56,15 +56,30 @@ export default function NotificationBell() {
     useNotifications();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
+  const buttonRef = useRef<HTMLButtonElement>(null);
+  const [dropdownPos, setDropdownPos] = useState({ top: 0, right: 0 });
+
+  // Calculate dropdown position when opening
+  const updatePosition = useCallback(() => {
+    if (buttonRef.current) {
+      const rect = buttonRef.current.getBoundingClientRect();
+      setDropdownPos({
+        top: rect.bottom + 8,
+        right: window.innerWidth - rect.right,
+      });
+    }
+  }, []);
 
   // Close dropdown on click outside
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) {
+      if (ref.current && !ref.current.contains(e.target as Node) &&
+          buttonRef.current && !buttonRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
     if (open) {
+      updatePosition();
       document.addEventListener("mousedown", handleClickOutside);
     }
     return () => document.removeEventListener("mousedown", handleClickOutside);
@@ -81,9 +96,10 @@ export default function NotificationBell() {
   };
 
   return (
-    <div className="relative" ref={ref}>
+    <div className="relative">
       {/* Bell Button */}
       <button
+        ref={buttonRef}
         onClick={() => setOpen(!open)}
         className="relative rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
         title="Notifications"
@@ -96,9 +112,13 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Desktop Dropdown */}
+      {/* Desktop Dropdown — fixed position to escape overflow:hidden parents */}
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-96 rounded-xl bg-white shadow-lg ring-1 ring-gray-200 z-50">
+        <div
+          ref={ref}
+          className="fixed w-96 rounded-xl bg-white shadow-lg ring-1 ring-gray-200 z-[100]"
+          style={{ top: dropdownPos.top, right: dropdownPos.right }}
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
             <h3 className="text-sm font-semibold text-gray-900">

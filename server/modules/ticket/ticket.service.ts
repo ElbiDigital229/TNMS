@@ -40,12 +40,20 @@ export const ticketService = {
     dueDateFrom?: string;
     dueDateTo?: string;
     blocked?: string;
+    sortBy?: string;
+    sortOrder?: "asc" | "desc";
     viewMode?: "all" | "assigned";
     userId?: string;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
     const skip = (page - 1) * limit;
+
+    // Build orderBy from sort params
+    const allowedSortColumns = ["ticketNumber", "name", "priority", "status", "dueDate", "createdAt"];
+    const sortCol = allowedSortColumns.includes(params.sortBy || "") ? params.sortBy! : "createdAt";
+    const sortDir = params.sortOrder === "asc" ? "asc" : "desc";
+    const orderBy = { [sortCol]: sortDir };
 
     const where: any = {};
     if (params.search) {
@@ -100,7 +108,7 @@ export const ticketService = {
           },
           _count: { select: { comments: true } },
         },
-        orderBy: { createdAt: "desc" },
+        orderBy,
         skip,
         take: limit,
       }),

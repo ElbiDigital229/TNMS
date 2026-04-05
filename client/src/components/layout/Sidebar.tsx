@@ -1,4 +1,4 @@
-import { NavLink, Link } from "react-router-dom";
+import { NavLink, Link, useLocation } from "react-router-dom";
 import { useAuth } from "../../contexts/AuthContext";
 import {
   LayoutDashboard,
@@ -17,7 +17,7 @@ import {
   LogOut,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { PERMISSIONS } from "../../../../shared/permissions";
 
 interface SidebarProps {
@@ -27,7 +27,14 @@ interface SidebarProps {
 
 export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const { logout, hasPermission, hasAnyPermission } = useAuth();
-  const [settingsOpen, setSettingsOpen] = useState(false);
+  const location = useLocation();
+  const isOnSettingsPage = location.pathname.startsWith("/settings");
+  const [settingsOpen, setSettingsOpen] = useState(isOnSettingsPage);
+
+  // Auto-expand settings section when navigating to a settings page
+  useEffect(() => {
+    if (isOnSettingsPage && !settingsOpen) setSettingsOpen(true);
+  }, [isOnSettingsPage]);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-200 ${
@@ -140,7 +147,11 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <div className="space-y-0.5">
                 <button
                   onClick={() => setSettingsOpen(!settingsOpen)}
-                  className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-gray-400 transition-all duration-200 hover:bg-white/[0.06] hover:text-gray-200"
+                  className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
+                    isOnSettingsPage
+                      ? "bg-white/10 text-white"
+                      : "text-gray-400 hover:bg-white/[0.06] hover:text-gray-200"
+                  }`}
                 >
                   <Settings size={18} />
                   Settings
