@@ -1,16 +1,24 @@
+import { useEffect } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
+
+/** Dismiss the HTML splash screen (defined in index.html) */
+function dismissSplash() {
+  const el = document.getElementById("splash");
+  if (el) {
+    el.classList.add("hide");
+    setTimeout(() => el.remove(), 500);
+  }
+}
 
 export default function ProtectedRoute() {
   const { isAuthenticated, isLoading } = useAuth();
 
-  if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary-600 border-t-transparent" />
-      </div>
-    );
-  }
+  useEffect(() => {
+    if (!isLoading) dismissSplash();
+  }, [isLoading]);
+
+  if (isLoading) return null; // splash is still visible
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;

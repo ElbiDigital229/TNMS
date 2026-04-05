@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 40" fill="none">
+  <!-- TRUE -->
+  <text x="0" y="30" font-family="Inter, system-ui, sans-serif" font-weight="600" font-size="28" letter-spacing="4" fill="white">TRUE</text>
+  <!-- NORTH with teal accent on N -->
+  <text x="140" y="30" font-family="Inter, system-ui, sans-serif" font-weight="600" font-size="28" letter-spacing="4" fill="white">N</text>
+  <!-- Teal diagonal accent through the N -->
+  <line x1="148" y1="8" x2="162" y2="32" stroke="#0ea899" stroke-width="3.5" stroke-linecap="round"/>
+  <text x="166" y="30" font-family="Inter, system-ui, sans-serif" font-weight="600" font-size="28" letter-spacing="4" fill="white">ORTH</text>
+</svg>

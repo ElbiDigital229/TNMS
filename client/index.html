@@ -2,8 +2,11 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#0D2637" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
     <title>TNMS - True North Management System</title>
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
     <link
@@ -15,8 +18,87 @@
       href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
       crossorigin=""
     />
+    <style>
+      #splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        background: #0D2637;
+        transition: opacity 0.4s ease-out;
+      }
+      #splash.hide {
+        opacity: 0;
+        pointer-events: none;
+      }
+      #splash .logo-text {
+        font-family: 'Inter', system-ui, sans-serif;
+        font-weight: 600;
+        font-size: 28px;
+        letter-spacing: 5px;
+        display: flex;
+        align-items: baseline;
+        gap: 14px;
+        opacity: 0;
+        transform: scale(0.96);
+        animation: splash-in 0.5s ease-out 0.1s forwards;
+      }
+      #splash .true { color: #ffffff; }
+      #splash .north { color: #ffffff; position: relative; }
+      #splash .north .accent {
+        position: absolute;
+        left: 1px;
+        top: -2px;
+        width: 18px;
+        height: 36px;
+        overflow: hidden;
+      }
+      #splash .north .accent::after {
+        content: '';
+        position: absolute;
+        left: 4px;
+        top: 0;
+        width: 3px;
+        height: 100%;
+        background: #0ea899;
+        transform: rotate(18deg);
+        transform-origin: top center;
+        border-radius: 2px;
+      }
+      #splash .spinner {
+        margin-top: 32px;
+        width: 20px;
+        height: 20px;
+        border: 2.5px solid rgba(255,255,255,0.15);
+        border-top-color: #0ea899;
+        border-radius: 50%;
+        animation: spin 0.8s linear infinite;
+        opacity: 0;
+        animation: spin 0.8s linear infinite, splash-in 0.3s ease-out 0.5s forwards;
+      }
+      @keyframes spin {
+        to { transform: rotate(360deg); }
+      }
+      @keyframes splash-in {
+        to { opacity: 1; transform: scale(1); }
+      }
+    </style>
   </head>
   <body>
+    <!-- Splash screen: shows instantly before JS loads -->
+    <div id="splash">
+      <div class="logo-text">
+        <span class="true">TRUE</span>
+        <span class="north">
+          <span class="accent"></span>
+          NORTH
+        </span>
+      </div>
+      <div class="spinner"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -5,6 +5,14 @@ import { Building2 } from "lucide-react";
 import { cls } from "../lib/styles";
 import axios from "axios";
 
+function dismissSplash() {
+  const el = document.getElementById("splash");
+  if (el) {
+    el.classList.add("hide");
+    setTimeout(() => el.remove(), 500);
+  }
+}
+
 const TEST_USERS = [
   { username: "admin", label: "Admin (Super Admin)" },
   { username: "ceo", label: "Imran Khan (CEO)" },
@@ -32,6 +40,10 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) dismissSplash();
+  }, [isLoading]);
 
   if (isLoading) return null;
   if (isAuthenticated) return <Navigate to="/" replace />;
