@@ -15,23 +15,16 @@ export default function SlaBar({ createdAt, dueDate, completedAt, status }: SlaB
     const due = new Date(dueDate).getTime();
     const totalTime = due - created;
 
-    if (totalTime <= 0) {
-      return {
-        percentage: 100,
-        label: "Invalid SLA window",
-        barColor: "bg-gray-300",
-        textColor: "text-gray-500",
-        pulsing: false,
-      };
-    }
-
     const isCompleted = status === "COMPLETED" && completedAt;
     const endTime = isCompleted
       ? new Date(completedAt!).getTime()
       : Date.now();
 
+    // If due <= created, treat effective window as 1 day minimum
+    const effectiveTotal = totalTime > 0 ? totalTime : 86400000;
+
     const elapsed = endTime - created;
-    const pct = Math.min((elapsed / totalTime) * 100, 100);
+    const pct = Math.min((elapsed / effectiveTotal) * 100, 100);
     const remaining = due - endTime;
     const overdue = endTime > due;
 
