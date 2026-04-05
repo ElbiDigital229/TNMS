@@ -716,7 +716,7 @@ export default function UserManagementPage() {
           </div>
           )}
 
-          {/* Reports To — shown for roles at level 4+ (Facility Manager, Supervisor, Technician, etc.) */}
+          {/* Reports To — shown for roles at level 4+ (Manager, Supervisor, Technician, etc.) */}
           {(() => {
             const sel = roles.find((r) => r.id === form.roleId);
             return sel && sel.level >= 4;

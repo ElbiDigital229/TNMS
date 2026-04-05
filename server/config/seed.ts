@@ -106,6 +106,21 @@ export async function seed() {
       ],
     },
     {
+      // Manager — department manager, manages supervisors and technicians
+      name: "Manager",
+      level: 4,
+      canAssignToMaxLevel: 6,
+      permissions: [
+        P.PROPERTIES.VIEW, P.PROPERTIES.EXPORT,
+        P.FLOORS.VIEW,
+        P.UNITS.VIEW, P.UNITS.EXPORT,
+        P.ASSETS.VIEW, P.ASSETS.EXPORT,
+        P.TICKETS.VIEW_ALL, P.TICKETS.CREATE, P.TICKETS.EDIT, P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.COMMENT, P.TICKETS.EXPORT,
+        P.TODOS.ACCESS,
+        P.DASHBOARD.VIEW,
+      ],
+    },
+    {
       // Supervisor — tickets only: see line manager's tickets, assign to technicians
       name: "Supervisor",
       level: 5,
@@ -176,7 +191,7 @@ export async function seed() {
 
   // ─── 3. Fetch roles for user assignment ─────────────────
   const roleMap: Record<string, string> = {};
-  for (const name of ["Super Admin", "CEO", "OPS Lead", "Community Executive", "Facility Manager", "Supervisor", "Technician"]) {
+  for (const name of ["Super Admin", "CEO", "OPS Lead", "Community Executive", "Manager", "Supervisor", "Technician"]) {
     const role = await prisma.role.findUnique({ where: { name } });
     if (role) roleMap[name] = role.id;
   }
@@ -468,25 +483,25 @@ export async function seed() {
     reportsToUsername: "opslead",
   });
 
-  // Facility Manager 1 — under CE Ali, same properties
+  // Manager 1 — under CE Ali, same properties
   await upsertUser({
     username: "lm_hassan",
     fullName: "Hassan Javed",
     email: "hassan@propmgmt.com",
     phone: "0304-5678901",
-    roleName: "Facility Manager",
+    roleName: "Manager",
     allProperties: false,
     propertyCodeAssignments: ["PROP-001", "PROP-003"],
     reportsToUsername: "ce_ali",
   });
 
-  // Facility Manager 2 — under CE Sara, Blue Area Tower
+  // Manager 2 — under CE Sara, Blue Area Tower
   await upsertUser({
     username: "lm_ayesha",
     fullName: "Ayesha Tariq",
     email: "ayesha@propmgmt.com",
     phone: "0305-6789012",
-    roleName: "Facility Manager",
+    roleName: "Manager",
     allProperties: false,
     propertyCodeAssignments: ["PROP-002"],
     reportsToUsername: "ce_sara",
