@@ -502,7 +502,7 @@ export default function TicketListPage() {
       {hasPermission(PERMISSIONS.TICKETS.CREATE) && (
         <Link
           to="/tickets/new"
-          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 active:bg-primary-700 transition-colors md:hidden"
+          className="fixed bottom-[calc(4.5rem+env(safe-area-inset-bottom,0px))] right-5 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 active:bg-primary-700 transition-colors md:hidden"
         >
           <Plus size={24} />
         </Link>
