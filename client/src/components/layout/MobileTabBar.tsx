@@ -83,7 +83,7 @@ export default function MobileTabBar() {
 
   const tabClass = (isActive: boolean) =>
     `flex flex-1 flex-col items-center gap-0.5 py-2 text-[10px] font-medium transition-colors ${
-      isActive ? "text-primary-600" : "text-gray-400"
+      isActive ? "text-white" : "text-sidebar-text"
     }`;
 
   // Lock body scroll when notification overlay is open
@@ -274,7 +274,7 @@ export default function MobileTabBar() {
       {/* ── Tab Bar (hidden on child/detail pages) ── */}
       {!hideTabBar && (
         <div
-          className="fixed inset-x-0 bottom-0 z-30 border-t border-gray-200 bg-white md:hidden"
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-sidebar-border bg-sidebar md:hidden"
           style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}
         >
           <nav className="flex">
