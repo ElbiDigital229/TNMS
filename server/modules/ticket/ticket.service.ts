@@ -209,9 +209,14 @@ export const ticketService = {
       },
     });
 
-    // Fire-and-forget notification
+    // Fire-and-forget notifications
     if (data.createdById) {
       notificationTrigger.onTicketCreated(ticket.id, data.createdById).catch(console.error);
+    }
+
+    // Notify the assignee if ticket is assigned on creation
+    if (data.assignedToId && data.createdById) {
+      notificationTrigger.onTicketAssigned(ticket.id, data.assignedToId, data.createdById, null).catch(console.error);
     }
 
     return ticket;
