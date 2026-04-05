@@ -96,8 +96,8 @@ export const ticketController = {
         assetIds,
       } = req.body;
 
-      if (!name || !description || !propertyId || !unitId || !dueDate || !taskType || !subTaskType || !departmentId || !priority) {
-        return sendError(res, "Missing required fields", 400);
+      if (!name || !description || !propertyId || !unitId || !dueDate || !taskType || !subTaskType || !departmentId || !priority || !categoryId) {
+        return sendError(res, "Missing required fields (including category)", 400);
       }
 
       const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
