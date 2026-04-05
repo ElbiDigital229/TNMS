@@ -5,15 +5,24 @@ let firebaseAdmin: any = null;
 async function getFirebase() {
   if (firebaseAdmin) return firebaseAdmin;
 
+  // Support either a file path or inline JSON via env var
   const serviceAccountPath = process.env.FIREBASE_SERVICE_ACCOUNT_PATH;
-  if (!serviceAccountPath) return null;
+  const serviceAccountJson = process.env.FIREBASE_SERVICE_ACCOUNT_JSON;
+
+  if (!serviceAccountPath && !serviceAccountJson) return null;
 
   try {
     const admin = await import("firebase-admin");
-    const fs = await import("fs");
-    const serviceAccount = JSON.parse(
-      fs.readFileSync(serviceAccountPath, "utf-8")
-    );
+    let serviceAccount: any;
+
+    if (serviceAccountJson) {
+      serviceAccount = JSON.parse(serviceAccountJson);
+    } else {
+      const fs = await import("fs");
+      serviceAccount = JSON.parse(
+        fs.readFileSync(serviceAccountPath!, "utf-8")
+      );
+    }
 
     admin.default.initializeApp({
       credential: admin.default.credential.cert(serviceAccount),
