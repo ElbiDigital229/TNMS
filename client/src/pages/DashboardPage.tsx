@@ -425,70 +425,75 @@ export default function DashboardPage() {
             </p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100">
-                  <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Ticket
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Name
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Property
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Priority
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Status
-                  </th>
-                  <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Due
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recentTickets.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="border-b border-gray-50 transition-colors duration-150 hover:bg-gray-50/80"
-                  >
-                    <td className="px-5 py-3">
-                      <Link
-                        to={`/tickets/${ticket.id}`}
-                        className="font-mono text-xs font-medium text-primary-600 hover:underline"
-                      >
-                        {ticket.ticketNumber}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3 font-medium">{ticket.name}</td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {ticket.property.name}
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(ticket.priority)}`}
-                      >
-                        {PRIORITY_LABELS[ticket.priority]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge(ticket.status)}`}
-                      >
-                        {TICKET_STATUS_LABELS[ticket.status]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3 text-gray-600">
-                      {new Date(ticket.dueDate).toLocaleDateString()}
-                    </td>
+          <>
+            {/* Mobile card view */}
+            <div className="space-y-2 p-4 md:hidden">
+              {stats.recentTickets.map((ticket) => (
+                <Link
+                  key={ticket.id}
+                  to={`/tickets/${ticket.id}`}
+                  className="block rounded-lg border border-gray-100 bg-gray-50/50 p-3 active:bg-gray-100 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-xs font-semibold text-primary-600">{ticket.ticketNumber}</span>
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${priorityBadge(ticket.priority)}`}>
+                      {PRIORITY_LABELS[ticket.priority]}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-sm font-medium text-gray-900 leading-snug">{ticket.name}</p>
+                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadge(ticket.status)}`}>
+                      {TICKET_STATUS_LABELS[ticket.status]}
+                    </span>
+                    <span className="text-[11px] text-gray-400">·</span>
+                    <span className="text-[11px] text-gray-500">{ticket.property.name}</span>
+                    <span className="text-[11px] text-gray-400">·</span>
+                    <span className="text-[11px] text-gray-400">Due {new Date(ticket.dueDate).toLocaleDateString()}</span>
+                  </div>
+                </Link>
+              ))}
+            </div>
+
+            {/* Desktop table view */}
+            <div className="hidden md:block overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-100">
+                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Ticket</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Name</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Property</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Priority</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
+                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Due</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                </thead>
+                <tbody>
+                  {stats.recentTickets.map((ticket) => (
+                    <tr key={ticket.id} className="border-b border-gray-50 transition-colors duration-150 hover:bg-gray-50/80">
+                      <td className="px-5 py-3">
+                        <Link to={`/tickets/${ticket.id}`} className="font-mono text-xs font-medium text-primary-600 hover:underline">
+                          {ticket.ticketNumber}
+                        </Link>
+                      </td>
+                      <td className="px-5 py-3 font-medium">{ticket.name}</td>
+                      <td className="px-5 py-3 text-gray-600">{ticket.property.name}</td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(ticket.priority)}`}>
+                          {PRIORITY_LABELS[ticket.priority]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge(ticket.status)}`}>
+                          {TICKET_STATUS_LABELS[ticket.status]}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3 text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
     </div>

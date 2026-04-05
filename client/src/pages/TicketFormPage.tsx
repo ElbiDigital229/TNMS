@@ -649,27 +649,33 @@ export default function TicketFormPage() {
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
               Upload Image <span className="text-gray-400">(optional)</span>
             </label>
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => setImage(e.target.files?.[0] || null)}
-              className="w-full text-sm text-gray-500 file:mr-4 file:rounded-lg file:border-0 file:bg-primary-50 file:px-4 file:py-2 file:text-sm file:font-medium file:text-primary-600 hover:file:bg-primary-100"
-            />
-            {image && (
-              <div className="mt-3">
+            {image ? (
+              <div className="relative mt-1">
                 <img
                   src={URL.createObjectURL(image)}
                   alt="Preview"
-                  className="max-h-48 rounded-lg object-cover ring-1 ring-gray-200"
+                  className="max-h-48 w-full rounded-lg object-cover ring-1 ring-gray-200"
                 />
                 <button
                   type="button"
                   onClick={() => setImage(null)}
-                  className="mt-1 text-xs text-red-500 hover:text-red-700"
+                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  title="Remove image"
                 >
-                  Remove
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
+            ) : (
+              <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => setImage(e.target.files?.[0] || null)}
+                  className="hidden"
+                />
+                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2 text-gray-300"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                <p className="text-sm text-gray-400">Tap to upload photo</p>
+              </label>
             )}
           </div>
 

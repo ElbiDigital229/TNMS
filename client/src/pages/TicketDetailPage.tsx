@@ -282,7 +282,7 @@ export default function TicketDetailPage() {
     ticket.status !== "COMPLETED" && new Date(ticket.dueDate) < new Date();
 
   return (
-    <div className="pb-36 md:pb-0">
+    <div className="pb-24 md:pb-0">
       {/* ── Mobile Sticky Collapsed Header ── */}
       <div
         className={`fixed inset-x-0 top-14 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 py-2.5 transition-all duration-200 md:hidden ${
@@ -462,17 +462,35 @@ export default function TicketDetailPage() {
               Image
             </h3>
             {ticket.imagePath ? (
-              <img
-                src={`/${ticket.imagePath}`}
-                alt="Ticket"
-                className="w-full rounded-lg object-cover"
-              />
+              <div>
+                <img
+                  src={`/${ticket.imagePath}`}
+                  alt="Ticket"
+                  className="w-full rounded-lg object-cover"
+                />
+                {isAssignee && (
+                  <div className="mt-3">
+                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+                      <input
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        disabled={uploadingImage}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) handleImageUpload(file);
+                          e.target.value = "";
+                        }}
+                      />
+                      <Camera size={15} />
+                      {uploadingImage ? "Uploading..." : "Replace Image"}
+                    </label>
+                  </div>
+                )}
+              </div>
             ) : (
-              <p className="text-sm text-gray-400">No image attached</p>
-            )}
-            {isAssignee && (
-              <div className="mt-3">
-                <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 transition-colors">
+              <label className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors ${isAssignee ? "hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50" : ""}`}>
+                {isAssignee && (
                   <input
                     type="file"
                     accept="image/*"
@@ -484,9 +502,12 @@ export default function TicketDetailPage() {
                       e.target.value = "";
                     }}
                   />
-                  {uploadingImage ? "Uploading..." : ticket.imagePath ? "Replace Image" : "Upload Image"}
-                </label>
-              </div>
+                )}
+                <Camera size={24} className="mb-2 text-gray-300" />
+                <p className="text-sm text-gray-400">
+                  {isAssignee ? (uploadingImage ? "Uploading..." : "Tap to add photo") : "No image attached"}
+                </p>
+              </label>
             )}
           </div>
 
@@ -554,11 +575,7 @@ export default function TicketDetailPage() {
 
                   {/* Comments list */}
                   {ticket.comments?.length === 0 ? (
-                    <div className="py-6 text-center">
-                      <Inbox size={24} className="mx-auto mb-2 text-gray-300" />
-                      <p className="text-sm text-gray-400">No comments yet</p>
-                      <p className="text-xs text-gray-300">Be the first to add a comment</p>
-                    </div>
+                    <p className="py-2 text-center text-sm text-gray-400">No comments yet</p>
                   ) : (
                     <div className="space-y-3">
                       {ticket.comments?.map((c: any) => (
@@ -991,10 +1008,11 @@ export default function TicketDetailPage() {
       </Modal>
 
       {/* ── Mobile Bottom Action Bar — sits above the tab bar ── */}
-      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-40 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.06)] md:hidden">
+      <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.06)] md:hidden"
+           style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="flex items-center gap-2 px-4 py-3">
-          {/* Primary Action */}
-          {ticket.status === "OPEN" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+          {/* Primary Action — always present */}
+          {(ticket.status === "OPEN" || ticket.status === "OVERDUE") && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
             <button
               onClick={() => handleStatusChange("IN_PROGRESS")}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-primary-700"
@@ -1020,24 +1038,6 @@ export default function TicketDetailPage() {
               <RotateCcw size={16} />
               Reopen Ticket
             </button>
-          )}
-
-          {/* Add Photo */}
-          {isAssignee && (
-            <label className="flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-xl bg-gray-100 text-gray-600 active:bg-gray-200">
-              <input
-                type="file"
-                accept="image/*"
-                className="hidden"
-                disabled={uploadingImage}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) handleImageUpload(file);
-                  e.target.value = "";
-                }}
-              />
-              <Camera size={18} />
-            </label>
           )}
 
           {/* Comment */}
@@ -1075,7 +1075,7 @@ export default function TicketDetailPage() {
             onClick={() => setMoreSheetOpen(false)}
           />
           {/* Sheet */}
-          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white shadow-xl animate-in slide-in-from-bottom"
+          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white shadow-xl animate-slide-up"
                style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
             <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
               <span className="text-sm font-semibold text-gray-900">More Actions</span>
@@ -1104,6 +1104,26 @@ export default function TicketDetailPage() {
                   <Pencil size={18} className="text-gray-400" />
                   Edit Details
                 </button>
+              )}
+              {isAssignee && (
+                <label
+                  className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 active:bg-gray-100"
+                  onClick={() => setMoreSheetOpen(false)}
+                >
+                  <Camera size={18} className="text-gray-400" />
+                  Add Photo
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    disabled={uploadingImage}
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) handleImageUpload(file);
+                      e.target.value = "";
+                    }}
+                  />
+                </label>
               )}
               {ticket.status !== "COMPLETED" && !ticket.blocks?.some((b: any) => !b.resolvedAt) && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
                 <button

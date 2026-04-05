@@ -208,9 +208,16 @@ export default function TicketListPage() {
               )}
             </button>
 
-            {/* Filter popup */}
+            {/* Filter popup — desktop: absolute dropdown, mobile: bottom sheet */}
             {filterOpen && (
-              <div className="absolute right-0 top-full z-30 mt-2 w-80 rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
+              <>
+                {/* Mobile backdrop */}
+                <div className="fixed inset-0 z-40 bg-black/40 md:hidden" onClick={() => setFilterOpen(false)} />
+              </>
+            )}
+            {filterOpen && (
+              <div className="fixed inset-x-0 bottom-0 z-50 max-h-[70vh] overflow-y-auto rounded-t-2xl bg-white p-4 shadow-xl animate-slide-up md:absolute md:inset-auto md:right-0 md:top-full md:z-30 md:mt-2 md:w-80 md:max-h-none md:rounded-xl md:border md:border-gray-200 md:animate-none"
+                   style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
                 <div className="mb-3 flex items-center justify-between">
                   <span className="text-[13px] font-semibold text-gray-800">Filters</span>
                   {activeFilterCount > 0 && (
@@ -281,6 +288,17 @@ export default function TicketListPage() {
                       <input type="date" value={filters.dueDateTo} onChange={(e) => setFilter("dueDateTo", e.target.value)} className="w-full rounded-lg border border-gray-300 px-2 py-1.5 text-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100" />
                     </div>
                   </div>
+                </div>
+                {/* Mobile action buttons */}
+                <div className="mt-4 flex gap-2 md:hidden">
+                  {activeFilterCount > 0 && (
+                    <button onClick={() => { clearAll(); setFilterOpen(false); }} className="flex-1 rounded-lg border border-gray-300 py-2.5 text-sm font-medium text-gray-600 active:bg-gray-50">
+                      Reset
+                    </button>
+                  )}
+                  <button onClick={() => setFilterOpen(false)} className="flex-1 rounded-lg bg-primary-600 py-2.5 text-sm font-medium text-white active:bg-primary-700">
+                    Apply Filters
+                  </button>
                 </div>
               </div>
             )}
