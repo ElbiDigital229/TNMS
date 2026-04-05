@@ -585,7 +585,7 @@ export default function ReportBuilderPage() {
   const trendHasMulti = isTrend && results && results.length > 0 && "total" in results[0];
 
   const navigate = useNavigate();
-const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100";
+const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100";
 
   return (
     <div>
@@ -598,14 +598,14 @@ const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm 
         Back
       </button>
 
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Report Builder</h1>
-        <p className="mt-1 text-[13px] text-gray-500">Build and run custom queries across your data</p>
+      <div className="mb-3">
+        <h1 className="text-lg font-semibold text-gray-900">Report Builder</h1>
+        <p className="text-xs text-gray-500">Build and run custom queries across your data</p>
       </div>
 
       {/* Query Builder */}
-      <div className="mb-6 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-        <h2 className="mb-4 text-sm font-semibold text-gray-700">Query Builder</h2>
+      <div className="mb-3 rounded-lg bg-white p-4 ring-1 ring-gray-200">
+        <h2 className="mb-3 text-[13px] font-semibold text-gray-700">Query Builder</h2>
 
         {/* Row 1: Entity + Measure */}
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -696,20 +696,20 @@ const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm 
         </div>
 
         <button onClick={runReport} disabled={loading || (measure !== "trend" && !groupBy)}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-primary-700 disabled:opacity-50 transition-all duration-200">
-          {loading ? <Loader2 size={16} className="animate-spin" /> : <BarChart3 size={16} />}
+          className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm hover:bg-primary-700 disabled:opacity-50 transition-colors">
+          {loading ? <Loader2 size={15} className="animate-spin" /> : <BarChart3 size={15} />}
           Run Report
         </button>
       </div>
 
       {/* Results */}
       {hasRun && (
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="text-sm font-semibold text-gray-700">Results</h2>
+        <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-[13px] font-semibold text-gray-700">Results</h2>
             {results && results.length > 0 && (
               <button onClick={() => exportCsv(results, measure, resultType)}
-                className="inline-flex items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50">
+                className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-[12px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                 <Download size={14} /> Export CSV
               </button>
             )}
@@ -726,27 +726,27 @@ const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm 
             <>
               {/* Summary */}
               {summary && (
-                <div className="mb-5 grid gap-3 grid-cols-2 sm:grid-cols-4">
+                <div className="mb-3 grid gap-3 grid-cols-2 sm:grid-cols-4">
                   {isBreakdown ? (
                     Object.entries(BREAKDOWN_COLORS).map(([key, cfg]) => (
-                      <div key={key} className="rounded-lg bg-gray-50 px-4 py-3 ring-1 ring-gray-200">
+                      <div key={key} className="rounded-lg bg-gray-50 px-3 py-2.5 ring-1 ring-gray-200">
                         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{cfg.label}</p>
-                        <p className={`text-2xl font-bold ${cfg.text}`}>{(summary as any)[key]?.toLocaleString() ?? 0}</p>
+                        <p className={`text-xl font-bold ${cfg.text}`}>{(summary as any)[key]?.toLocaleString() ?? 0}</p>
                       </div>
                     ))
                   ) : (
                     <>
-                      <div className="rounded-lg bg-gray-50 px-4 py-3 ring-1 ring-gray-200">
+                      <div className="rounded-lg bg-gray-50 px-3 py-2.5 ring-1 ring-gray-200">
                         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">{measure === "avg_completion_time" ? "Total Hours" : "Grand Total"}</p>
-                        <p className="text-2xl font-bold text-gray-900">{(summary as any).total?.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-gray-900">{(summary as any).total?.toLocaleString()}</p>
                       </div>
-                      <div className="rounded-lg bg-gray-50 px-4 py-3 ring-1 ring-gray-200">
+                      <div className="rounded-lg bg-gray-50 px-3 py-2.5 ring-1 ring-gray-200">
                         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Groups</p>
-                        <p className="text-2xl font-bold text-gray-900">{(summary as any).count}</p>
+                        <p className="text-xl font-bold text-gray-900">{(summary as any).count}</p>
                       </div>
-                      <div className="rounded-lg bg-gray-50 px-4 py-3 ring-1 ring-gray-200">
+                      <div className="rounded-lg bg-gray-50 px-3 py-2.5 ring-1 ring-gray-200">
                         <p className="text-[11px] font-medium text-gray-500 uppercase tracking-wide">Average</p>
-                        <p className="text-2xl font-bold text-gray-900">{(summary as any).avg?.toLocaleString()}</p>
+                        <p className="text-xl font-bold text-gray-900">{(summary as any).avg?.toLocaleString()}</p>
                       </div>
                     </>
                   )}
@@ -754,31 +754,31 @@ const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm 
               )}
 
               {/* Table */}
-              <div className="mb-6 overflow-hidden rounded-lg ring-1 ring-gray-200">
+              <div className="mb-4 overflow-hidden rounded-lg ring-1 ring-gray-200">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
+                  <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="px-4 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Group</th>
+                        <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">Group</th>
                         {isBreakdown ? (
                           Object.values(BREAKDOWN_COLORS).map((cfg) => (
-                            <th key={cfg.label} className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">{cfg.label}</th>
+                            <th key={cfg.label} className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">{cfg.label}</th>
                           ))
                         ) : isTrend && trendHasMulti ? (
                           <>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Total</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Open</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Completed</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Overdue</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Open</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Completed</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Overdue</th>
                           </>
                         ) : measure === "completed_late" ? (
                           <>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Late Tickets</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Avg Days Late</th>
-                            <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Avg Days Blocked</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Late Tickets</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Avg Days Late</th>
+                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Avg Days Blocked</th>
                           </>
                         ) : (
-                          <th className="px-4 py-2.5 text-right text-xs font-medium uppercase tracking-wide text-gray-500">
+                          <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">
                             {measure === "avg_completion_time" ? "Avg Hours" : measure === "overdue_count" ? "Overdue" : "Count"}
                           </th>
                         )}
@@ -787,28 +787,28 @@ const inputCls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm 
                     <tbody>
                       {results.map((row, i) => (
                         <tr key={i} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                          <td className="px-4 py-2.5 font-medium text-gray-800">
+                          <td className="px-3 py-2 font-medium text-gray-800">
                             {isTrend ? (row as TrendRow).label : (row as StandardRow | BreakdownRow).label}
                           </td>
                           {isBreakdown ? (
                             Object.keys(BREAKDOWN_COLORS).map((key) => (
-                              <td key={key} className="px-4 py-2.5 text-right tabular-nums text-gray-600">{((row as BreakdownRow)[key as keyof BreakdownRow] as number).toLocaleString()}</td>
+                              <td key={key} className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as BreakdownRow)[key as keyof BreakdownRow] as number).toLocaleString()}</td>
                             ))
                           ) : isTrend && trendHasMulti ? (
                             <>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{((row as TrendRow).total ?? 0).toLocaleString()}</td>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{((row as TrendRow).open ?? 0).toLocaleString()}</td>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{((row as TrendRow).completed ?? 0).toLocaleString()}</td>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{((row as TrendRow).overdue ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).total ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).open ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).completed ?? 0).toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).overdue ?? 0).toLocaleString()}</td>
                             </>
                           ) : measure === "completed_late" ? (
                             <>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">{(row as any).value.toLocaleString()}</td>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-orange-600 font-medium">{(row as any).avgDaysLate?.toFixed(1) ?? "—"}</td>
-                              <td className="px-4 py-2.5 text-right tabular-nums text-blue-600">{(row as any).avgDaysBlocked > 0 ? (row as any).avgDaysBlocked.toFixed(1) : "—"}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{(row as any).value.toLocaleString()}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-orange-600 font-medium">{(row as any).avgDaysLate?.toFixed(1) ?? "—"}</td>
+                              <td className="px-3 py-2 text-right tabular-nums text-blue-600">{(row as any).avgDaysBlocked > 0 ? (row as any).avgDaysBlocked.toFixed(1) : "—"}</td>
                             </>
                           ) : (
-                            <td className="px-4 py-2.5 text-right tabular-nums text-gray-600">
+                            <td className="px-3 py-2 text-right tabular-nums text-gray-600">
                               {isTrend ? ((row as TrendRow).value ?? 0).toLocaleString() : measure === "avg_completion_time" ? (row as StandardRow).value.toFixed(1) : (row as StandardRow).value.toLocaleString()}
                             </td>
                           )}
@@ -897,20 +897,20 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
   const isDate = isDateField(filter.field);
   const isApi = isApiField(filter.field);
   const isMulti = filter.operator === "in";
-  const cls = "rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100";
+  const filterInputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100";
 
   const renderValue = () => {
     if (isDate) {
       if (filter.operator === "between") {
         return (
           <div className="flex items-center gap-1.5">
-            <input type="date" value={Array.isArray(filter.value) ? filter.value[0] || "" : ""} onChange={(e) => onValueChange([e.target.value, Array.isArray(filter.value) ? filter.value[1] || "" : ""])} className={`w-full ${cls}`} />
+            <input type="date" value={Array.isArray(filter.value) ? filter.value[0] || "" : ""} onChange={(e) => onValueChange([e.target.value, Array.isArray(filter.value) ? filter.value[1] || "" : ""])} className={`w-full ${filterInputCls}`} />
             <span className="text-xs text-gray-400">to</span>
-            <input type="date" value={Array.isArray(filter.value) ? filter.value[1] || "" : ""} onChange={(e) => onValueChange([Array.isArray(filter.value) ? filter.value[0] || "" : "", e.target.value])} className={`w-full ${cls}`} />
+            <input type="date" value={Array.isArray(filter.value) ? filter.value[1] || "" : ""} onChange={(e) => onValueChange([Array.isArray(filter.value) ? filter.value[0] || "" : "", e.target.value])} className={`w-full ${filterInputCls}`} />
           </div>
         );
       }
-      return <input type="date" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${cls}`} />;
+      return <input type="date" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${filterInputCls}`} />;
     }
 
     if (enumOpts) {
@@ -931,7 +931,7 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
         );
       }
       return (
-        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${cls}`}>
+        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${filterInputCls}`}>
           <option value="">Select...</option>
           {enumOpts.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
@@ -943,7 +943,7 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
         const selected: string[] = Array.isArray(filter.value) ? filter.value : [];
         return (
           <div>
-            <select value="" onChange={(e) => { if (e.target.value && !selected.includes(e.target.value)) onValueChange([...selected, e.target.value]); }} className={`w-full ${cls}`}>
+            <select value="" onChange={(e) => { if (e.target.value && !selected.includes(e.target.value)) onValueChange([...selected, e.target.value]); }} className={`w-full ${filterInputCls}`}>
               <option value="">Add item...</option>
               {apiOptions.filter((o) => !selected.includes(o.id)).map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
             </select>
@@ -964,22 +964,22 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
         );
       }
       return (
-        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${cls}`}>
+        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${filterInputCls}`}>
           <option value="">Select...</option>
           {apiOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
         </select>
       );
     }
 
-    return <input type="text" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} placeholder="Enter value..." className={`w-full ${cls}`} />;
+    return <input type="text" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} placeholder="Enter value..." className={`w-full ${filterInputCls}`} />;
   };
 
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-gray-50 p-3 sm:flex-row sm:items-start">
-      <select value={filter.field} onChange={(e) => onFieldChange(e.target.value)} className={`sm:w-40 ${cls}`}>
+      <select value={filter.field} onChange={(e) => onFieldChange(e.target.value)} className={`sm:w-40 ${filterInputCls}`}>
         {fields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
       </select>
-      <select value={filter.operator} onChange={(e) => onOperatorChange(e.target.value as Operator)} className={`sm:w-24 ${cls}`}>
+      <select value={filter.operator} onChange={(e) => onOperatorChange(e.target.value as Operator)} className={`sm:w-24 ${filterInputCls}`}>
         {operators.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
       </select>
       <div className="min-w-0 flex-1">{renderValue()}</div>
