@@ -10,6 +10,7 @@ import { Users, Plus, Edit2, Power, Search, Shield, KeyRound, Upload } from "luc
 interface Role {
   id: string;
   name: string;
+  level: number;
 }
 
 interface Department {
@@ -216,7 +217,7 @@ export default function UserManagementPage() {
     }
 
     const selectedRole = roles.find((r) => r.id === form.roleId);
-    const requiresManager = selectedRole && ["Supervisor", "Technician"].includes(selectedRole.name);
+    const requiresManager = selectedRole && selectedRole.level >= 4;
     if (requiresManager && !form.reportsToId) {
       toast.error(`${selectedRole.name} must have a reporting manager`);
       return;
@@ -676,7 +677,7 @@ export default function UserManagementPage() {
               onChange={(e) => {
                 const newRoleId = e.target.value;
                 const newRole = roles.find((r) => r.id === newRoleId);
-                const needsManager = newRole && ["Supervisor", "Technician"].includes(newRole.name);
+                const needsManager = newRole && newRole.level >= 4;
                 setForm((prev) => ({
                   ...prev,
                   roleId: newRoleId,
@@ -715,10 +716,10 @@ export default function UserManagementPage() {
           </div>
           )}
 
-          {/* Reports To — only for Supervisor/Technician */}
+          {/* Reports To — shown for roles at level 4+ (Facility Manager, Supervisor, Technician, etc.) */}
           {(() => {
             const sel = roles.find((r) => r.id === form.roleId);
-            return sel && ["Supervisor", "Technician"].includes(sel.name);
+            return sel && sel.level >= 4;
           })() && (
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
@@ -734,17 +735,15 @@ export default function UserManagementPage() {
                 .filter((u) => {
                   if (editing && u.id === editing.id) return false;
                   const selectedRole = roles.find((r) => r.id === form.roleId);
-                  if (selectedRole?.name === "Technician") {
-                    return u.departmentId === form.departmentId && u.role?.name === "Supervisor";
-                  }
-                  if (selectedRole?.name === "Supervisor") {
-                    return u.departmentId === form.departmentId && u.role?.name === "Manager";
-                  }
-                  return false;
+                  if (!selectedRole) return false;
+                  const userRole = roles.find((r) => r.name === u.role?.name);
+                  if (!userRole) return false;
+                  // Show users with a higher role (lower level number) in the same department
+                  return u.departmentId === form.departmentId && userRole.level < selectedRole.level;
                 })
                 .map((u) => (
                   <option key={u.id} value={u.id}>
-                    {u.fullName || u.username}
+                    {u.fullName || u.username} ({u.role?.name})
                   </option>
                 ))}
             </select>
@@ -754,7 +753,7 @@ export default function UserManagementPage() {
           {/* Property Access — inherited if reporting to someone or role requires manager */}
           {(() => {
             const sel = roles.find((r) => r.id === form.roleId);
-            const mustInherit = sel && ["Supervisor", "Technician"].includes(sel.name);
+            const mustInherit = sel && sel.level >= 4;
             return mustInherit || form.reportsToId;
           })() ? (
             <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
