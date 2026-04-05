@@ -362,7 +362,7 @@ export default function TicketDetailPage() {
           {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
             <button
               onClick={() => handleStatusChange("OPEN")}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-[13px] font-medium text-blue-700 hover:bg-blue-100 shadow-sm transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-primary-50 px-3 py-1.5 text-[13px] font-medium text-primary-700 hover:bg-primary-100 shadow-sm transition-all duration-200"
             >
               Reopen
             </button>
@@ -1008,7 +1008,7 @@ export default function TicketDetailPage() {
           {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
             <button
               onClick={() => handleStatusChange("OPEN")}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-blue-700"
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-primary-700"
             >
               <RotateCcw size={16} />
               Reopen Ticket
