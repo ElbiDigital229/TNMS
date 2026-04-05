@@ -9,6 +9,30 @@ import type {
 import { notificationTrigger } from "../../services/notificationTrigger.service.js";
 
 export const ticketService = {
+  /** Parse imagePath field — handles legacy single path, JSON array, or null */
+  parseImagePaths(imagePath: string | null | undefined): string[] {
+    if (!imagePath) return [];
+    const trimmed = imagePath.trim();
+    if (trimmed.startsWith("[")) {
+      try {
+        const arr = JSON.parse(trimmed);
+        return Array.isArray(arr) ? arr.filter(Boolean) : [];
+      } catch {
+        return [];
+      }
+    }
+    // Legacy: single path string
+    return [trimmed];
+  },
+
+  /** Directly set imagePath (supports null to clear) */
+  async setImagePath(id: string, imagePath: string | null) {
+    return prisma.ticket.update({
+      where: { id },
+      data: { imagePath },
+    });
+  },
+
   async generateTicketNumber(): Promise<string> {
     const last = await prisma.ticket.findFirst({
       orderBy: { ticketNumber: "desc" },

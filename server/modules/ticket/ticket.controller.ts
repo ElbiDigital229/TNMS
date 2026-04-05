@@ -102,7 +102,12 @@ export const ticketController = {
         return sendError(res, "Missing required fields (including category)", 400);
       }
 
-      const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
+      const files = req.files as Express.Multer.File[] | undefined;
+      const newPaths = files?.map((f) => `uploads/${f.filename}`) || [];
+      // Also support legacy single-file field name during transition
+      const singleFile = (req as any).file as Express.Multer.File | undefined;
+      if (singleFile) newPaths.push(`uploads/${singleFile.filename}`);
+      const imagePath = newPaths.length > 0 ? JSON.stringify(newPaths) : undefined;
 
       const ticket = await ticketService.create({
         name,
@@ -155,7 +160,20 @@ export const ticketController = {
         assetIds,
       } = req.body;
 
-      const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
+      // Build merged image paths: existing + newly uploaded
+      const files = req.files as Express.Multer.File[] | undefined;
+      const newPaths = files?.map((f) => `uploads/${f.filename}`) || [];
+      const singleFile = (req as any).file as Express.Multer.File | undefined;
+      if (singleFile) newPaths.push(`uploads/${singleFile.filename}`);
+
+      let imagePath: string | undefined;
+      if (newPaths.length > 0) {
+        // Merge with existing images
+        const existing = await ticketService.findById(req.params.id);
+        const currentImages = existing ? ticketService.parseImagePaths(existing.imagePath) : [];
+        const merged = [...currentImages, ...newPaths].slice(0, 5); // cap at 5
+        imagePath = JSON.stringify(merged);
+      }
 
       const ticket = await ticketService.update(req.params.id, {
         name,
@@ -286,6 +304,32 @@ export const ticketController = {
       sendSuccess(res, null, "Ticket blocked");
     } catch (error: any) {
       sendError(res, error.message, 400);
+    }
+  },
+
+  async deleteImage(req: Request, res: Response) {
+    try {
+      const { imagePath } = req.body;
+      if (!imagePath) return sendError(res, "imagePath is required", 400);
+
+      const ticket = await ticketService.findById(req.params.id);
+      if (!ticket) return sendError(res, "Ticket not found", 404);
+
+      const currentImages = ticketService.parseImagePaths(ticket.imagePath);
+      const filtered = currentImages.filter((p) => p !== imagePath);
+      const newValue = filtered.length > 0 ? JSON.stringify(filtered) : null;
+
+      await ticketService.setImagePath(req.params.id, newValue);
+
+      // Try to delete the file from disk
+      try {
+        const fs = await import("fs/promises");
+        await fs.unlink(imagePath);
+      } catch { /* ignore if file doesn't exist */ }
+
+      sendSuccess(res, null, "Image deleted");
+    } catch (error: any) {
+      sendError(res, error.message);
     }
   },
 

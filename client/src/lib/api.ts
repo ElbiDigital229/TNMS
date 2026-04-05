@@ -109,6 +109,8 @@ export const assetApi = {
     api.post(`/properties/${propertyId}/assets/bulk-import`, { items }),
   bulkDelete: (propertyId: string, ids: string[]) =>
     api.post(`/properties/${propertyId}/assets/bulk-delete`, { ids }),
+  bulkStatus: (ids: string[], action: string) =>
+    api.post("/assets/bulk-status", { ids, action }),
 };
 
 // Area Group API
@@ -146,6 +148,8 @@ export const ticketApi = {
     api.put(`/tickets/${id}`, data, {
       headers: { "Content-Type": "multipart/form-data" },
     }),
+  deleteImage: (id: string, imagePath: string) =>
+    api.delete(`/tickets/${id}/images`, { data: { imagePath } }),
   updateStatus: (id: string, status: string) =>
     api.patch(`/tickets/${id}/status`, { status }),
   addComment: (id: string, content: string) =>
@@ -239,6 +243,7 @@ export const auditApi = {
 
 // Report API
 export const reportApi = {
+  getDashboard: () => api.get("/reports/dashboard"),
   runQuery: (query: Record<string, unknown>) =>
     api.post("/reports/query", query),
   getEntityReport: (entityType: string, entityId: string) =>

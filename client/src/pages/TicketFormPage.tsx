@@ -88,7 +88,7 @@ export default function TicketFormPage() {
   const [recurringType, setRecurringType] = useState("");
   const [recurringDay, setRecurringDay] = useState("");
   const [recurringDueDays, setRecurringDueDays] = useState("");
-  const [image, setImage] = useState<File | null>(null);
+  const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [assetSearch, setAssetSearch] = useState("");
 
@@ -217,7 +217,7 @@ export default function TicketFormPage() {
     if (selectedAssetIds.length > 0) {
       formData.append("assetIds", JSON.stringify(selectedAssetIds));
     }
-    if (image) formData.append("image", image);
+    images.forEach((img) => formData.append("images", img));
 
     try {
       if (isEdit) {
@@ -632,37 +632,49 @@ export default function TicketFormPage() {
             )}
           </div>
 
-          {/* Image */}
+          {/* Images */}
           <div>
             <label className={cls.label}>
-              Upload Image <span className="text-gray-400">(optional)</span>
+              Upload Photos <span className="text-gray-400">(optional, up to 5)</span>
             </label>
-            {image ? (
-              <div className="relative mt-1">
-                <img
-                  src={URL.createObjectURL(image)}
-                  alt="Preview"
-                  className="max-h-40 w-full rounded-md object-cover ring-1 ring-gray-200"
-                />
-                <button
-                  type="button"
-                  onClick={() => setImage(null)}
-                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
-                  title="Remove image"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                </button>
+            {images.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-2">
+                {images.map((img, i) => (
+                  <div key={i} className="relative">
+                    <img
+                      src={URL.createObjectURL(img)}
+                      alt={`Preview ${i + 1}`}
+                      className="h-20 w-20 rounded-md object-cover ring-1 ring-gray-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setImages((prev) => prev.filter((_, idx) => idx !== i))}
+                      className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors"
+                      title="Remove image"
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
+                  </div>
+                ))}
               </div>
-            ) : (
-              <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-200 py-6 transition-colors hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50">
+            )}
+            {images.length < 5 && (
+              <label className="mt-2 flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-200 py-6 transition-colors hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50">
                 <input
                   type="file"
                   accept="image/*"
-                  onChange={(e) => setImage(e.target.files?.[0] || null)}
+                  multiple
+                  onChange={(e) => {
+                    const files = Array.from(e.target.files || []);
+                    setImages((prev) => [...prev, ...files].slice(0, 5));
+                    e.target.value = "";
+                  }}
                   className="hidden"
                 />
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-1.5 text-gray-300"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                <p className="text-[13px] text-gray-400">Tap to upload photo</p>
+                <p className="text-[13px] text-gray-400">
+                  {images.length === 0 ? "Tap to upload photos" : `Add more (${images.length}/5)`}
+                </p>
               </label>
             )}
           </div>

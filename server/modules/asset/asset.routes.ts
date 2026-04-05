@@ -9,6 +9,7 @@ export const assetRoutes = Router();
 
 // All asset routes are protected
 assetRoutes.get("/", authenticate, requirePermission(PERMISSIONS.ASSETS.VIEW), assetController.findAll);
+assetRoutes.post("/bulk-status", authenticate, requirePermission(PERMISSIONS.ASSETS.DEACTIVATE), assetController.bulkStatus);
 assetRoutes.get("/code/:code", assetController.findByCode);
 
 // Protected routes

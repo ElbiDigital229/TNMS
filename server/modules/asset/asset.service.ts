@@ -211,6 +211,15 @@ export const assetService = {
     });
   },
 
+  async bulkStatus(ids: string[], action: "activate" | "deactivate") {
+    const status = action === "activate" ? "ACTIVE" : "INACTIVE";
+    const result = await prisma.asset.updateMany({
+      where: { id: { in: ids } },
+      data: { status },
+    });
+    return result.count;
+  },
+
   async bulkDelete(ids: string[]) {
     await prisma.$transaction(async (tx) => {
       // Delete related ticket records first

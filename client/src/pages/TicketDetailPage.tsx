@@ -5,6 +5,7 @@ import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
 import Modal from "../components/ui/Modal";
+import Lightbox from "../components/ui/Lightbox";
 import { cls, STATUS_COLOR, PRIORITY_COLOR } from "../lib/styles";
 import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import SlaBar from "../components/ticket/SlaBar";
@@ -42,7 +43,26 @@ import {
   X,
   Layers,
   ClipboardList,
+  Plus,
+  Trash2,
 } from "lucide-react";
+
+/** Parse imagePath: handles JSON array, legacy single path, or null */
+function parseImagePaths(imagePath: string | null | undefined): string[] {
+  if (!imagePath) return [];
+  const trimmed = imagePath.trim();
+  if (trimmed.startsWith("[")) {
+    try {
+      const arr = JSON.parse(trimmed);
+      return Array.isArray(arr) ? arr.filter(Boolean) : [];
+    } catch {
+      return [];
+    }
+  }
+  return [trimmed];
+}
+
+const MAX_IMAGES = 5;
 
 const DAY_NAMES: Record<string, string> = {
   "1": "Monday",
@@ -71,6 +91,7 @@ export default function TicketDetailPage() {
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
   const [moreSheetOpen, setMoreSheetOpen] = useState(false);
   const commentInputRef = useRef<HTMLInputElement>(null);
   const headerSentinelRef = useRef<HTMLDivElement>(null);
@@ -157,18 +178,35 @@ export default function TicketDetailPage() {
     }
   };
 
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (files: FileList | File[]) => {
+    const currentImages = parseImagePaths(ticket?.imagePath);
+    const remaining = MAX_IMAGES - currentImages.length;
+    if (remaining <= 0) {
+      toast.error(`Maximum ${MAX_IMAGES} images allowed`);
+      return;
+    }
+    const toUpload = Array.from(files).slice(0, remaining);
     setUploadingImage(true);
     try {
       const formData = new FormData();
-      formData.append("image", file);
+      toUpload.forEach((f) => formData.append("images", f));
       await ticketApi.update(id!, formData);
-      toast.success("Image uploaded");
+      toast.success(toUpload.length === 1 ? "Image uploaded" : `${toUpload.length} images uploaded`);
       fetchTicket();
     } catch {
       toast.error("Failed to upload image");
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleImageDelete = async (imagePath: string) => {
+    try {
+      await ticketApi.deleteImage(id!, imagePath);
+      toast.success("Image deleted");
+      fetchTicket();
+    } catch {
+      toast.error("Failed to delete image");
     }
   };
 
@@ -476,60 +514,86 @@ export default function TicketDetailPage() {
             </p>
           </div>
 
-          {/* Image */}
-          <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
-            <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
-              Image
-            </h3>
-            {ticket.imagePath ? (
-              <div>
-                <img
-                  src={`/${ticket.imagePath}`}
-                  alt="Ticket"
-                  className="w-full rounded-lg object-cover"
-                />
-                {isAssignee && (
-                  <div className="mt-3">
-                    <label className="inline-flex cursor-pointer items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50 active:bg-gray-100 transition-colors">
+          {/* Images Gallery */}
+          {(() => {
+            const images = parseImagePaths(ticket.imagePath);
+            const remaining = MAX_IMAGES - images.length;
+            return (
+              <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+                <div className="mb-3 flex items-center justify-between">
+                  <h3 className="text-[13px] font-semibold text-gray-900">
+                    Photos{images.length > 0 && ` (${images.length}/${MAX_IMAGES})`}
+                  </h3>
+                  {isAssignee && remaining > 0 && (
+                    <label className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg bg-primary-50 px-3 py-1.5 text-xs font-medium text-primary-700 hover:bg-primary-100 active:bg-primary-150 transition-colors">
                       <input
                         type="file"
                         accept="image/*"
+                        multiple
                         className="hidden"
                         disabled={uploadingImage}
                         onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) handleImageUpload(file);
+                          if (e.target.files?.length) handleImageUpload(e.target.files);
                           e.target.value = "";
                         }}
                       />
-                      <Camera size={15} />
-                      {uploadingImage ? "Uploading..." : "Replace Image"}
+                      <Plus size={14} />
+                      {uploadingImage ? "Uploading..." : `Add Photo (${images.length}/${MAX_IMAGES})`}
                     </label>
+                  )}
+                </div>
+                {images.length > 0 ? (
+                  <div className="flex gap-2 overflow-x-auto pb-1 md:grid md:grid-cols-3 md:overflow-visible">
+                    {images.map((imgPath, i) => (
+                      <div
+                        key={imgPath}
+                        className="group relative flex-shrink-0 cursor-pointer"
+                        onClick={() => setLightboxIndex(i)}
+                      >
+                        <img
+                          src={`/${imgPath}`}
+                          alt={`Photo ${i + 1}`}
+                          className="h-24 w-24 rounded-lg object-cover ring-1 ring-gray-200 transition-shadow hover:ring-primary-300 md:h-32 md:w-full"
+                        />
+                        {isAssignee && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleImageDelete(imgPath);
+                            }}
+                            className="absolute -right-1.5 -top-1.5 hidden h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow-sm hover:bg-red-600 group-hover:flex transition-colors"
+                            title="Delete image"
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
+                      </div>
+                    ))}
                   </div>
+                ) : (
+                  <label className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors ${isAssignee ? "hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50" : ""}`}>
+                    {isAssignee && (
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        disabled={uploadingImage}
+                        onChange={(e) => {
+                          if (e.target.files?.length) handleImageUpload(e.target.files);
+                          e.target.value = "";
+                        }}
+                      />
+                    )}
+                    <Camera size={24} className="mb-2 text-gray-300" />
+                    <p className="text-sm text-gray-400">
+                      {isAssignee ? (uploadingImage ? "Uploading..." : "Tap to add photos") : "No images attached"}
+                    </p>
+                  </label>
                 )}
               </div>
-            ) : (
-              <label className={`flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors ${isAssignee ? "hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50" : ""}`}>
-                {isAssignee && (
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    disabled={uploadingImage}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file);
-                      e.target.value = "";
-                    }}
-                  />
-                )}
-                <Camera size={24} className="mb-2 text-gray-300" />
-                <p className="text-sm text-gray-400">
-                  {isAssignee ? (uploadingImage ? "Uploading..." : "Tap to add photo") : "No image attached"}
-                </p>
-              </label>
-            )}
-          </div>
+            );
+          })()}
 
           {/* Comments & Activity Tabs */}
           <div className="rounded-lg bg-white ring-1 ring-gray-200">
@@ -1128,21 +1192,21 @@ export default function TicketDetailPage() {
                   Edit Details
                 </button>
               )}
-              {isAssignee && (
+              {isAssignee && parseImagePaths(ticket.imagePath).length < MAX_IMAGES && (
                 <label
                   className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 active:bg-gray-100"
                   onClick={() => setMoreSheetOpen(false)}
                 >
                   <Camera size={18} className="text-gray-400" />
-                  Add Photo
+                  Add Photo ({parseImagePaths(ticket.imagePath).length}/{MAX_IMAGES})
                   <input
                     type="file"
                     accept="image/*"
+                    multiple
                     className="hidden"
                     disabled={uploadingImage}
                     onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) handleImageUpload(file);
+                      if (e.target.files?.length) handleImageUpload(e.target.files);
                       e.target.value = "";
                     }}
                   />
@@ -1174,6 +1238,18 @@ export default function TicketDetailPage() {
           </div>
         </div>
       )}
+
+      {/* Lightbox */}
+      {lightboxIndex !== null && (() => {
+        const images = parseImagePaths(ticket.imagePath).map((p: string) => `/${p}`);
+        return (
+          <Lightbox
+            images={images}
+            initialIndex={lightboxIndex}
+            onClose={() => setLightboxIndex(null)}
+          />
+        );
+      })()}
     </div>
   );
 }

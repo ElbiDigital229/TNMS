@@ -9,7 +9,7 @@ import { ActiveBadge, ConditionBadge } from "../components/ui/Badge";
 import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
 import PageHeader from "../components/ui/PageHeader";
 import Modal from "../components/ui/Modal";
-import { Search, Eye, Package, Plus } from "lucide-react";
+import { Search, Eye, Package, Plus, X, Download, Power, PowerOff } from "lucide-react";
 
 interface Asset {
   id: string;
@@ -72,6 +72,10 @@ export default function AssetsListPage() {
   const [modalFloors, setModalFloors] = useState<Floor[]>([]);
   const [floorsLoading, setFloorsLoading] = useState(false);
 
+  // Bulk selection state
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
+
   // Fetch filter dropdown data on mount
   useEffect(() => {
     const loadFilterData = async () => {
@@ -122,6 +126,59 @@ export default function AssetsListPage() {
     }, 300);
     return () => clearTimeout(timeout);
   }, [searchInput]);
+
+  // Clear selection when page or filters change
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, search, statusFilter, conditionFilter, categoryFilter, propertyFilter]);
+
+  const toggleSelectAll = () => {
+    if (selectedIds.size === assets.length) {
+      setSelectedIds(new Set());
+    } else {
+      setSelectedIds(new Set(assets.map((a) => a.id)));
+    }
+  };
+
+  const toggleSelectOne = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const handleBulkStatus = async (action: "activate" | "deactivate") => {
+    if (selectedIds.size === 0) return;
+    setBulkLoading(true);
+    try {
+      await assetApi.bulkStatus(Array.from(selectedIds), action);
+      toast.success(`${selectedIds.size} asset${selectedIds.size > 1 ? "s" : ""} ${action}d`);
+      setSelectedIds(new Set());
+      fetchAssets();
+    } catch {
+      toast.error(`Failed to ${action} assets`);
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  const handleExportSelected = () => {
+    const selected = assets.filter((a) => selectedIds.has(a.id));
+    const header = "Code,Name,Category,Property,Condition,Status";
+    const rows = selected.map((a) =>
+      [a.code, `"${a.name}"`, a.category.name, a.property.name, a.condition, a.status].join(",")
+    );
+    const csv = [header, ...rows].join("\n");
+    const blob = new Blob([csv], { type: "text/csv" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `assets-export-${new Date().toISOString().split("T")[0]}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   const handleToggleStatus = async (asset: Asset) => {
     try {
@@ -272,6 +329,14 @@ export default function AssetsListPage() {
           <table className={cls.table}>
             <thead>
               <tr className="border-b border-gray-200">
+                <th className={cls.th}>
+                  <input
+                    type="checkbox"
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    checked={assets.length > 0 && selectedIds.size === assets.length}
+                    onChange={toggleSelectAll}
+                  />
+                </th>
                 <th className={cls.th}>Code</th>
                 <th className={cls.th}>Name</th>
                 <th className={cls.th}>Category</th>
@@ -285,11 +350,11 @@ export default function AssetsListPage() {
             <tbody>
               {loading ? (
                 <tr>
-                  <td colSpan={8}><TableLoading /></td>
+                  <td colSpan={9}><TableLoading /></td>
                 </tr>
               ) : assets.length === 0 ? (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={9}>
                     <EmptyState
                       icon={<Package size={48} />}
                       title="No assets found"
@@ -300,6 +365,14 @@ export default function AssetsListPage() {
               ) : (
                 assets.map((asset) => (
                   <tr key={asset.id} className={cls.tr}>
+                    <td className="px-3 py-2">
+                      <input
+                        type="checkbox"
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                        checked={selectedIds.has(asset.id)}
+                        onChange={() => toggleSelectOne(asset.id)}
+                      />
+                    </td>
                     <td className={`px-3 py-2 ${cls.mono}`}>{asset.code}</td>
                     <td className="px-3 py-2 font-medium">{asset.name}</td>
                     <td className="px-3 py-2 text-gray-600">{asset.category.name}</td>
@@ -344,6 +417,48 @@ export default function AssetsListPage() {
         </div>
         <Pagination pagination={pagination} onPageChange={setPage} />
       </div>
+
+      {/* Floating Bulk Action Bar */}
+      {selectedIds.size > 0 && (
+        <div className="fixed bottom-4 left-1/2 z-40 -translate-x-1/2 animate-slide-up rounded-lg bg-white px-4 py-2.5 shadow-lg ring-1 ring-gray-200">
+          <div className="flex items-center gap-3">
+            <span className="text-[13px] font-medium text-gray-700">
+              {selectedIds.size} selected
+            </span>
+            <div className="h-4 w-px bg-gray-200" />
+            {hasPermission(PERMISSIONS.ASSETS.DEACTIVATE) && (
+              <>
+                <button
+                  onClick={() => handleBulkStatus("activate")}
+                  disabled={bulkLoading}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-emerald-600 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm hover:bg-emerald-700 disabled:opacity-50 transition-colors"
+                >
+                  <Power size={14} /> Activate
+                </button>
+                <button
+                  onClick={() => handleBulkStatus("deactivate")}
+                  disabled={bulkLoading}
+                  className="inline-flex items-center gap-1.5 rounded-md bg-amber-600 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm hover:bg-amber-700 disabled:opacity-50 transition-colors"
+                >
+                  <PowerOff size={14} /> Deactivate
+                </button>
+              </>
+            )}
+            <button
+              onClick={handleExportSelected}
+              className={cls.btnSecondary}
+            >
+              <Download size={14} /> Export Selected
+            </button>
+            <button
+              onClick={() => setSelectedIds(new Set())}
+              className={cls.btnGhost}
+            >
+              <X size={14} /> Clear
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Create Asset Modal */}
       <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Asset" size="md">

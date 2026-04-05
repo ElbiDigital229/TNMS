@@ -1,8 +1,22 @@
 import type { Request, Response } from "express";
-import { reportService, entityReportService } from "./report.service.js";
+import { reportService, entityReportService, dashboardReportService } from "./report.service.js";
 import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 
 export const reportController = {
+  async getDashboard(req: Request, res: Response) {
+    try {
+      const result = await dashboardReportService.getDashboard(
+        req.user!.id,
+        req.user!.isSuperAdmin,
+        req.user!.allProperties,
+      );
+      sendSuccess(res, result);
+    } catch (error: any) {
+      if (error.status) return sendError(res, error.message, error.status);
+      sendError(res, error.message || "Failed to generate dashboard report");
+    }
+  },
+
   async runQuery(req: Request, res: Response) {
     try {
       const { entity, measure, groupBy, filters, sortOrder, limit, granularity, trendStart, trendEnd } = req.body;

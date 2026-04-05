@@ -690,6 +690,185 @@ async function getPropertyScope(userId: string, isSuperAdmin: boolean, allProper
   return { propertyId: { in: ids as string[] } };
 }
 
+// ─── Dashboard service ───────────────────────────────────────────────────
+
+export const dashboardReportService = {
+  async getDashboard(userId: string, isSuperAdmin: boolean, allProperties: boolean) {
+    const scopeFilter = await getPropertyScope(userId, isSuperAdmin, allProperties);
+    const tomorrow = getTomorrow();
+
+    // ── Ticket counts by status ──
+    const statusGroups = await prisma.ticket.groupBy({
+      by: ["status"],
+      where: scopeFilter,
+      _count: { id: true },
+    });
+    const statusMap: Record<string, number> = {};
+    let totalTickets = 0;
+    for (const g of statusGroups) {
+      statusMap[g.status] = g._count.id;
+      totalTickets += g._count.id;
+    }
+
+    // ── Avg resolution hours (completed tickets) ──
+    const completedTickets = await prisma.ticket.findMany({
+      where: { ...scopeFilter, status: "COMPLETED", completedAt: { not: null } },
+      select: { createdAt: true, completedAt: true, dueDate: true },
+    });
+
+    let avgResolutionHours = 0;
+    let slaCompliant = 0;
+    if (completedTickets.length > 0) {
+      let totalHours = 0;
+      for (const t of completedTickets) {
+        totalHours += (t.completedAt!.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
+        if (t.completedAt! <= t.dueDate) slaCompliant++;
+      }
+      avgResolutionHours = Math.round((totalHours / completedTickets.length) * 10) / 10;
+    }
+
+    const slaComplianceRate = completedTickets.length > 0
+      ? Math.round((slaCompliant / completedTickets.length) * 1000) / 10
+      : 0;
+
+    const overdueCount = statusMap["OVERDUE"] || 0;
+    const overdueRate = totalTickets > 0
+      ? Math.round((overdueCount / totalTickets) * 1000) / 10
+      : 0;
+
+    const tickets = {
+      total: totalTickets,
+      open: statusMap["OPEN"] || 0,
+      inProgress: statusMap["IN_PROGRESS"] || 0,
+      overdue: overdueCount,
+      completed: statusMap["COMPLETED"] || 0,
+      avgResolutionHours,
+      slaComplianceRate,
+      overdueRate,
+    };
+
+    // ── Tickets by priority ──
+    const priorityGroups = await prisma.ticket.groupBy({
+      by: ["priority"],
+      where: scopeFilter,
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+    });
+    const ticketsByPriority = priorityGroups.map((g) => ({
+      priority: g.priority,
+      count: g._count.id,
+    }));
+
+    // ── Tickets by property (top 10) ──
+    const propertyGroups = await prisma.ticket.groupBy({
+      by: ["propertyId"],
+      where: scopeFilter,
+      _count: { id: true },
+      orderBy: { _count: { id: "desc" } },
+      take: 10,
+    });
+    const propertyIds = propertyGroups.map((g) => g.propertyId);
+    const properties = await prisma.property.findMany({
+      where: { id: { in: propertyIds } },
+      select: { id: true, name: true },
+    });
+    const propertyNameMap = new Map(properties.map((p) => [p.id, p.name]));
+    const ticketsByProperty = propertyGroups.map((g) => ({
+      propertyId: g.propertyId,
+      propertyName: propertyNameMap.get(g.propertyId) ?? "Unknown",
+      count: g._count.id,
+    }));
+
+    // ── Tickets trend (last 6 months) ──
+    const sixMonthsAgo = new Date();
+    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
+    sixMonthsAgo.setDate(1);
+    sixMonthsAgo.setHours(0, 0, 0, 0);
+
+    const trendTickets = await prisma.ticket.findMany({
+      where: { ...scopeFilter, createdAt: { gte: sixMonthsAgo } },
+      select: { createdAt: true, status: true, completedAt: true },
+    });
+
+    const ticketsTrend: { month: string; created: number; completed: number }[] = [];
+    for (let i = 0; i < 6; i++) {
+      const d = new Date(sixMonthsAgo);
+      d.setMonth(d.getMonth() + i);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const monthKey = `${year}-${String(month + 1).padStart(2, "0")}`;
+      const nextMonth = new Date(year, month + 1, 1);
+
+      const created = trendTickets.filter(
+        (t) => t.createdAt >= d && t.createdAt < nextMonth
+      ).length;
+      const completed = trendTickets.filter(
+        (t) => t.completedAt && t.completedAt >= d && t.completedAt < nextMonth
+      ).length;
+
+      ticketsTrend.push({ month: monthKey, created, completed });
+    }
+
+    // ── Tech performance (by assignedToId) ──
+    const techTickets = await prisma.ticket.findMany({
+      where: { ...scopeFilter, assignedToId: { not: null } },
+      select: { assignedToId: true, status: true, createdAt: true, completedAt: true, dueDate: true },
+    });
+
+    const techMap = new Map<string, { assigned: number; completed: number; totalHours: number; slaOk: number }>();
+    for (const t of techTickets) {
+      const uid = t.assignedToId!;
+      if (!techMap.has(uid)) techMap.set(uid, { assigned: 0, completed: 0, totalHours: 0, slaOk: 0 });
+      const entry = techMap.get(uid)!;
+      entry.assigned++;
+      if (t.status === "COMPLETED" && t.completedAt) {
+        entry.completed++;
+        entry.totalHours += (t.completedAt.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
+        if (t.completedAt <= t.dueDate) entry.slaOk++;
+      }
+    }
+
+    const techUserIds = [...techMap.keys()];
+    const techUsers = await prisma.user.findMany({
+      where: { id: { in: techUserIds } },
+      select: { id: true, fullName: true, username: true },
+    });
+    const techNameMap = new Map(techUsers.map((u) => [u.id, u.fullName || u.username]));
+
+    const techPerformance = [...techMap.entries()]
+      .map(([uid, d]) => ({
+        userId: uid,
+        name: techNameMap.get(uid) ?? "Unknown",
+        assigned: d.assigned,
+        completed: d.completed,
+        avgHours: d.completed > 0 ? Math.round((d.totalHours / d.completed) * 10) / 10 : 0,
+        slaRate: d.completed > 0 ? Math.round((d.slaOk / d.completed) * 1000) / 10 : 0,
+      }))
+      .sort((a, b) => b.assigned - a.assigned)
+      .slice(0, 20);
+
+    // ── Asset health ──
+    const conditionGroups = await prisma.asset.groupBy({
+      by: ["condition"],
+      where: { ...scopeFilter, status: "ACTIVE" },
+      _count: { id: true },
+    });
+    const assetHealth: Record<string, number> = { excellent: 0, good: 0, fair: 0, poor: 0 };
+    for (const g of conditionGroups) {
+      assetHealth[g.condition.toLowerCase()] = g._count.id;
+    }
+
+    return {
+      tickets,
+      ticketsByPriority,
+      ticketsByProperty,
+      ticketsTrend,
+      techPerformance,
+      assetHealth,
+    };
+  },
+};
+
 // ─── Entity report service ────────────────────────────────────────────────
 
 export const entityReportService = {

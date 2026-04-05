@@ -157,6 +157,22 @@ export const assetController = {
     }
   },
 
+  async bulkStatus(req: Request, res: Response) {
+    try {
+      const { ids, action } = req.body;
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return sendError(res, "ids array is required", 400);
+      }
+      if (!["activate", "deactivate"].includes(action)) {
+        return sendError(res, "action must be 'activate' or 'deactivate'", 400);
+      }
+      const count = await assetService.bulkStatus(ids, action);
+      sendSuccess(res, { updated: count }, `${count} asset${count !== 1 ? "s" : ""} ${action}d`);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
   async bulkDelete(req: Request, res: Response) {
     try {
       const { ids } = req.body;
