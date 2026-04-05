@@ -10,10 +10,13 @@ jobs:
     steps:
       - name: Deploy to EC2
         uses: appleboy/ssh-action@v1
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
           key: ${{ secrets.EC2_SSH_KEY }}
+          envs: FIREBASE_SERVICE_ACCOUNT_JSON
           script: |
             set -e
             cd /home/ubuntu/TNMS
@@ -21,6 +24,14 @@ jobs:
             git clean -fd
             git pull origin main
             npm install
+
+            # Write Firebase service account key
+            echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /home/ubuntu/firebase-key.json
+            chmod 600 /home/ubuntu/firebase-key.json
+
+            # Ensure .env has the Firebase path
+            grep -q "FIREBASE_SERVICE_ACCOUNT_PATH" .env 2>/dev/null || echo 'FIREBASE_SERVICE_ACCOUNT_PATH=/home/ubuntu/firebase-key.json' >> .env
+
             npx prisma migrate resolve --applied 20260401000000_add_departments_ticket_blocking 2>/dev/null || true
             npx prisma migrate deploy
             npx prisma generate
