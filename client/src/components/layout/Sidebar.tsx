@@ -50,16 +50,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay */}
+      {/* Mobile overlay — only between md and lg (tablet). On <md we use bottom tab bar */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 bg-gray-950/60 backdrop-blur-sm lg:hidden"
+          className="fixed inset-0 z-40 hidden bg-gray-950/60 backdrop-blur-sm md:block lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] flex-col bg-[#0C111D] transition-transform duration-300 ease-in-out lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 hidden w-[260px] flex-col bg-[#0C111D] transition-transform duration-300 ease-in-out md:flex lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >

@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { ticketApi, departmentApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
@@ -30,6 +30,13 @@ import {
   UserPlus,
   ShieldAlert,
   ShieldCheck,
+  Play,
+  RotateCcw,
+  Camera,
+  MoreHorizontal,
+  X,
+  Layers,
+  ClipboardList,
 } from "lucide-react";
 
 const DAY_NAMES: Record<string, string> = {
@@ -59,6 +66,22 @@ export default function TicketDetailPage() {
   const [selectedAssignee, setSelectedAssignee] = useState("");
   const [assigning, setAssigning] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [moreSheetOpen, setMoreSheetOpen] = useState(false);
+  const commentInputRef = useRef<HTMLInputElement>(null);
+  const headerSentinelRef = useRef<HTMLDivElement>(null);
+  const [showStickyHeader, setShowStickyHeader] = useState(false);
+
+  // Sticky header — observe when the title area scrolls out of view
+  useEffect(() => {
+    const sentinel = headerSentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => setShowStickyHeader(!entry.isIntersecting),
+      { threshold: 0, rootMargin: "-56px 0px 0px 0px" } // account for header height
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [ticket]);
 
   // Block / Unblock state
   const [blockModalOpen, setBlockModalOpen] = useState(false);
@@ -259,21 +282,63 @@ export default function TicketDetailPage() {
     ticket.status !== "COMPLETED" && new Date(ticket.dueDate) < new Date();
 
   return (
-    <div>
-      {/* Back */}
+    <div className="pb-36 md:pb-0">
+      {/* ── Mobile Sticky Collapsed Header ── */}
+      <div
+        className={`fixed inset-x-0 top-14 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 py-2.5 transition-all duration-200 md:hidden ${
+          showStickyHeader
+            ? "translate-y-0 opacity-100"
+            : "-translate-y-full opacity-0 pointer-events-none"
+        }`}
+      >
+        <div className="flex items-center gap-2.5">
+          <button
+            onClick={() => navigate("/tickets")}
+            className="flex h-9 w-9 flex-shrink-0 items-center justify-center rounded-lg active:bg-gray-100"
+          >
+            <ArrowLeft size={18} className="text-gray-600" />
+          </button>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-gray-900">
+              {ticket.ticketNumber} — {ticket.name}
+            </p>
+          </div>
+          <span className={`inline-flex flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${statusColor(ticket.status)}`}>
+            {TICKET_STATUS_LABELS[ticket.status]}
+          </span>
+          <span className={`inline-flex flex-shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${priorityColor(ticket.priority)}`}>
+            {PRIORITY_LABELS[ticket.priority]}
+          </span>
+        </div>
+      </div>
+
+      {/* ── Mobile App Bar (back button) ── */}
+      <div className="mb-3 flex items-center gap-3 md:hidden" ref={headerSentinelRef}>
+        <button
+          onClick={() => navigate("/tickets")}
+          className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 active:bg-gray-200"
+        >
+          <ArrowLeft size={18} className="text-gray-700" />
+        </button>
+        <h1 className="min-w-0 flex-1 truncate text-base font-semibold text-gray-900">
+          {ticket.name}
+        </h1>
+      </div>
+
+      {/* ── Desktop Back Link ── */}
       <button
         onClick={() => navigate("/tickets")}
-        className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors duration-150"
+        className="mb-4 hidden items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors duration-150 md:flex"
       >
         <ArrowLeft size={16} />
         Back to Tickets
       </button>
 
-      {/* Header */}
+      {/* Header — desktop only shows the full action bar */}
       <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
-          <div className="flex items-center gap-3">
-            <h1 className="text-xl font-semibold text-gray-900">{ticket.name}</h1>
+          <div className="flex flex-wrap items-center gap-2 md:gap-3">
+            <h1 className="hidden text-xl font-semibold text-gray-900 md:block">{ticket.name}</h1>
             <span
               className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor(ticket.status)}`}
             >
@@ -290,7 +355,8 @@ export default function TicketDetailPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        {/* Desktop action buttons */}
+        <div className="hidden items-center gap-2 md:flex">
           {hasPermission(PERMISSIONS.TICKETS.EDIT) && (
             <Link
               to={`/tickets/${ticket.id}/edit`}
@@ -463,6 +529,7 @@ export default function TicketDetailPage() {
                   {hasPermission(PERMISSIONS.TICKETS.COMMENT) && (
                     <div className="mb-4 flex gap-2">
                       <input
+                        ref={commentInputRef}
                         type="text"
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
@@ -553,30 +620,32 @@ export default function TicketDetailPage() {
 
         {/* Right: Sidebar info */}
         <div className="space-y-4">
-          {/* Info Card */}
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-            <h3 className="mb-4 text-[13px] font-semibold text-gray-900">
-              Details
-            </h3>
-            <dl className="space-y-3.5 text-sm">
+          {/* Ticket ID — always at top */}
+          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-gray-500">Ticket ID</span>
+              <span className="flex items-center gap-1.5">
+                <span className="font-mono font-semibold text-primary-600">{ticket.ticketNumber}</span>
+                <button
+                  onClick={() => { navigator.clipboard.writeText(ticket.ticketNumber); toast.success("Copied!"); }}
+                  className="text-gray-400 hover:text-gray-600"
+                  title="Copy ticket number"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                </button>
+              </span>
+            </div>
+          </div>
+
+          {/* ── Location Group ── */}
+          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
+              <MapPin size={14} className="text-gray-400" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Location</span>
+            </div>
+            <dl className="space-y-3 p-4 text-sm">
               <div className="flex items-center justify-between">
-                <dt className="text-gray-500">Ticket ID</dt>
-                <dd className="flex items-center gap-1.5">
-                  <span className="font-mono font-semibold text-primary-600">{ticket.ticketNumber}</span>
-                  <button
-                    onClick={() => { navigator.clipboard.writeText(ticket.ticketNumber); toast.success("Copied!"); }}
-                    className="text-gray-400 hover:text-gray-600"
-                    title="Copy ticket number"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
-                  </button>
-                </dd>
-              </div>
-              <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <Building2 size={14} />
-                  Property
-                </dt>
+                <dt className="text-gray-500">Property</dt>
                 <dd>
                   <Link
                     to={`/properties/${ticket.property?.id}`}
@@ -587,58 +656,61 @@ export default function TicketDetailPage() {
                 </dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <MapPin size={14} />
-                  Unit
-                </dt>
-                <dd className="font-medium">
+                <dt className="text-gray-500">Unit</dt>
+                <dd className="font-medium text-gray-900">
                   {ticket.unit?.name}{" "}
-                  <span className="text-xs text-gray-400">
-                    ({ticket.unit?.code})
-                  </span>
+                  <span className="text-xs text-gray-400">({ticket.unit?.code})</span>
                 </dd>
               </div>
               {ticket.unit?.floor && (
                 <div className="flex items-center justify-between">
                   <dt className="text-gray-500">Floor</dt>
-                  <dd className="font-medium">{ticket.unit.floor.name}</dd>
+                  <dd className="font-medium text-gray-900">{ticket.unit.floor.name}</dd>
                 </div>
               )}
+            </dl>
+          </div>
+
+          {/* ── Classification Group ── */}
+          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
+              <Tag size={14} className="text-gray-400" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Classification</span>
+            </div>
+            <dl className="space-y-3 p-4 text-sm">
               {ticket.department && (
                 <div className="flex items-center justify-between">
                   <dt className="text-gray-500">Department</dt>
-                  <dd className="font-medium">{ticket.department.name}</dd>
+                  <dd className="font-medium text-gray-900">{ticket.department.name}</dd>
                 </div>
               )}
               {ticket.category && (
                 <div className="flex items-center justify-between">
-                  <dt className="flex items-center gap-1.5 text-gray-500">
-                    <Tag size={14} />
-                    Category
-                  </dt>
-                  <dd className="font-medium">{ticket.category.name}</dd>
+                  <dt className="text-gray-500">Category</dt>
+                  <dd className="font-medium text-gray-900">{ticket.category.name}</dd>
                 </div>
               )}
               <div className="flex items-center justify-between">
                 <dt className="text-gray-500">Task Type</dt>
-                <dd className="font-medium">
-                  {TASK_TYPE_LABELS[ticket.taskType]}
-                </dd>
+                <dd className="font-medium text-gray-900">{TASK_TYPE_LABELS[ticket.taskType]}</dd>
               </div>
               <div className="flex items-center justify-between">
                 <dt className="text-gray-500">Sub Type</dt>
-                <dd className="font-medium">
-                  {SUB_TASK_TYPE_LABELS[ticket.subTaskType]}
-                </dd>
+                <dd className="font-medium text-gray-900">{SUB_TASK_TYPE_LABELS[ticket.subTaskType]}</dd>
               </div>
+            </dl>
+          </div>
+
+          {/* ── Meta Group ── */}
+          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+            <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
+              <ClipboardList size={14} className="text-gray-400" />
+              <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Meta</span>
+            </div>
+            <dl className="space-y-3 p-4 text-sm">
               <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <Calendar size={14} />
-                  Due Date
-                </dt>
-                <dd
-                  className={`font-medium ${isOverdue ? "text-red-600" : ""}`}
-                >
+                <dt className="text-gray-500">Due Date</dt>
+                <dd className={`font-medium ${isOverdue ? "text-red-600" : "text-gray-900"}`}>
                   {new Date(ticket.dueDate).toLocaleDateString()}
                   {isOverdue && (
                     <span className="ml-1 text-xs">
@@ -648,31 +720,20 @@ export default function TicketDetailPage() {
                 </dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <Clock size={14} />
-                  Created
-                </dt>
-                <dd className="font-medium">
-                  {new Date(ticket.createdAt).toLocaleDateString()}
-                </dd>
+                <dt className="text-gray-500">Created</dt>
+                <dd className="font-medium text-gray-900">{new Date(ticket.createdAt).toLocaleDateString()}</dd>
               </div>
               <div className="flex items-center justify-between">
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <UserCircle size={14} />
-                  Created By
-                </dt>
-                <dd className="font-medium">
+                <dt className="text-gray-500">Created By</dt>
+                <dd className="font-medium text-gray-900">
                   {ticket.createdBy
                     ? `${ticket.createdBy.fullName || ticket.createdBy.username} (${ticket.createdBy.role?.name || ""})`
                     : "—"}
                 </dd>
               </div>
-              <div>
-                <dt className="flex items-center gap-1.5 text-gray-500">
-                  <UserCircle size={14} />
-                  Assigned To
-                </dt>
-                <dd className="font-medium">
+              <div className="flex items-center justify-between">
+                <dt className="text-gray-500">Assigned To</dt>
+                <dd className="font-medium text-gray-900">
                   {ticket.assignedTo
                     ? `${ticket.assignedTo.fullName || ticket.assignedTo.username} (${ticket.assignedTo.role?.name || ""})`
                     : "Unassigned"}
@@ -928,6 +989,148 @@ export default function TicketDetailPage() {
           </div>
         </div>
       </Modal>
+
+      {/* ── Mobile Bottom Action Bar — sits above the tab bar ── */}
+      <div className="fixed inset-x-0 bottom-[calc(3.5rem+env(safe-area-inset-bottom,0px))] z-40 border-t border-gray-200 bg-white shadow-[0_-4px_12px_rgba(0,0,0,0.06)] md:hidden">
+        <div className="flex items-center gap-2 px-4 py-3">
+          {/* Primary Action */}
+          {ticket.status === "OPEN" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+            <button
+              onClick={() => handleStatusChange("IN_PROGRESS")}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-primary-700"
+            >
+              <Play size={16} />
+              Start Work
+            </button>
+          )}
+          {ticket.status === "IN_PROGRESS" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+            <button
+              onClick={() => handleStatusChange("COMPLETED")}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-green-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-green-700"
+            >
+              <CheckCircle2 size={16} />
+              Mark Completed
+            </button>
+          )}
+          {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
+            <button
+              onClick={() => handleStatusChange("OPEN")}
+              className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-blue-700"
+            >
+              <RotateCcw size={16} />
+              Reopen Ticket
+            </button>
+          )}
+
+          {/* Add Photo */}
+          {isAssignee && (
+            <label className="flex h-11 w-11 flex-shrink-0 cursor-pointer items-center justify-center rounded-xl bg-gray-100 text-gray-600 active:bg-gray-200">
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                disabled={uploadingImage}
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) handleImageUpload(file);
+                  e.target.value = "";
+                }}
+              />
+              <Camera size={18} />
+            </label>
+          )}
+
+          {/* Comment */}
+          {hasPermission(PERMISSIONS.TICKETS.COMMENT) && (
+            <button
+              onClick={() => {
+                setActiveTab("comments");
+                setTimeout(() => {
+                  commentInputRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
+                  commentInputRef.current?.focus();
+                }, 100);
+              }}
+              className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600 active:bg-gray-200"
+            >
+              <MessageSquare size={18} />
+            </button>
+          )}
+
+          {/* More */}
+          <button
+            onClick={() => setMoreSheetOpen(true)}
+            className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gray-100 text-gray-600 active:bg-gray-200"
+          >
+            <MoreHorizontal size={18} />
+          </button>
+        </div>
+      </div>
+
+      {/* ── Mobile "More" Bottom Sheet ── */}
+      {moreSheetOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMoreSheetOpen(false)}
+          />
+          {/* Sheet */}
+          <div className="absolute inset-x-0 bottom-0 rounded-t-2xl bg-white shadow-xl animate-in slide-in-from-bottom"
+               style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
+            <div className="flex items-center justify-between border-b border-gray-100 px-5 py-3">
+              <span className="text-sm font-semibold text-gray-900">More Actions</span>
+              <button
+                onClick={() => setMoreSheetOpen(false)}
+                className="flex h-8 w-8 items-center justify-center rounded-full bg-gray-100 text-gray-500"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="space-y-1 p-3">
+              {hasPermission(PERMISSIONS.TICKETS.ASSIGN) && (
+                <button
+                  onClick={() => { setMoreSheetOpen(false); openAssignModal(); }}
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 active:bg-gray-100"
+                >
+                  <UserPlus size={18} className="text-gray-400" />
+                  {ticket.assignedTo ? "Reassign Ticket" : "Assign Ticket"}
+                </button>
+              )}
+              {hasPermission(PERMISSIONS.TICKETS.EDIT) && (
+                <button
+                  onClick={() => { setMoreSheetOpen(false); navigate(`/tickets/${ticket.id}/edit`); }}
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 active:bg-gray-100"
+                >
+                  <Pencil size={18} className="text-gray-400" />
+                  Edit Details
+                </button>
+              )}
+              {ticket.status !== "COMPLETED" && !ticket.blocks?.some((b: any) => !b.resolvedAt) && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+                <button
+                  onClick={() => { setMoreSheetOpen(false); openBlockModal(); }}
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-orange-700 active:bg-orange-50"
+                >
+                  <ShieldAlert size={18} className="text-orange-400" />
+                  Report Blocker
+                </button>
+              )}
+              {ticket.blocks?.some((b: any) => !b.resolvedAt) && (
+                user?.id === ticket.blocks?.[0]?.blockedBy?.id ||
+                user?.id === ticket.blocks?.[0]?.blockingUser?.id ||
+                hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)
+              ) && (
+                <button
+                  onClick={() => { setMoreSheetOpen(false); setUnblockNote(""); setUnblockModalOpen(true); }}
+                  className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-green-700 active:bg-green-50"
+                >
+                  <ShieldCheck size={18} className="text-green-400" />
+                  Unblock Ticket
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

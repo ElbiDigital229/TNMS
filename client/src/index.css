@@ -49,6 +49,19 @@ input:focus, textarea:focus, select:focus {
   display: none;
 }
 
+/* Slide-up animation for mobile overlays */
+@keyframes slide-up {
+  from {
+    transform: translateY(100%);
+  }
+  to {
+    transform: translateY(0);
+  }
+}
+.animate-slide-up {
+  animation: slide-up 0.2s ease-out;
+}
+
 .leaflet-container {
   @apply h-full w-full rounded-lg;
   z-index: 0;

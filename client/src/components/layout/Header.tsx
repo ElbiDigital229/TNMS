@@ -11,9 +11,10 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="flex h-14 items-center justify-between border-b border-gray-200/80 bg-white px-6">
+      {/* Hamburger — desktop only (mobile uses bottom tab bar) */}
       <button
         onClick={onMenuClick}
-        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden"
+        className="hidden rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden md:block"
       >
         <Menu size={20} />
       </button>
@@ -21,12 +22,15 @@ export default function Header({ onMenuClick }: HeaderProps) {
       <div className="flex-1" />
 
       <div className="flex items-center gap-4">
-        <NotificationBell />
+        {/* Notification bell — hidden on mobile (moved to tab bar) */}
+        <div className="hidden md:block">
+          <NotificationBell />
+        </div>
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-full bg-primary-50 ring-1 ring-primary-100">
             <User size={14} className="text-primary-600" />
           </div>
-          <span className="text-[13px] font-medium text-gray-600">
+          <span className="hidden text-[13px] font-medium text-gray-600 md:block">
             {user?.username}
           </span>
         </div>

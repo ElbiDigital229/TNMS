@@ -46,6 +46,10 @@ function timeAgo(dateStr: string): string {
   return new Date(dateStr).toLocaleDateString();
 }
 
+/**
+ * Desktop-only notification bell with dropdown.
+ * On mobile, notifications are accessed via the bottom tab bar (MobileTabBar).
+ */
 export default function NotificationBell() {
   const navigate = useNavigate();
   const { unreadCount, notifications, isLoading, markAsRead, markAllAsRead } =
@@ -92,7 +96,7 @@ export default function NotificationBell() {
         )}
       </button>
 
-      {/* Dropdown */}
+      {/* Desktop Dropdown */}
       {open && (
         <div className="absolute right-0 top-full mt-2 w-96 rounded-xl bg-white shadow-lg ring-1 ring-gray-200 z-50">
           {/* Header */}
