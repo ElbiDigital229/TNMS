@@ -10,10 +10,11 @@ import {
   UserCog,
   AlertTriangle,
   Building2,
-  ChevronLeft,
-  ChevronRight,
 } from "lucide-react";
 import { useNotifications } from "../contexts/NotificationContext";
+import { cls } from "../lib/styles";
+import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
+import PageHeader from "../components/ui/PageHeader";
 
 interface Notification {
   id: string;
@@ -126,29 +127,22 @@ export default function NotificationsPage() {
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">Notifications</h1>
-          <p className="mt-1 text-[13px] text-gray-500">
-            {pagination.total} {pagination.total === 1 ? "notification" : "notifications"}
-          </p>
-        </div>
-        <button
-          onClick={handleMarkAllAsRead}
-          className="inline-flex items-center gap-2 rounded-lg border border-gray-200 px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm transition-all duration-200 hover:bg-gray-50"
-        >
-          <CheckCheck size={16} />
-          Mark all as read
-        </button>
-      </div>
+      <PageHeader
+        title="Notifications"
+        subtitle={`${pagination.total} ${pagination.total === 1 ? "notification" : "notifications"}`}
+        actions={
+          <button onClick={handleMarkAllAsRead} className={cls.btnSecondary}>
+            <CheckCheck size={14} />
+            Mark all as read
+          </button>
+        }
+      />
 
-      {/* Filters */}
-      <div className="mb-4 flex items-center gap-3">
-        <div className="flex rounded-lg border border-gray-200 p-0.5">
+      <div className="mb-3 flex items-center gap-3">
+        <div className="flex rounded-md border border-gray-200 p-0.5">
           <button
             onClick={() => { setFilter("all"); setPage(1); }}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded px-3 py-1 text-[11px] font-medium transition-colors ${
               filter === "all"
                 ? "bg-primary-600 text-white"
                 : "text-gray-600 hover:text-gray-900"
@@ -158,7 +152,7 @@ export default function NotificationsPage() {
           </button>
           <button
             onClick={() => { setFilter("unread"); setPage(1); }}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+            className={`rounded px-3 py-1 text-[11px] font-medium transition-colors ${
               filter === "unread"
                 ? "bg-primary-600 text-white"
                 : "text-gray-600 hover:text-gray-900"
@@ -171,7 +165,7 @@ export default function NotificationsPage() {
         <select
           value={typeFilter}
           onChange={(e) => { setTypeFilter(e.target.value); setPage(1); }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+          className={cls.select}
         >
           <option value="">All Types</option>
           {Object.entries(TYPE_CONFIG).map(([key, config]) => (
@@ -182,22 +176,19 @@ export default function NotificationsPage() {
         </select>
       </div>
 
-      {/* Notification List */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+      <div className="rounded-lg bg-white ring-1 ring-gray-200">
         {loading ? (
-          <div className="px-5 py-12 text-center text-sm text-gray-400">
-            Loading...
-          </div>
+          <TableLoading />
         ) : notifications.length === 0 ? (
-          <div className="px-5 py-12 text-center">
-            <Bell size={48} className="mx-auto mb-3 text-gray-200" />
-            <p className="text-sm font-medium text-gray-500">No notifications</p>
-            <p className="mt-1 text-[13px] text-gray-400">
-              {filter === "unread"
+          <EmptyState
+            icon={<Bell size={40} />}
+            title="No notifications"
+            subtitle={
+              filter === "unread"
                 ? "You're all caught up!"
-                : "Notifications will appear here when something happens"}
-            </p>
-          </div>
+                : "Notifications will appear here when something happens"
+            }
+          />
         ) : (
           <div className="divide-y divide-gray-100">
             {notifications.map((n) => {
@@ -213,32 +204,32 @@ export default function NotificationsPage() {
                 <button
                   key={n.id}
                   onClick={() => handleClick(n)}
-                  className={`flex w-full items-start gap-4 px-5 py-4 text-left transition-colors hover:bg-gray-50/80 ${
+                  className={`flex w-full items-start gap-3 px-3 py-3 text-left transition-colors hover:bg-gray-50/80 ${
                     !n.isRead ? "bg-primary-50/20" : ""
                   }`}
                 >
                   <div
-                    className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg ${config.bg}`}
+                    className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md ${config.bg}`}
                   >
-                    <Icon size={18} className={config.color} />
+                    <Icon size={15} className={config.color} />
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium text-gray-900">
+                      <p className="text-[13px] font-medium text-gray-900">
                         {n.title}
                       </p>
                       {!n.isRead && (
-                        <span className="h-2 w-2 shrink-0 rounded-full bg-primary-500" />
+                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-primary-500" />
                       )}
-                      <span className="ml-auto shrink-0 text-xs text-gray-400">
+                      <span className="ml-auto shrink-0 text-[11px] text-gray-400">
                         {timeAgo(n.createdAt)}
                       </span>
                     </div>
-                    <p className="mt-0.5 text-[13px] text-gray-500">
+                    <p className="mt-0.5 text-[12px] text-gray-500">
                       {n.message}
                     </p>
                     <span
-                      className={`mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${config.bg} ${config.color}`}
+                      className={`mt-1 inline-flex rounded-full px-1.5 py-px text-[10px] font-medium ${config.bg} ${config.color}`}
                     >
                       {config.label}
                     </span>
@@ -249,7 +240,7 @@ export default function NotificationsPage() {
                         e.stopPropagation();
                         handleMarkAsRead(n.id);
                       }}
-                      className="mt-1 shrink-0 rounded-md p-1.5 text-gray-300 hover:bg-gray-100 hover:text-gray-500"
+                      className={cls.btnIcon}
                       title="Mark as read"
                     >
                       <Check size={14} />
@@ -260,36 +251,7 @@ export default function NotificationsPage() {
             })}
           </div>
         )}
-
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-            <span className="text-sm text-gray-600">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)} of{" "}
-              {pagination.total}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-sm font-medium">
-                {page} / {pagination.totalPages}
-              </span>
-              <button
-                onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))}
-                disabled={page === pagination.totalPages}
-                className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination pagination={pagination} onPageChange={setPage} />
       </div>
     </div>
   );

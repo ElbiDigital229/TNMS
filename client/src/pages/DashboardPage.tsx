@@ -2,6 +2,11 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { dashboardApi, todoApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { cls, STATUS_BAR, PRIORITY_BAR, TASK_TYPE_BAR } from "../lib/styles";
+import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
+import StatCard from "../components/ui/StatCard";
+import { EmptyState } from "../components/ui/DataTable";
+import PageHeader from "../components/ui/PageHeader";
 import {
   TASK_TYPE_LABELS,
   PRIORITY_LABELS,
@@ -14,7 +19,6 @@ import {
   ClipboardList,
   AlertTriangle,
   CheckCircle2,
-  TrendingUp,
   Inbox,
   ListChecks,
 } from "lucide-react";
@@ -76,189 +80,39 @@ export default function DashboardPage() {
 
   if (!stats) return null;
 
-  const priorityColor = (p: string) => {
-    switch (p) {
-      case "CRITICAL": return "bg-red-500";
-      case "HIGH": return "bg-orange-500";
-      case "MEDIUM": return "bg-yellow-500";
-      case "LOW": return "bg-blue-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const statusColor = (s: string) => {
-    switch (s) {
-      case "OPEN": return "bg-blue-500";
-      case "IN_PROGRESS": return "bg-yellow-500";
-      case "COMPLETED": return "bg-green-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const taskTypeColor = (t: string) => {
-    switch (t) {
-      case "COMPLAIN": return "bg-red-500";
-      case "MAINTENANCE": return "bg-orange-500";
-      case "INSPECT": return "bg-purple-500";
-      case "TASK": return "bg-blue-500";
-      default: return "bg-gray-500";
-    }
-  };
-
-  const priorityBadge = (p: string) => {
-    switch (p) {
-      case "CRITICAL": return "bg-red-50 text-red-600";
-      case "HIGH": return "bg-orange-50 text-orange-600";
-      case "MEDIUM": return "bg-yellow-50 text-yellow-600";
-      case "LOW": return "bg-blue-50 text-blue-600";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
-
-  const statusBadge = (s: string) => {
-    switch (s) {
-      case "OPEN": return "bg-blue-50 text-blue-600";
-      case "IN_PROGRESS": return "bg-yellow-50 text-yellow-600";
-      case "COMPLETED": return "bg-green-50 text-green-600";
-      default: return "bg-gray-100 text-gray-700";
-    }
-  };
-
   const totalTickets = stats.totals.tickets;
-
-
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Dashboard</h1>
-        <p className="mt-1 text-[13px] text-gray-500">
-          Overview of your True North Management System.
-        </p>
-      </div>
+      <PageHeader title="Dashboard" subtitle="Overview of your True North Management System." />
 
       {/* Summary Cards */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Link
-          to="/properties"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Properties</p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.totals.properties}
-              </p>
-            </div>
-            <div className="rounded-lg bg-blue-50 p-2">
-              <Building2 className="text-blue-600" size={24} />
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/units"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Units</p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.totals.units}
-              </p>
-            </div>
-            <div className="rounded-lg bg-purple-50 p-2">
-              <Layers className="text-purple-600" size={24} />
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/assets"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Assets</p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.totals.assets}
-              </p>
-            </div>
-            <div className="rounded-lg bg-green-50 p-2">
-              <Package className="text-green-600" size={24} />
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/tickets"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-500">Tickets</p>
-              <p className="mt-1 text-3xl font-semibold text-gray-900">
-                {stats.totals.tickets}
-              </p>
-            </div>
-            <div className="rounded-lg bg-orange-50 p-2">
-              <ClipboardList className="text-orange-600" size={24} />
-            </div>
-          </div>
-        </Link>
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatCard to="/properties" icon={<Building2 size={20} />} iconBg="bg-blue-50 text-blue-600" label="Properties" value={stats.totals.properties} />
+        <StatCard to="/units" icon={<Layers size={20} />} iconBg="bg-purple-50 text-purple-600" label="Units" value={stats.totals.units} />
+        <StatCard to="/assets" icon={<Package size={20} />} iconBg="bg-green-50 text-green-600" label="Assets" value={stats.totals.assets} />
+        <StatCard to="/tickets" icon={<ClipboardList size={20} />} iconBg="bg-orange-50 text-orange-600" label="Tickets" value={stats.totals.tickets} />
       </div>
 
       {/* Ticket Metrics Row */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <Link
-          to="/tickets?status=OVERDUE"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-red-50 p-2">
-              <AlertTriangle className="text-red-600" size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Overdue Tickets</p>
-              <p className="text-2xl font-semibold text-red-600">
-                {stats.tickets.overdue}
-              </p>
-            </div>
-          </div>
-        </Link>
-
-        <Link
-          to="/tickets?status=COMPLETED"
-          className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
-        >
-          <div className="flex items-center gap-3">
-            <div className="rounded-lg bg-green-50 p-2">
-              <CheckCircle2 className="text-green-600" size={20} />
-            </div>
-            <div>
-              <p className="text-sm text-gray-500">Completion Rate</p>
-              <p className="text-2xl font-semibold text-green-600">
-                {stats.tickets.completionRate}%
-              </p>
-            </div>
-          </div>
-        </Link>
-
+      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <StatCard to="/tickets?status=OVERDUE" icon={<AlertTriangle size={18} />} iconBg="bg-red-50 text-red-600" label="Overdue Tickets" value={stats.tickets.overdue} valueColor="text-red-600" />
+        <StatCard to="/tickets?status=COMPLETED" icon={<CheckCircle2 size={18} />} iconBg="bg-green-50 text-green-600" label="Completion Rate" value={`${stats.tickets.completionRate}%`} valueColor="text-green-600" />
       </div>
 
       {/* To-Do Widget */}
       {todoStats && (
-        <div className="mb-6">
+        <div className="mb-4">
           <Link
             to="/todos"
-            className="flex items-center gap-4 rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5 transition-all duration-200 hover:shadow-md"
+            className="flex items-center gap-4 rounded-lg bg-white p-3.5 ring-1 ring-gray-200 transition-all hover:ring-gray-300 hover:shadow-sm"
           >
-            <div className="rounded-lg bg-primary-50 p-2.5">
-              <ListChecks className="text-primary-600" size={22} />
+            <div className="rounded-md bg-primary-50 p-2">
+              <ListChecks className="text-primary-600" size={20} />
             </div>
             <div className="flex-1">
-              <p className="text-sm font-medium text-gray-900">Tasks Due Today</p>
-              <p className="mt-0.5 text-[13px] text-gray-500">
+              <p className="text-[13px] font-medium text-gray-900">Tasks Due Today</p>
+              <p className="text-[12px] text-gray-500">
                 {todoStats.dueToday === 0
                   ? "No tasks due today"
                   : `${todoStats.dueToday} task${todoStats.dueToday === 1 ? "" : "s"} due today`}
@@ -267,19 +121,19 @@ export default function DashboardPage() {
                 )}
               </p>
             </div>
-            <div className="flex items-center gap-4 text-center">
+            <div className="flex items-center gap-3 text-center">
               <div>
-                <p className="text-2xl font-semibold text-primary-600">{todoStats.dueToday}</p>
+                <p className="text-lg font-semibold text-primary-600">{todoStats.dueToday}</p>
                 <p className="text-[11px] text-gray-400">Today</p>
               </div>
-              <div className="h-8 w-px bg-gray-100" />
+              <div className="h-7 w-px bg-gray-100" />
               <div>
-                <p className="text-2xl font-semibold text-gray-900">{todoStats.open}</p>
+                <p className="text-lg font-semibold text-gray-900">{todoStats.open}</p>
                 <p className="text-[11px] text-gray-400">Open</p>
               </div>
-              <div className="h-8 w-px bg-gray-100" />
+              <div className="h-7 w-px bg-gray-100" />
               <div>
-                <p className="text-2xl font-semibold text-green-600">{todoStats.completed}</p>
+                <p className="text-lg font-semibold text-green-600">{todoStats.completed}</p>
                 <p className="text-[11px] text-gray-400">Done</p>
               </div>
             </div>
@@ -288,164 +142,37 @@ export default function DashboardPage() {
       )}
 
       {/* Breakdown Charts */}
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        {/* By Status */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-          <h3 className="mb-4 text-[13px] font-semibold text-gray-900">
-            Tickets by Status
-          </h3>
-          {totalTickets === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-              <Inbox size={28} className="mb-2" />
-              <p className="text-sm">No tickets yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(stats.tickets.byStatus).map(([key, count]) => (
-                <Link
-                  key={key}
-                  to={`/tickets?status=${key}`}
-                  className="block rounded-lg px-2 py-1 -mx-2 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
-                      {TICKET_STATUS_LABELS[key]}
-                    </span>
-                    <span className="font-medium">{count}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100/80">
-                    <div
-                      className={`h-full rounded-full ${statusColor(key)} transition-all duration-500`}
-                      style={{
-                        width: `${totalTickets > 0 ? (count / totalTickets) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* By Priority */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-          <h3 className="mb-4 text-[13px] font-semibold text-gray-900">
-            Tickets by Priority
-          </h3>
-          {totalTickets === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-              <Inbox size={28} className="mb-2" />
-              <p className="text-sm">No tickets yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(stats.tickets.byPriority).map(([key, count]) => (
-                <Link
-                  key={key}
-                  to={`/tickets?priority=${key}`}
-                  className="block rounded-lg px-2 py-1 -mx-2 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
-                      {PRIORITY_LABELS[key]}
-                    </span>
-                    <span className="font-medium">{count}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100/80">
-                    <div
-                      className={`h-full rounded-full ${priorityColor(key)} transition-all duration-500`}
-                      style={{
-                        width: `${totalTickets > 0 ? (count / totalTickets) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
-
-        {/* By Task Type */}
-        <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
-          <h3 className="mb-4 text-[13px] font-semibold text-gray-900">
-            Tickets by Type
-          </h3>
-          {totalTickets === 0 ? (
-            <div className="flex flex-col items-center justify-center py-6 text-gray-400">
-              <Inbox size={28} className="mb-2" />
-              <p className="text-sm">No tickets yet</p>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {Object.entries(stats.tickets.byTaskType).map(([key, count]) => (
-                <Link
-                  key={key}
-                  to={`/tickets?taskType=${key}`}
-                  className="block rounded-lg px-2 py-1 -mx-2 hover:bg-gray-50 transition-colors"
-                >
-                  <div className="mb-1 flex items-center justify-between text-sm">
-                    <span className="text-gray-600">
-                      {TASK_TYPE_LABELS[key]}
-                    </span>
-                    <span className="font-medium">{count}</span>
-                  </div>
-                  <div className="h-2 overflow-hidden rounded-full bg-gray-100/80">
-                    <div
-                      className={`h-full rounded-full ${taskTypeColor(key)} transition-all duration-500`}
-                      style={{
-                        width: `${totalTickets > 0 ? (count / totalTickets) * 100 : 0}%`,
-                      }}
-                    />
-                  </div>
-                </Link>
-              ))}
-            </div>
-          )}
-        </div>
+      <div className="mb-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
+        <BreakdownChart title="Tickets by Status" data={stats.tickets.byStatus} labels={TICKET_STATUS_LABELS} barColors={STATUS_BAR} totalTickets={totalTickets} linkPrefix="/tickets?status=" />
+        <BreakdownChart title="Tickets by Priority" data={stats.tickets.byPriority} labels={PRIORITY_LABELS} barColors={PRIORITY_BAR} totalTickets={totalTickets} linkPrefix="/tickets?priority=" />
+        <BreakdownChart title="Tickets by Type" data={stats.tickets.byTaskType} labels={TASK_TYPE_LABELS} barColors={TASK_TYPE_BAR} totalTickets={totalTickets} linkPrefix="/tickets?taskType=" />
       </div>
 
       {/* Recent Tickets */}
-      <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
-        <div className="flex items-center justify-between border-b border-gray-200 px-5 py-4">
-          <h3 className="text-[13px] font-semibold text-gray-900">
-            Recent Tickets
-          </h3>
-          <Link
-            to="/tickets"
-            className="text-xs font-medium text-primary-600 hover:underline"
-          >
-            View all
-          </Link>
+      <div className="rounded-lg bg-white ring-1 ring-gray-200">
+        <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2.5">
+          <h3 className="text-[13px] font-semibold text-gray-900">Recent Tickets</h3>
+          <Link to="/tickets" className="text-[12px] font-medium text-primary-600 hover:underline">View all</Link>
         </div>
         {stats.recentTickets.length === 0 ? (
-          <div className="flex flex-col items-center justify-center px-5 py-12 text-gray-400">
-            <Inbox size={32} className="mb-3" />
-            <p className="text-sm font-medium text-gray-500">No tickets yet</p>
-            <p className="mt-1 text-xs text-gray-400">
-              Tickets will appear here once created.
-            </p>
-          </div>
+          <EmptyState icon={<Inbox size={28} />} title="No tickets yet" subtitle="Tickets will appear here once created." />
         ) : (
           <>
             {/* Mobile card view */}
-            <div className="space-y-2 p-4 md:hidden">
+            <div className="space-y-1.5 p-3 md:hidden">
               {stats.recentTickets.map((ticket) => (
                 <Link
                   key={ticket.id}
                   to={`/tickets/${ticket.id}`}
-                  className="block rounded-lg border border-gray-100 bg-gray-50/50 p-3 active:bg-gray-100 transition-colors"
+                  className="block rounded-md border border-gray-100 bg-gray-50/50 p-3 active:bg-gray-100 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-mono text-xs font-semibold text-primary-600">{ticket.ticketNumber}</span>
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${priorityBadge(ticket.priority)}`}>
-                      {PRIORITY_LABELS[ticket.priority]}
-                    </span>
+                    <span className={cls.mono}>{ticket.ticketNumber}</span>
+                    <PriorityBadge priority={ticket.priority} />
                   </div>
-                  <p className="mt-1 text-sm font-medium text-gray-900 leading-snug">{ticket.name}</p>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${statusBadge(ticket.status)}`}>
-                      {TICKET_STATUS_LABELS[ticket.status]}
-                    </span>
+                  <p className="mt-1 text-[13px] font-medium text-gray-900 leading-snug">{ticket.name}</p>
+                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
+                    <StatusBadge status={ticket.status} />
                     <span className="text-[11px] text-gray-400">·</span>
                     <span className="text-[11px] text-gray-500">{ticket.property.name}</span>
                     <span className="text-[11px] text-gray-400">·</span>
@@ -457,42 +184,26 @@ export default function DashboardPage() {
 
             {/* Desktop table view */}
             <div className="hidden md:block overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className={cls.table}>
                 <thead>
                   <tr className="border-b border-gray-100">
-                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Ticket</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Name</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Property</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Priority</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
-                    <th className="px-5 py-2.5 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Due</th>
+                    <th className={cls.th}>Ticket</th>
+                    <th className={cls.th}>Name</th>
+                    <th className={cls.th}>Property</th>
+                    <th className={cls.th}>Priority</th>
+                    <th className={cls.th}>Status</th>
+                    <th className={cls.th}>Due</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stats.recentTickets.map((ticket) => (
-                    <tr
-                      key={ticket.id}
-                      onClick={() => navigate(`/tickets/${ticket.id}`)}
-                      className="cursor-pointer border-b border-gray-50 transition-colors duration-150 hover:bg-primary-50/40"
-                    >
-                      <td className="px-5 py-3">
-                        <span className="font-mono text-xs font-medium text-primary-600">
-                          {ticket.ticketNumber}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 font-medium text-gray-900">{ticket.name}</td>
-                      <td className="px-5 py-3 text-gray-600">{ticket.property.name}</td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityBadge(ticket.priority)}`}>
-                          {PRIORITY_LABELS[ticket.priority]}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusBadge(ticket.status)}`}>
-                          {TICKET_STATUS_LABELS[ticket.status]}
-                        </span>
-                      </td>
-                      <td className="px-5 py-3 text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</td>
+                    <tr key={ticket.id} onClick={() => navigate(`/tickets/${ticket.id}`)} className={cls.trClick}>
+                      <td className={cls.td}><span className={cls.mono}>{ticket.ticketNumber}</span></td>
+                      <td className={`${cls.td} font-medium text-gray-900`}>{ticket.name}</td>
+                      <td className={`${cls.td} text-gray-600`}>{ticket.property.name}</td>
+                      <td className={cls.td}><PriorityBadge priority={ticket.priority} /></td>
+                      <td className={cls.td}><StatusBadge status={ticket.status} /></td>
+                      <td className={`${cls.td} text-gray-600`}>{new Date(ticket.dueDate).toLocaleDateString()}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -501,6 +212,42 @@ export default function DashboardPage() {
           </>
         )}
       </div>
+    </div>
+  );
+}
+
+/* ── Breakdown Chart (local helper) ── */
+function BreakdownChart({ title, data, labels, barColors, totalTickets, linkPrefix }: {
+  title: string;
+  data: Record<string, number>;
+  labels: Record<string, string>;
+  barColors: Record<string, string>;
+  totalTickets: number;
+  linkPrefix: string;
+}) {
+  return (
+    <div className="rounded-lg bg-white p-3.5 ring-1 ring-gray-200">
+      <h3 className="mb-3 text-[13px] font-semibold text-gray-900">{title}</h3>
+      {totalTickets === 0 ? (
+        <EmptyState icon={<Inbox size={24} />} title="No tickets yet" />
+      ) : (
+        <div className="space-y-2.5">
+          {Object.entries(data).map(([key, count]) => (
+            <Link key={key} to={`${linkPrefix}${key}`} className="block rounded-md px-2 py-0.5 -mx-2 hover:bg-gray-50 transition-colors">
+              <div className="mb-0.5 flex items-center justify-between text-[13px]">
+                <span className="text-gray-600">{labels[key] || key}</span>
+                <span className="font-medium">{count}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-gray-100/80">
+                <div
+                  className={`h-full rounded-full ${barColors[key] || "bg-gray-500"} transition-all duration-500`}
+                  style={{ width: `${totalTickets > 0 ? (count / totalTickets) * 100 : 0}%` }}
+                />
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

@@ -12,7 +12,7 @@ export default function DashboardLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-1 flex-col overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} />
-        <main className="relative flex-1 overflow-y-auto scroll-smooth bg-gray-50/50 p-4 pb-20 md:p-6 md:pb-6">
+        <main className="relative flex-1 overflow-y-auto scroll-smooth bg-gray-50/50 p-3 pb-20 md:p-5 md:pb-5">
           <div className="mx-auto max-w-7xl animate-fade-in">
             <Outlet />
           </div>

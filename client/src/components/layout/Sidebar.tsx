@@ -37,7 +37,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   }, [isOnSettingsPage]);
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
-    `flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-200 ${
+    `flex items-center gap-2.5 px-3 py-1.5 rounded-md text-[13px] font-medium transition-all duration-200 ${
       isActive
         ? "bg-sidebar-active text-white"
         : "text-sidebar-text hover:bg-sidebar-hover hover:text-gray-200"
@@ -66,12 +66,12 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 hidden w-[260px] flex-col bg-sidebar transition-transform duration-300 ease-in-out md:flex lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 hidden w-[230px] flex-col bg-sidebar transition-transform duration-300 ease-in-out md:flex lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
+        <div className="flex h-12 items-center justify-between border-b border-sidebar-border px-4">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
               <Building2 size={16} className="text-white" />
@@ -84,8 +84,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-text/60">
+        <nav className="flex-1 overflow-y-auto px-2 py-3">
+          <div className="mb-1.5 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text/50">
             Main
           </div>
           <div className="space-y-0.5">
@@ -141,7 +141,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {hasAnySettingsPermission && (
             <>
-              <div className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-text/60">
+              <div className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text/50">
                 Configuration
               </div>
               <div className="space-y-0.5">

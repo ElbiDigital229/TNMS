@@ -5,6 +5,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
 import Modal from "../components/ui/Modal";
 import BulkImportModal from "../components/ui/BulkImportModal";
+import PageHeader from "../components/ui/PageHeader";
+import { TableLoading, EmptyState } from "../components/ui/DataTable";
+import { ActiveBadge, Badge } from "../components/ui/Badge";
+import { cls } from "../lib/styles";
 import { Users, Plus, Edit2, Power, Search, Shield, KeyRound, Upload } from "lucide-react";
 
 interface Role {
@@ -356,67 +360,50 @@ export default function UserManagementPage() {
     }));
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
-      </div>
-    );
-  }
+  if (loading) return <TableLoading />;
 
   return (
     <div>
-      {/* Header */}
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            User Management
-          </h1>
-          <p className="mt-1 text-[13px] text-gray-500">
-            Manage system users, roles, and property access.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          {hasPermission(PERMISSIONS.USERS.IMPORT) && (
-            <button
-              onClick={() => setBulkOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-            >
-              <Upload size={18} />
-              Bulk Import
-            </button>
-          )}
-          {hasPermission(PERMISSIONS.USERS.CREATE) && (
-            <button
-              onClick={openAdd}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-            >
-              <Plus size={18} />
-              Add User
-            </button>
-          )}
-        </div>
-      </div>
+      <PageHeader
+        title="User Management"
+        subtitle="Manage system users, roles, and property access."
+        actions={
+          <>
+            {hasPermission(PERMISSIONS.USERS.IMPORT) && (
+              <button onClick={() => setBulkOpen(true)} className={cls.btnSecondary}>
+                <Upload size={15} />
+                Bulk Import
+              </button>
+            )}
+            {hasPermission(PERMISSIONS.USERS.CREATE) && (
+              <button onClick={openAdd} className={cls.btnPrimary}>
+                <Plus size={15} />
+                Add User
+              </button>
+            )}
+          </>
+        }
+      />
 
       {/* Filters */}
-      <div className="mb-4 flex flex-wrap items-center gap-3">
+      <div className="mb-3 flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[220px]">
           <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400"
           />
           <input
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Search by name, username, or email..."
-            className="w-full rounded-lg border border-gray-300 py-2.5 pl-9 pr-4 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+            className={`${cls.input} pl-8`}
           />
         </div>
         <select
           value={filterRole}
           onChange={(e) => setFilterRole(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+          className={cls.select}
         >
           <option value="">All Roles</option>
           {roles.map((r) => (
@@ -428,7 +415,7 @@ export default function UserManagementPage() {
         <select
           value={filterStatus}
           onChange={(e) => setFilterStatus(e.target.value)}
-          className="rounded-lg border border-gray-300 px-3 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+          className={cls.select}
         >
           <option value="">All Statuses</option>
           <option value="ACTIVE">Active</option>
@@ -438,120 +425,103 @@ export default function UserManagementPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+      <div className="overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
         {filteredUsers.length === 0 ? (
-          <div className="py-12 text-center">
-            <Users size={48} className="mx-auto text-gray-300" />
-            <p className="mt-3 font-medium text-gray-500">No users found</p>
-            <p className="mt-1 text-[13px] text-gray-400">
-              {search || filterRole || filterStatus
+          <EmptyState
+            icon={<Users size={40} />}
+            title="No users found"
+            subtitle={
+              search || filterRole || filterStatus
                 ? "Try adjusting your filters."
-                : "Add your first user to get started."}
-            </p>
-          </div>
+                : "Add your first user to get started."
+            }
+          />
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className={cls.table}>
               <thead>
                 <tr className="border-b border-gray-200">
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Full Name
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Email
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Role
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Properties
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Department
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Reports To
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Status
-                  </th>
-                  <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                    Actions
-                  </th>
+                  <th className={cls.th}>Full Name</th>
+                  <th className={cls.th}>Email</th>
+                  <th className={cls.th}>Role</th>
+                  <th className={cls.th}>Properties</th>
+                  <th className={cls.th}>Department</th>
+                  <th className={cls.th}>Reports To</th>
+                  <th className={cls.th}>Status</th>
+                  <th className={cls.th}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filteredUsers.map((user) => (
-                  <tr
-                    key={user.id}
-                    className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
-                  >
-                    <td className="px-5 py-3.5 font-medium">
+                  <tr key={user.id} className={cls.tr}>
+                    <td className={`${cls.td} font-medium`}>
                       {user.fullName || "-"}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className={`${cls.td} text-gray-600`}>
                       {user.email || user.username}
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className={cls.td}>
                       {user.role ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
-                          <Shield size={12} />
-                          {user.role.name}
-                        </span>
+                        <Badge color="bg-primary-50 text-primary-700">
+                          <span className="inline-flex items-center gap-1">
+                            <Shield size={10} />
+                            {user.role.name}
+                          </span>
+                        </Badge>
                       ) : (
                         <span className="text-gray-400">-</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className={`${cls.td} text-gray-600`}>
                       {user.allProperties
                         ? "All"
                         : user._count?.propertyAssignments ?? user.properties?.length ?? 0}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className={`${cls.td} text-gray-600`}>
                       {user.department?.name || "-"}
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
+                    <td className={`${cls.td} text-gray-600`}>
                       {user.reportsTo
                         ? `${user.reportsTo.fullName || user.reportsTo.username}`
                         : "-"}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    <td className={cls.td}>
+                      <Badge
+                        color={
                           user.status === "ACTIVE"
-                            ? "bg-green-50 text-green-600"
+                            ? "bg-emerald-50 text-emerald-700"
                             : user.status === "BLOCKED"
                               ? "bg-amber-50 text-amber-600"
                               : "bg-red-50 text-red-600"
-                        }`}
+                        }
                       >
                         {user.status}
-                      </span>
+                      </Badge>
                     </td>
-                    <td className="px-5 py-3.5">
+                    <td className={cls.td}>
                       {!user.isSuperAdmin && (
                       <div className="flex items-center gap-1">
                         {hasPermission(PERMISSIONS.USERS.EDIT) && (
                           <button
                             onClick={() => openEdit(user)}
-                            className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            className={cls.btnIcon}
                             title="Edit"
                           >
-                            <Edit2 size={16} />
+                            <Edit2 size={14} />
                           </button>
                         )}
                         {hasPermission(PERMISSIONS.USERS.DEACTIVATE) && user.status === "ACTIVE" && (
                           <>
                             <button
                               onClick={() => handleBlock(user)}
-                              className="rounded px-2 py-0.5 text-xs font-medium text-amber-600 hover:bg-amber-50"
+                              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-amber-600 hover:bg-amber-50"
                               title="Block access without deactivating"
                             >
                               Block
                             </button>
                             <button
                               onClick={() => handleDeactivate(user)}
-                              className="rounded px-2 py-0.5 text-xs font-medium text-red-600 hover:bg-red-50"
+                              className="rounded px-1.5 py-0.5 text-[11px] font-medium text-red-600 hover:bg-red-50"
                               title="Fully deactivate (requires no subordinates or open tickets)"
                             >
                               Deactivate
@@ -561,9 +531,9 @@ export default function UserManagementPage() {
                         {hasPermission(PERMISSIONS.USERS.DEACTIVATE) && (user.status === "INACTIVE" || user.status === "BLOCKED") && (
                           <button
                             onClick={() => handleActivate(user)}
-                            className="rounded px-2 py-0.5 text-xs font-medium text-green-600 hover:bg-green-50"
+                            className="rounded px-1.5 py-0.5 text-[11px] font-medium text-green-600 hover:bg-green-50"
                           >
-                            <Power size={14} className="inline mr-1" />
+                            <Power size={12} className="inline mr-0.5" />
                             Activate
                           </button>
                         )}
@@ -584,24 +554,22 @@ export default function UserManagementPage() {
         onClose={closeModal}
         title={editing ? "Edit User" : "Add User"}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Full Name */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Full Name
-            </label>
+            <label className={cls.label}>Full Name</label>
             <input
               type="text"
               value={form.fullName}
               onChange={(e) => updateForm("fullName", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Enter full name"
             />
           </div>
 
           {/* Email (used as username) */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Email <span className="text-red-500">*</span>
             </label>
             <input
@@ -612,9 +580,7 @@ export default function UserManagementPage() {
                 setForm((prev) => ({ ...prev, email: val, username: val }));
               }}
               readOnly={!!editing}
-              className={`w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 ${
-                editing ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""
-              }`}
+              className={`${cls.input} ${editing ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
               placeholder="Enter email address"
             />
           </div>
@@ -622,9 +588,7 @@ export default function UserManagementPage() {
           {/* Password (create only) / Reset Password (edit) */}
           {editing ? (
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Password
-              </label>
+              <label className={cls.label}>Password</label>
               <button
                 type="button"
                 onClick={() => {
@@ -632,22 +596,22 @@ export default function UserManagementPage() {
                   setNewPassword("");
                   setResetPwOpen(true);
                 }}
-                className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+                className={cls.btnSecondary}
               >
-                <KeyRound size={16} />
+                <KeyRound size={14} />
                 Reset Password
               </button>
             </div>
           ) : (
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Password <span className="text-red-500">*</span>
               </label>
               <input
                 type="text"
                 value={form.password}
                 onChange={(e) => updateForm("password", e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={cls.input}
                 placeholder="Enter password"
               />
             </div>
@@ -655,23 +619,19 @@ export default function UserManagementPage() {
 
           {/* Phone */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Phone
-            </label>
+            <label className={cls.label}>Phone</label>
             <input
               type="text"
               value={form.phone}
               onChange={(e) => updateForm("phone", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Enter phone number"
             />
           </div>
 
           {/* Role */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Role
-            </label>
+            <label className={cls.label}>Role</label>
             <select
               value={form.roleId}
               onChange={(e) => {
@@ -684,7 +644,7 @@ export default function UserManagementPage() {
                   reportsToId: needsManager ? prev.reportsToId : "",
                 }));
               }}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={`${cls.select} w-full`}
             >
               <option value="">Select a role</option>
               {roles.map((r) => (
@@ -698,13 +658,11 @@ export default function UserManagementPage() {
           {/* Department */}
           {departments.length > 0 && (
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Department
-            </label>
+            <label className={cls.label}>Department</label>
             <select
               value={form.departmentId}
               onChange={(e) => updateForm("departmentId", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={`${cls.select} w-full`}
             >
               <option value="">No department</option>
               {departments.map((d) => (
@@ -722,13 +680,13 @@ export default function UserManagementPage() {
             return sel && sel.level >= 4;
           })() && (
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Reports To <span className="text-red-500">*</span>
             </label>
             <select
               value={form.reportsToId}
               onChange={(e) => updateForm("reportsToId", e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={`${cls.select} w-full`}
             >
               <option value="">Select manager</option>
               {users
@@ -757,23 +715,21 @@ export default function UserManagementPage() {
             const mustInherit = sel && sel.level >= 4;
             return mustInherit || form.reportsToId;
           })() ? (
-            <div className="rounded-lg border border-blue-200 bg-blue-50 p-3">
-              <p className="text-sm text-blue-700 font-medium">Property access inherited from manager</p>
-              <p className="text-xs text-blue-600 mt-1">This user will automatically have access to the same properties as their reporting manager.</p>
+            <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5">
+              <p className="text-[13px] text-blue-700 font-medium">Property access inherited from manager</p>
+              <p className="text-[11px] text-blue-600 mt-0.5">This user will automatically have access to the same properties as their reporting manager.</p>
             </div>
           ) : (<>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Property Access
-            </label>
+            <label className={cls.label}>Property Access</label>
             {managerPropertyIds !== null && managerPropertyIds !== "all" && (
-              <p className="mb-2 text-xs text-amber-600">
+              <p className="mb-1.5 text-[11px] text-amber-600">
                 Manager has access to specific properties only — this user inherits that scope.
               </p>
             )}
-            <div className="space-y-2 rounded-lg border border-gray-300 p-3">
+            <div className="space-y-1.5 rounded-md border border-gray-300 p-2.5">
               {/* All properties */}
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <label className="flex items-center gap-2 text-[13px] cursor-pointer">
                 <input
                   type="radio"
                   name="accessMode"
@@ -782,7 +738,7 @@ export default function UserManagementPage() {
                     setForm((prev) => ({ ...prev, accessMode: "all", allProperties: true, propertyIds: [] }));
                   }}
                   disabled={managerPropertyIds !== null && managerPropertyIds !== "all"}
-                  className="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                  className="h-3.5 w-3.5 border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
                 />
                 <span className="font-medium text-gray-700">Access to all properties</span>
               </label>
@@ -797,7 +753,7 @@ export default function UserManagementPage() {
                   if (!hasAccess) return null;
                 }
                 return (
-                  <label key={ag.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                  <label key={ag.id} className="flex items-center gap-2 text-[13px] cursor-pointer">
                     <input
                       type="radio"
                       name="accessMode"
@@ -806,16 +762,16 @@ export default function UserManagementPage() {
                         const ids = groupProps.map((p) => p.id);
                         setForm((prev) => ({ ...prev, accessMode: ag.id, allProperties: false, propertyIds: ids }));
                       }}
-                      className="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="h-3.5 w-3.5 border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                     <span className="font-medium text-gray-700">Access to {ag.groupName} only</span>
-                    <span className="text-xs text-gray-400">({groupProps.map((p) => p.name).join(", ")})</span>
+                    <span className="text-[11px] text-gray-400">({groupProps.map((p) => p.name).join(", ")})</span>
                   </label>
                 );
               })}
 
               {/* Specific properties */}
-              <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <label className="flex items-center gap-2 text-[13px] cursor-pointer">
                 <input
                   type="radio"
                   name="accessMode"
@@ -823,7 +779,7 @@ export default function UserManagementPage() {
                   onChange={() => {
                     setForm((prev) => ({ ...prev, accessMode: "specific", allProperties: false }));
                   }}
-                  className="h-4 w-4 border-gray-300 text-primary-600 focus:ring-primary-500"
+                  className="h-3.5 w-3.5 border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="font-medium text-gray-700">Access to specific properties</span>
               </label>
@@ -833,17 +789,15 @@ export default function UserManagementPage() {
           {/* Property Multi-select — only when "specific" is chosen */}
           {form.accessMode === "specific" && (
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Select Properties
-              </label>
-              <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-300 p-2 space-y-1">
+              <label className={cls.label}>Select Properties</label>
+              <div className="max-h-36 overflow-y-auto rounded-md border border-gray-300 p-2 space-y-0.5">
                 {(() => {
                   const availableProperties =
                     managerPropertyIds && managerPropertyIds !== "all"
                       ? properties.filter((p) => managerPropertyIds.includes(p.id))
                       : properties;
                   return availableProperties.length === 0 ? (
-                    <p className="px-2 py-1 text-[13px] text-gray-400">
+                    <p className="px-2 py-1 text-[12px] text-gray-400">
                       {managerPropertyIds && managerPropertyIds !== "all"
                         ? "Manager has no properties assigned"
                         : "No properties available"}
@@ -852,17 +806,17 @@ export default function UserManagementPage() {
                     availableProperties.map((p) => (
                       <label
                         key={p.id}
-                        className="flex items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-gray-50 cursor-pointer"
+                        className="flex items-center gap-2 rounded px-1.5 py-1 text-[13px] hover:bg-gray-50 cursor-pointer"
                       >
                         <input
                           type="checkbox"
                           checked={form.propertyIds.includes(p.id)}
                           onChange={() => toggleProperty(p.id)}
-                          className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
                         <span>{p.name}</span>
                         {p.areaGroup && (
-                          <span className="text-xs text-gray-400">({p.areaGroup.groupName})</span>
+                          <span className="text-[11px] text-gray-400">({p.areaGroup.groupName})</span>
                         )}
                       </label>
                     ))
@@ -874,17 +828,14 @@ export default function UserManagementPage() {
           </>)}
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2">
-            <button
-              onClick={closeModal}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-            >
+          <div className="flex justify-end gap-2 pt-1">
+            <button onClick={closeModal} className={cls.btnSecondary}>
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700 disabled:opacity-50"
+              className={cls.btnPrimary}
             >
               {saving ? "Saving..." : editing ? "Update" : "Save"}
             </button>
@@ -902,8 +853,8 @@ export default function UserManagementPage() {
         }}
         title="Reset Password"
       >
-        <div className="space-y-4">
-          <p className="text-[13px] text-gray-500">
+        <div className="space-y-3">
+          <p className="text-[12px] text-gray-500">
             Set a new password for{" "}
             <span className="font-medium text-gray-700">
               {resetPwUser?.fullName || resetPwUser?.username}
@@ -911,33 +862,30 @@ export default function UserManagementPage() {
             .
           </p>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               New Password <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Enter new password"
               autoFocus
             />
           </div>
-          <div className="flex justify-end gap-3">
+          <div className="flex justify-end gap-2">
             <button
               onClick={() => {
                 setResetPwOpen(false);
                 setResetPwUser(null);
                 setNewPassword("");
               }}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+              className={cls.btnSecondary}
             >
               Cancel
             </button>
-            <button
-              onClick={handleResetPassword}
-              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-            >
+            <button onClick={handleResetPassword} className={cls.btnPrimary}>
               Reset Password
             </button>
           </div>

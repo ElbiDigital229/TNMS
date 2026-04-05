@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { userApi, departmentApi, propertyApi, assetApi } from "../lib/api";
-import { Users, Building2, LayoutGrid, Package, Search, ChevronRight, BarChart3 } from "lucide-react";
+import { cls } from "../lib/styles";
+import PageHeader from "../components/ui/PageHeader";
+import { TableLoading } from "../components/ui/DataTable";
+import { Users, Building2, LayoutGrid, Package, Search, ChevronRight } from "lucide-react";
 
 // Minimum chars before fetching for large collections
 const MIN_SEARCH_CHARS: Record<string, number> = { asset: 2, user: 0, property: 0, department: 0 };
@@ -123,17 +126,14 @@ export default function ReportPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-10">
-      <div className="mb-8">
-        <div className="flex items-center gap-2.5 mb-1">
-          <BarChart3 size={20} className="text-gray-400" />
-          <h1 className="text-xl font-semibold text-gray-900">Reports</h1>
-        </div>
-        <p className="text-sm text-gray-500">Select an entity to generate a full report automatically.</p>
-      </div>
+    <div className="mx-auto max-w-3xl px-4 py-6">
+      <PageHeader
+        title="Reports"
+        subtitle="Select an entity to generate a full report automatically."
+      />
 
       {/* Entity type cards */}
-      <div className="grid grid-cols-2 gap-3 mb-8 sm:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 mb-3 sm:grid-cols-4">
         {(Object.keys(ENTITY_CONFIG) as EntityType[]).map((type) => {
           const cfg = ENTITY_CONFIG[type];
           const Icon = cfg.icon;
@@ -142,7 +142,7 @@ export default function ReportPage() {
             <button
               key={type}
               onClick={() => handleTypeSelect(type)}
-              className={`flex flex-col items-start gap-2 rounded-xl p-4 text-left ring-1 transition-all ${
+              className={`flex flex-col items-start gap-2 rounded-lg p-3 text-left ring-1 transition-all ${
                 isSelected ? cfg.activeColor : "bg-white ring-gray-200 hover:ring-gray-300"
               }`}
             >
@@ -150,7 +150,7 @@ export default function ReportPage() {
                 <Icon size={16} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-gray-900">{cfg.label}</p>
+                <p className="text-[13px] font-semibold text-gray-900">{cfg.label}</p>
                 <p className="text-[11px] text-gray-500 leading-tight mt-0.5">{cfg.description}</p>
               </div>
             </button>
@@ -161,7 +161,7 @@ export default function ReportPage() {
       {/* Search + dropdown */}
       {selectedType && (
         <div className="relative" ref={dropdownRef}>
-          <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-2">
+          <p className={cls.label}>
             Search {ENTITY_CONFIG[selectedType].label}
           </p>
           <div className="relative">
@@ -173,31 +173,31 @@ export default function ReportPage() {
               onChange={(e) => setSearch(e.target.value)}
               onFocus={() => { setDropdownOpen(true); if (!search.trim()) doFetch(selectedType, ""); }}
               placeholder={selectedType === "asset" ? "Type asset name or code..." : `Search ${ENTITY_CONFIG[selectedType].label.toLowerCase()}...`}
-              className="w-full rounded-lg border border-gray-200 bg-white py-2.5 pl-9 pr-4 text-sm outline-none focus:border-blue-400 focus:ring-2 focus:ring-blue-100"
+              className={`${cls.input} pl-9`}
             />
           </div>
 
           {dropdownOpen && (
-            <div className="absolute z-20 mt-1 w-full rounded-xl border border-gray-200 bg-white shadow-lg overflow-hidden">
+            <div className="absolute z-20 mt-1 w-full rounded-lg bg-white ring-1 ring-gray-200 shadow-lg overflow-hidden">
               {loading ? (
-                <div className="py-8 text-center text-sm text-gray-400">Loading...</div>
+                <TableLoading />
               ) : search.trim().length < (MIN_SEARCH_CHARS[selectedType] ?? 0) ? (
-                <div className="py-8 text-center text-sm text-gray-400">
+                <div className="py-8 text-center text-[13px] text-gray-400">
                   Type at least {MIN_SEARCH_CHARS[selectedType]} characters to search
                 </div>
               ) : options.length === 0 ? (
-                <div className="py-8 text-center text-sm text-gray-400">No results</div>
+                <div className="py-8 text-center text-[13px] text-gray-400">No results</div>
               ) : (
                 <ul className="max-h-72 overflow-y-auto divide-y divide-gray-50">
                   {options.map((opt) => (
                     <li key={opt.id}>
                       <button
                         onClick={() => handleSelect(opt)}
-                        className="flex w-full items-center justify-between px-4 py-3 text-left hover:bg-gray-50 transition-colors"
+                        className="flex w-full items-center justify-between px-3 py-2.5 text-left hover:bg-gray-50 transition-colors"
                       >
                         <div>
-                          <p className="text-sm font-medium text-gray-900">{opt.label}</p>
-                          {opt.sub && <p className="text-xs text-gray-500">{opt.sub}</p>}
+                          <p className="text-[13px] font-medium text-gray-900">{opt.label}</p>
+                          {opt.sub && <p className="text-[11px] text-gray-500">{opt.sub}</p>}
                         </div>
                         <ChevronRight size={14} className="text-gray-300" />
                       </button>

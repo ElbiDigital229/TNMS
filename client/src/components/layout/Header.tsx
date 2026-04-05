@@ -10,7 +10,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
   const { user } = useAuth();
 
   return (
-    <header className="relative z-20 flex h-14 items-center justify-between border-b border-gray-200/80 bg-white px-6">
+    <header className="relative z-20 flex h-12 items-center justify-between border-b border-gray-200 bg-white px-4">
       {/* Hamburger — desktop only (mobile uses bottom tab bar) */}
       <button
         onClick={onMenuClick}

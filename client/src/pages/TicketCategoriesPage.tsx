@@ -1,6 +1,10 @@
 import { useState, useEffect } from "react";
 import { ticketCategoryApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { cls } from "../lib/styles";
+import PageHeader from "../components/ui/PageHeader";
+import { EmptyState, TableLoading } from "../components/ui/DataTable";
+import { ActiveBadge } from "../components/ui/Badge";
 import Modal from "../components/ui/Modal";
 import { Plus, Pencil, Tag } from "lucide-react";
 
@@ -78,90 +82,56 @@ export default function TicketCategoriesPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
-      </div>
-    );
-  }
+  if (loading) return <TableLoading />;
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            Ticket Categories
-          </h1>
-          <p className="mt-1 text-[13px] text-gray-500">
-            Manage categories used for tickets.
-          </p>
-        </div>
-        <button
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-        >
-          <Plus size={16} />
-          Add Category
-        </button>
-      </div>
+      <PageHeader
+        title="Ticket Categories"
+        subtitle="Manage categories used for tickets."
+        actions={
+          <button onClick={openAdd} className={cls.btnPrimary}>
+            <Plus size={14} />
+            Add Category
+          </button>
+        }
+      />
 
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
-        <table className="w-full text-sm">
+      <div className="overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
+        <table className={cls.table}>
           <thead>
-            <tr className="border-b border-gray-200">
-              <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                Name
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                Status
-              </th>
-              <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                Actions
-              </th>
+            <tr className="border-b border-gray-100">
+              <th className={cls.th}>Name</th>
+              <th className={cls.th}>Status</th>
+              <th className={cls.th}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {categories.length === 0 ? (
               <tr>
-                <td
-                  colSpan={3}
-                  className="px-5 py-12 text-center"
-                >
-                  <Tag size={48} className="mx-auto text-gray-300" />
-                  <p className="mt-3 font-medium text-gray-500">No categories yet</p>
-                  <p className="mt-1 text-[13px] text-gray-400">Add your first ticket category to get started.</p>
+                <td colSpan={3}>
+                  <EmptyState
+                    icon={<Tag size={36} />}
+                    title="No categories yet"
+                    subtitle="Add your first ticket category to get started."
+                  />
                 </td>
               </tr>
             ) : (
               categories.map((cat) => (
-                <tr
-                  key={cat.id}
-                  className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
-                >
-                  <td className="px-5 py-3.5 font-medium">{cat.name}</td>
-                  <td className="px-5 py-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                        cat.status === "ACTIVE"
-                          ? "bg-green-50 text-green-600"
-                          : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      {cat.status}
-                    </span>
+                <tr key={cat.id} className={cls.tr}>
+                  <td className={`${cls.td} font-medium`}>{cat.name}</td>
+                  <td className={cls.td}>
+                    <ActiveBadge status={cat.status} />
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className={cls.td}>
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => openEdit(cat)}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                      >
-                        <Pencil size={16} />
+                      <button onClick={() => openEdit(cat)} className={cls.btnIcon}>
+                        <Pencil size={14} />
                       </button>
                       <button
                         onClick={() => handleToggleStatus(cat)}
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                        className={`rounded px-2 py-0.5 text-[11px] font-medium ${
                           cat.status === "ACTIVE"
                             ? "text-red-600 hover:bg-red-50"
                             : "text-green-600 hover:bg-green-50"
@@ -183,31 +153,23 @@ export default function TicketCategoriesPage() {
         onClose={() => setModalOpen(false)}
         title={editingId ? "Edit Category" : "Add Category"}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Category Name
-            </label>
+            <label className={cls.label}>Category Name</label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Enter category name"
               autoFocus
             />
           </div>
           <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-            >
+            <button onClick={() => setModalOpen(false)} className={cls.btnSecondary}>
               Cancel
             </button>
-            <button
-              onClick={handleSave}
-              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-            >
+            <button onClick={handleSave} className={cls.btnPrimary}>
               Save
             </button>
           </div>

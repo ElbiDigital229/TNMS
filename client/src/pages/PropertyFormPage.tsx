@@ -3,7 +3,9 @@ import { useNavigate, useParams } from "react-router-dom";
 import { propertyApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import LocationPicker from "../components/map/LocationPicker";
+import PageHeader from "../components/ui/PageHeader";
 import { ArrowLeft, X } from "lucide-react";
+import { cls } from "../lib/styles";
 
 export default function PropertyFormPage() {
   const { id } = useParams();
@@ -97,50 +99,50 @@ export default function PropertyFormPage() {
     <div className="mx-auto max-w-3xl">
       <button
         onClick={() => navigate(-1)}
-        className="mb-4 flex items-center gap-2 text-sm text-gray-600 transition-colors duration-150 hover:text-gray-900"
+        className="mb-3 flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-900 transition-colors"
       >
-        <ArrowLeft size={16} />
+        <ArrowLeft size={14} />
         Back
       </button>
 
-      <div className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5">
-        <h1 className="mb-6 text-lg font-semibold text-gray-900">
+      <div className={`${cls.card} p-4`}>
+        <h1 className="mb-4 text-lg font-semibold text-gray-900">
           {isEdit ? "Edit Property" : "Add Property"}
         </h1>
 
         {isEdit && propertyCode && (
-          <div className="mb-4 rounded-lg bg-gray-50 px-4 py-2 ring-1 ring-gray-100">
-            <span className="text-sm text-gray-500">Property Code: </span>
-            <span className="font-mono text-sm font-bold text-primary-600">
+          <div className="mb-3 rounded-md bg-gray-50 px-3 py-1.5 ring-1 ring-gray-100">
+            <span className="text-[13px] text-gray-500">Property Code: </span>
+            <span className="font-mono text-[13px] font-bold text-primary-600">
               {propertyCode}
             </span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Property Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Enter property name"
               required
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Property Type <span className="text-red-500">*</span>
               </label>
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
                 required
               >
                 <option value="">Select type</option>
@@ -151,13 +153,13 @@ export default function PropertyFormPage() {
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 City <span className="text-red-500">*</span>
               </label>
               <select
                 value={city}
                 onChange={(e) => setCity(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
                 required
               >
                 <option value="">Select city</option>
@@ -168,35 +170,31 @@ export default function PropertyFormPage() {
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Description
-            </label>
+            <label className={cls.label}>Description</label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.textarea}
               placeholder="Property description..."
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Image
-            </label>
+            <label className={cls.label}>Image</label>
             {existingImage && !image && !removeImage && (
               <div className="relative mb-2 inline-block">
                 <img
                   src={`/${existingImage}`}
                   alt="Current"
-                  className="h-32 w-32 rounded-lg object-cover ring-1 ring-gray-100"
+                  className="h-28 w-28 rounded-md object-cover ring-1 ring-gray-100"
                 />
                 <button
                   type="button"
                   onClick={() => { setRemoveImage(true); setExistingImage(null); }}
-                  className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+                  className="absolute -right-2 -top-2 rounded-full bg-red-500 p-0.5 text-white shadow-sm hover:bg-red-600"
                 >
-                  <X size={14} />
+                  <X size={12} />
                 </button>
               </div>
             )}
@@ -205,19 +203,19 @@ export default function PropertyFormPage() {
                 <img
                   src={URL.createObjectURL(image)}
                   alt="Preview"
-                  className="h-32 w-32 rounded-lg object-cover ring-1 ring-gray-100"
+                  className="h-28 w-28 rounded-md object-cover ring-1 ring-gray-100"
                 />
                 <button
                   type="button"
                   onClick={() => setImage(null)}
-                  className="absolute -right-2 -top-2 rounded-full bg-red-500 p-1 text-white shadow-sm hover:bg-red-600"
+                  className="absolute -right-2 -top-2 rounded-full bg-red-500 p-0.5 text-white shadow-sm hover:bg-red-600"
                 >
-                  <X size={14} />
+                  <X size={12} />
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-3">
-                <label className="cursor-pointer rounded-lg bg-primary-50 px-4 py-2 text-sm font-medium text-primary-600 hover:bg-primary-100">
+            <div className="flex items-center gap-2">
+                <label className="cursor-pointer rounded-md bg-primary-50 px-3 py-1.5 text-[13px] font-medium text-primary-600 hover:bg-primary-100">
                   Choose File
                   <input
                     type="file"
@@ -235,34 +233,32 @@ export default function PropertyFormPage() {
                   />
                 </label>
                 {image ? (
-                  <span className="text-sm font-medium text-green-600">Photo selected</span>
+                  <span className="text-[13px] font-medium text-green-600">Photo selected</span>
                 ) : existingImage ? (
-                  <span className="text-sm text-gray-500">Current photo set</span>
+                  <span className="text-[13px] text-gray-500">Current photo set</span>
                 ) : (
-                  <span className="text-sm text-gray-400">No image selected</span>
+                  <span className="text-[13px] text-gray-400">No image selected</span>
                 )}
               </div>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Map Location
-            </label>
+            <label className={cls.label}>Map Location</label>
             <LocationPicker value={location} onChange={setLocation} />
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-2 pt-2">
             <button
               type="button"
               onClick={() => navigate(-1)}
-              className="rounded-lg bg-white px-4 py-2.5 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 transition-all duration-200 hover:bg-gray-50"
+              className={cls.btnSecondary}
             >
               Cancel
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="rounded-lg bg-primary-600 px-6 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700 disabled:opacity-50"
+              className={cls.btnPrimary}
             >
               {loading
                 ? "Saving..."

@@ -11,7 +11,9 @@ import {
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
+import PageHeader from "../components/ui/PageHeader";
 import { ArrowLeft } from "lucide-react";
+import { cls } from "../lib/styles";
 
 interface Property {
   id: string;
@@ -245,42 +247,40 @@ export default function TicketFormPage() {
     <div>
       <button
         onClick={() => navigate("/tickets")}
-        className="mb-4 flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 transition-colors duration-150"
+        className="mb-3 flex items-center gap-1.5 text-[13px] text-gray-500 hover:text-gray-900 transition-colors"
       >
-        <ArrowLeft size={16} />
+        <ArrowLeft size={14} />
         Back to Tickets
       </button>
 
-      <h1 className="mb-6 text-lg font-semibold text-gray-900">
-        {isEdit ? "Edit Ticket" : "Create Ticket"}
-      </h1>
+      <PageHeader title={isEdit ? "Edit Ticket" : "Create Ticket"} />
 
-      <div className="mx-auto max-w-2xl rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5">
-        <div className="space-y-4">
+      <div className={`mx-auto max-w-2xl ${cls.card} p-4`}>
+        <div className="space-y-3">
           {/* Ticket Name */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Ticket Name <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Enter ticket name"
             />
           </div>
 
           {/* Property */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Property <span className="text-red-500">*</span>
             </label>
             <select
               value={propertyId}
               onChange={(e) => setPropertyId(e.target.value)}
               disabled={isEdit}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:bg-gray-100"
+              className={`w-full ${cls.select} disabled:bg-gray-100`}
             >
               <option value="">Select property</option>
               {properties.map((p) => (
@@ -293,14 +293,14 @@ export default function TicketFormPage() {
 
           {/* Unit */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Unit <span className="text-red-500">*</span>
             </label>
             <select
               value={unitId}
               onChange={(e) => setUnitId(e.target.value)}
               disabled={!propertyId}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:bg-gray-100"
+              className={`w-full ${cls.select} disabled:bg-gray-100`}
             >
               <option value="">Select unit</option>
               {units.map((u) => (
@@ -314,26 +314,26 @@ export default function TicketFormPage() {
           {/* Assets (optional, multi-select with search) */}
           {propertyId && assets.length > 0 && (
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Tag Assets
                 {selectedAssetIds.length > 0 && (
-                  <span className="ml-2 inline-flex items-center rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
+                  <span className="ml-2 inline-flex items-center rounded-full bg-primary-50 px-1.5 py-px text-[11px] font-medium text-primary-700">
                     {selectedAssetIds.length} selected
                   </span>
                 )}
                 <span className="ml-1 text-gray-400">(optional)</span>
               </label>
-              <div className="rounded-lg ring-1 ring-gray-200 shadow-sm overflow-hidden">
-                <div className="border-b border-gray-200 px-3 py-2">
+              <div className="rounded-md ring-1 ring-gray-200 overflow-hidden">
+                <div className="border-b border-gray-200 px-2.5 py-1.5">
                   <input
                     type="text"
                     value={assetSearch}
                     onChange={(e) => setAssetSearch(e.target.value)}
                     placeholder="Search assets by name or code..."
-                    className="w-full text-sm bg-transparent outline-none placeholder-gray-400"
+                    className="w-full text-[13px] bg-transparent outline-none placeholder-gray-400"
                   />
                 </div>
-                <div className="max-h-48 space-y-0.5 overflow-y-auto p-2">
+                <div className="max-h-40 space-y-0.5 overflow-y-auto p-1.5">
                   {(() => {
                     const q = assetSearch.toLowerCase();
                     const filtered = q
@@ -344,14 +344,14 @@ export default function TicketFormPage() {
                         )
                       : assets;
                     return filtered.length === 0 ? (
-                      <p className="px-2 py-3 text-center text-[13px] text-gray-400">
+                      <p className="px-2 py-2 text-center text-[13px] text-gray-400">
                         No assets found
                       </p>
                     ) : (
                       filtered.map((asset) => (
                         <label
                           key={asset.id}
-                          className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors ${
+                          className={`flex cursor-pointer items-center gap-2 rounded-md px-2 py-1 text-[13px] transition-colors ${
                             selectedAssetIds.includes(asset.id)
                               ? "bg-primary-50"
                               : "hover:bg-gray-50"
@@ -361,9 +361,9 @@ export default function TicketFormPage() {
                             type="checkbox"
                             checked={selectedAssetIds.includes(asset.id)}
                             onChange={() => toggleAsset(asset.id)}
-                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                           />
-                          <span className="font-mono text-xs text-primary-600">
+                          <span className="font-mono text-[11px] text-primary-600">
                             {asset.code}
                           </span>
                           <span>{asset.name}</span>
@@ -378,41 +378,41 @@ export default function TicketFormPage() {
 
           {/* Description */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Description <span className="text-red-500">*</span>
             </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.textarea}
               placeholder="Describe the ticket..."
             />
           </div>
 
           {/* Due Date */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Due Date <span className="text-red-500">*</span>
             </label>
             <input
               type="date"
               value={dueDate}
               onChange={(e) => setDueDate(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
             />
           </div>
 
           {/* Task Type & Sub Task Type */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Task Type <span className="text-red-500">*</span>
               </label>
               <select
                 value={taskType}
                 onChange={(e) => setTaskType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
               >
                 <option value="">Select type</option>
                 <option value="COMPLAIN">Complain</option>
@@ -422,13 +422,13 @@ export default function TicketFormPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Sub Task Type <span className="text-red-500">*</span>
               </label>
               <select
                 value={subTaskType}
                 onChange={(e) => setSubTaskType(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
               >
                 <option value="">Select sub type</option>
                 <option value="REACTIVE">Reactive</option>
@@ -439,14 +439,14 @@ export default function TicketFormPage() {
 
           {/* Department */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Department <span className="text-red-500">*</span>
             </label>
             <select
               value={departmentId}
               onChange={(e) => { setDepartmentId(e.target.value); setAssignedToId(""); }}
               disabled={isEdit}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:bg-gray-100"
+              className={`w-full ${cls.select} disabled:bg-gray-100`}
             >
               <option value="">Select department</option>
               {departments.map((d) => (
@@ -458,13 +458,13 @@ export default function TicketFormPage() {
           {/* Assign To */}
           {departmentId && (
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Assign To <span className="text-gray-400">(optional)</span>
               </label>
               <select
                 value={assignedToId}
                 onChange={(e) => setAssignedToId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
               >
                 <option value="">Leave unassigned</option>
                 {deptUsers.map((u) => (
@@ -477,15 +477,15 @@ export default function TicketFormPage() {
           )}
 
           {/* Category & Priority */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Category <span className="text-gray-400 font-normal">(optional)</span>
               </label>
               <select
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
               >
                 <option value="">Select category</option>
                 {categories.map((c) => (
@@ -496,13 +496,13 @@ export default function TicketFormPage() {
               </select>
             </div>
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+              <label className={cls.label}>
                 Priority <span className="text-red-500">*</span>
               </label>
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={`w-full ${cls.select}`}
               >
                 <option value="">Select priority</option>
                 <option value="CRITICAL">Critical</option>
@@ -514,7 +514,7 @@ export default function TicketFormPage() {
           </div>
 
           {/* Recurring */}
-          <div className="rounded-xl ring-1 ring-gray-200 p-4">
+          <div className="rounded-lg ring-1 ring-gray-200 p-3">
             <label className="flex cursor-pointer items-center gap-2">
               <input
                 type="checkbox"
@@ -527,19 +527,17 @@ export default function TicketFormPage() {
                     setRecurringDueDays("");
                   }
                 }}
-                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
               />
-              <span className="text-sm font-medium text-gray-700">
+              <span className="text-[13px] font-medium text-gray-700">
                 Is this a recurring ticket?
               </span>
             </label>
 
             {isRecurring && (
-              <div className="mt-4 space-y-3">
+              <div className="mt-3 space-y-3">
                 <div>
-                  <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                    Recurring Frequency
-                  </label>
+                  <label className={cls.label}>Recurring Frequency</label>
                   <select
                     value={recurringType}
                     onChange={(e) => {
@@ -547,7 +545,7 @@ export default function TicketFormPage() {
                       setRecurringDay("");
                       setRecurringDueDays("");
                     }}
-                    className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                    className={`w-full ${cls.select}`}
                   >
                     <option value="">Select frequency</option>
                     <option value="DAILY">Daily</option>
@@ -557,46 +555,40 @@ export default function TicketFormPage() {
                 </div>
 
                 {recurringType === "MONTHLY" && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                        Day of Month (1-28)
-                      </label>
+                      <label className={cls.label}>Day of Month (1-28)</label>
                       <input
                         type="number"
                         min={1}
                         max={28}
                         value={recurringDay}
                         onChange={(e) => setRecurringDay(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                        className={cls.input}
                       />
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                        Days until due (max 15)
-                      </label>
+                      <label className={cls.label}>Days until due (max 15)</label>
                       <input
                         type="number"
                         min={1}
                         max={15}
                         value={recurringDueDays}
                         onChange={(e) => setRecurringDueDays(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                        className={cls.input}
                       />
                     </div>
                   </div>
                 )}
 
                 {recurringType === "WEEKLY" && (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                        Day of Week
-                      </label>
+                      <label className={cls.label}>Day of Week</label>
                       <select
                         value={recurringDay}
                         onChange={(e) => setRecurringDay(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                        className={`w-full ${cls.select}`}
                       >
                         <option value="">Select day</option>
                         <option value="1">Monday</option>
@@ -609,16 +601,14 @@ export default function TicketFormPage() {
                       </select>
                     </div>
                     <div>
-                      <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                        Days until due (max 7)
-                      </label>
+                      <label className={cls.label}>Days until due (max 7)</label>
                       <input
                         type="number"
                         min={1}
                         max={7}
                         value={recurringDueDays}
                         onChange={(e) => setRecurringDueDays(e.target.value)}
-                        className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                        className={cls.input}
                       />
                     </div>
                   </div>
@@ -626,13 +616,11 @@ export default function TicketFormPage() {
 
                 {recurringType === "DAILY" && (
                   <div>
-                    <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                      Due date
-                    </label>
+                    <label className={cls.label}>Due date</label>
                     <select
                       value={recurringDueDays}
                       onChange={(e) => setRecurringDueDays(e.target.value)}
-                      className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                      className={`w-full ${cls.select}`}
                     >
                       <option value="">Select</option>
                       <option value="0">Same day</option>
@@ -646,7 +634,7 @@ export default function TicketFormPage() {
 
           {/* Image */}
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Upload Image <span className="text-gray-400">(optional)</span>
             </label>
             {image ? (
@@ -654,43 +642,43 @@ export default function TicketFormPage() {
                 <img
                   src={URL.createObjectURL(image)}
                   alt="Preview"
-                  className="max-h-48 w-full rounded-lg object-cover ring-1 ring-gray-200"
+                  className="max-h-40 w-full rounded-md object-cover ring-1 ring-gray-200"
                 />
                 <button
                   type="button"
                   onClick={() => setImage(null)}
-                  className="absolute right-2 top-2 flex h-7 w-7 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
+                  className="absolute right-2 top-2 flex h-6 w-6 items-center justify-center rounded-full bg-black/50 text-white hover:bg-black/70 transition-colors"
                   title="Remove image"
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
               </div>
             ) : (
-              <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-lg border-2 border-dashed border-gray-200 py-8 transition-colors hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50">
+              <label className="mt-1 flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-dashed border-gray-200 py-6 transition-colors hover:border-primary-300 hover:bg-primary-50/30 active:bg-primary-50/50">
                 <input
                   type="file"
                   accept="image/*"
                   onChange={(e) => setImage(e.target.files?.[0] || null)}
                   className="hidden"
                 />
-                <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-2 text-gray-300"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
-                <p className="text-sm text-gray-400">Tap to upload photo</p>
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="mb-1.5 text-gray-300"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3l-2.5-3z"/><circle cx="12" cy="13" r="3"/></svg>
+                <p className="text-[13px] text-gray-400">Tap to upload photo</p>
               </label>
             )}
           </div>
 
           {/* Actions */}
-          <div className="flex justify-end gap-3 border-t border-gray-100 pt-4">
+          <div className="flex justify-end gap-2 border-t border-gray-100 pt-3">
             <button
               onClick={() => navigate("/tickets")}
-              className="rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className={cls.btnSecondary}
             >
               Cancel
             </button>
             <button
               onClick={handleSubmit}
               disabled={saving}
-              className="rounded-lg bg-primary-600 px-6 py-2 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-all duration-200"
+              className={cls.btnPrimary}
             >
               {saving
                 ? "Saving..."

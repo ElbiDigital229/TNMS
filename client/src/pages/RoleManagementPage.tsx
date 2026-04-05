@@ -4,6 +4,10 @@ import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
 import Modal from "../components/ui/Modal";
+import PageHeader from "../components/ui/PageHeader";
+import { TableLoading, EmptyState } from "../components/ui/DataTable";
+import { ActiveBadge, Badge } from "../components/ui/Badge";
+import { cls } from "../lib/styles";
 import { Shield, Plus, Edit2, Power } from "lucide-react";
 
 const MODULE_LABELS: Record<string, string> = {
@@ -215,115 +219,72 @@ export default function RoleManagementPage() {
     return role._count?.permissions ?? role.permissions?.length ?? 0;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
-      </div>
-    );
-  }
+  if (loading) return <TableLoading />;
 
   return (
     <div>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
-          <h1 className="text-xl font-semibold text-gray-900">
-            Roles &amp; Permissions
-          </h1>
-          <p className="mt-1 text-[13px] text-gray-500">
-            Define roles and assign granular permissions to control access across
-            the platform.
-          </p>
-        </div>
-        {canManage && (
-          <button
-            onClick={openAdd}
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-          >
-            <Plus size={18} />
-            Add Role
-          </button>
-        )}
-      </div>
+      <PageHeader
+        title="Roles & Permissions"
+        subtitle="Define roles and assign granular permissions to control access across the platform."
+        actions={
+          canManage ? (
+            <button onClick={openAdd} className={cls.btnPrimary}>
+              <Plus size={15} />
+              Add Role
+            </button>
+          ) : undefined
+        }
+      />
 
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+      <div className="overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
         {roles.length === 0 ? (
-          <div className="py-12 text-center">
-            <Shield size={48} className="mx-auto text-gray-300" />
-            <p className="mt-3 font-medium text-gray-500">No roles yet</p>
-            <p className="mt-1 text-[13px] text-gray-400">
-              Add your first role to get started.
-            </p>
-          </div>
+          <EmptyState
+            icon={<Shield size={40} />}
+            title="No roles yet"
+            subtitle="Add your first role to get started."
+          />
         ) : (
-          <table className="w-full text-sm">
+          <table className={cls.table}>
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Role Name
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Level
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Users
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Permissions
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  System Role
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Status
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Actions
-                </th>
+                <th className={cls.th}>Role Name</th>
+                <th className={cls.th}>Level</th>
+                <th className={cls.th}>Users</th>
+                <th className={cls.th}>Permissions</th>
+                <th className={cls.th}>System Role</th>
+                <th className={cls.th}>Status</th>
+                <th className={cls.th}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {roles.map((role) => (
-                <tr
-                  key={role.id}
-                  className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
-                >
-                  <td className="px-5 py-3.5 font-medium">{role.name}</td>
-                  <td className="px-5 py-3.5">{role.level}</td>
-                  <td className="px-5 py-3.5">{role._count?.users ?? 0}</td>
-                  <td className="px-5 py-3.5">{getPermissionCount(role)}</td>
-                  <td className="px-5 py-3.5">
+                <tr key={role.id} className={cls.tr}>
+                  <td className={`${cls.td} font-medium`}>{role.name}</td>
+                  <td className={cls.td}>{role.level}</td>
+                  <td className={cls.td}>{role._count?.users ?? 0}</td>
+                  <td className={cls.td}>{getPermissionCount(role)}</td>
+                  <td className={cls.td}>
                     {role.isSystemRole && (
-                      <span className="inline-flex rounded-full bg-purple-50 px-2 py-0.5 text-xs font-medium text-purple-600">
-                        System
-                      </span>
+                      <Badge color="bg-purple-50 text-purple-600">System</Badge>
                     )}
                   </td>
-                  <td className="px-5 py-3.5">
-                    <span
-                      className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                        role.status === "ACTIVE"
-                          ? "bg-green-50 text-green-600"
-                          : "bg-red-50 text-red-600"
-                      }`}
-                    >
-                      {role.status}
-                    </span>
+                  <td className={cls.td}>
+                    <ActiveBadge status={role.status} />
                   </td>
-                  <td className="px-5 py-3.5">
+                  <td className={cls.td}>
                     {canManage ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <button
                         onClick={() => openEdit(role)}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                        className={cls.btnIcon}
                         title="Edit"
                       >
-                        <Edit2 size={16} />
+                        <Edit2 size={14} />
                       </button>
                       <button
                         onClick={() => handleToggleStatus(role)}
                         disabled={role.isSystemRole && role.status === "ACTIVE"}
-                        className={`rounded px-2 py-0.5 text-xs font-medium ${
+                        className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${
                           role.isSystemRole && role.status === "ACTIVE"
                             ? "cursor-not-allowed text-gray-300"
                             : role.status === "ACTIVE"
@@ -336,14 +297,14 @@ export default function RoleManagementPage() {
                             : undefined
                         }
                       >
-                        <span className="inline-flex items-center gap-1">
-                          <Power size={14} />
+                        <span className="inline-flex items-center gap-0.5">
+                          <Power size={12} />
                           {role.status === "ACTIVE" ? "Deactivate" : "Activate"}
                         </span>
                       </button>
                     </div>
                     ) : (
-                      <span className="text-xs text-gray-400">View only</span>
+                      <span className="text-[11px] text-gray-400">View only</span>
                     )}
                   </td>
                 </tr>
@@ -358,9 +319,9 @@ export default function RoleManagementPage() {
         onClose={() => setModalOpen(false)}
         title={editing ? "Edit Role" : "Add Role"}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Role Name <span className="text-red-500">*</span>
             </label>
             <input
@@ -368,14 +329,14 @@ export default function RoleManagementPage() {
               value={formName}
               onChange={(e) => setFormName(e.target.value)}
               disabled={!!editing?.isSystemRole}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+              className={`${cls.input} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500`}
               placeholder="e.g. Property Manager, Technician"
               autoFocus
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+            <label className={cls.label}>
               Level <span className="text-red-500">*</span>
             </label>
             <input
@@ -383,58 +344,54 @@ export default function RoleManagementPage() {
               value={formLevel}
               onChange={(e) => setFormLevel(Number(e.target.value))}
               disabled={!!editing?.isSystemRole}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100 disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500"
+              className={`${cls.input} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500`}
               min={0}
             />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Max assignment depth
-            </label>
+            <label className={cls.label}>Max assignment depth</label>
             <input
               type="number"
               value={formMaxLevel}
               onChange={(e) => setFormMaxLevel(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+              className={cls.input}
               placeholder="Leave empty for no limit"
               min={0}
             />
           </div>
 
           <div>
-            <label className="mb-2 block text-[13px] font-medium text-gray-700">
-              Permissions
-            </label>
-            <div className="max-h-72 space-y-3 overflow-y-auto">
+            <label className={cls.label}>Permissions</label>
+            <div className="max-h-72 space-y-2 overflow-y-auto">
               {Object.entries(permissionsByModule).map(([module, perms]) => (
-                <div key={module} className="rounded-lg bg-gray-50 p-4">
-                  <label className="mb-2 flex cursor-pointer items-center gap-2">
+                <div key={module} className="rounded-md bg-gray-50 p-3">
+                  <label className="mb-1.5 flex cursor-pointer items-center gap-2">
                     <input
                       type="checkbox"
                       checked={isModuleAllSelected(module)}
                       onChange={() => toggleModule(module)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
-                    <span className="text-sm font-semibold text-gray-800">
+                    <span className="text-[13px] font-semibold text-gray-800">
                       {MODULE_LABELS[module] || module}
                     </span>
-                    <span className="text-xs text-gray-400">Select All</span>
+                    <span className="text-[11px] text-gray-400">Select All</span>
                   </label>
 
-                  <div className="grid grid-cols-1 gap-1.5 sm:grid-cols-2">
+                  <div className="grid grid-cols-1 gap-1 sm:grid-cols-2">
                     {perms.map((perm) => (
                       <label
                         key={perm.id}
-                        className="flex cursor-pointer items-start gap-2 rounded px-1 py-1 hover:bg-gray-100"
+                        className="flex cursor-pointer items-start gap-1.5 rounded px-1 py-0.5 hover:bg-gray-100"
                       >
                         <input
                           type="checkbox"
                           checked={selectedPermissionIds.has(perm.id)}
                           onChange={() => togglePermission(perm.id)}
-                          className="mt-0.5 h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          className="mt-0.5 h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                         />
-                        <span className="text-[13px] text-gray-600">
+                        <span className="text-[12px] text-gray-600">
                           {perm.description}
                         </span>
                       </label>
@@ -445,17 +402,17 @@ export default function RoleManagementPage() {
             </div>
           </div>
 
-          <div className="flex justify-end gap-3 pt-2">
+          <div className="flex justify-end gap-2 pt-1">
             <button
               onClick={() => setModalOpen(false)}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+              className={cls.btnSecondary}
             >
               Cancel
             </button>
             <button
               onClick={handleSave}
               disabled={saving}
-              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700 disabled:opacity-50"
+              className={cls.btnPrimary}
             >
               {saving ? "Saving..." : editing ? "Update" : "Save"}
             </button>
@@ -465,4 +422,3 @@ export default function RoleManagementPage() {
     </div>
   );
 }
-

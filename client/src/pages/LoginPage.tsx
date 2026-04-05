@@ -2,6 +2,7 @@ import { useState, useEffect, type FormEvent } from "react";
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Building2 } from "lucide-react";
+import { cls } from "../lib/styles";
 import axios from "axios";
 
 const TEST_USERS = [
@@ -64,34 +65,34 @@ export default function LoginPage() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-[#0C111D] px-4">
       <div className="w-full max-w-sm">
-        <div className="rounded-2xl bg-white p-8 shadow-2xl ring-1 ring-white/10 animate-scale-in">
-          <div className="mb-8 text-center">
-            <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary-600 shadow-lg shadow-primary-600/30">
-              <Building2 size={22} className="text-white" />
+        <div className="rounded-lg bg-white p-5 shadow-2xl ring-1 ring-white/10 animate-scale-in">
+          <div className="mb-6 text-center">
+            <div className="mx-auto mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-primary-600 shadow-lg shadow-primary-600/30">
+              <Building2 size={20} className="text-white" />
             </div>
-            <h1 className="text-xl font-semibold text-gray-900">
+            <h1 className="text-lg font-semibold text-gray-900">
               Welcome back
             </h1>
-            <p className="mt-1 text-[13px] text-gray-500">
+            <p className="mt-0.5 text-[12px] text-gray-500">
               Sign in to your account
             </p>
           </div>
 
           {error && (
-            <div className="mb-4 rounded-lg bg-red-50 px-3.5 py-2.5 text-[13px] text-red-600 ring-1 ring-red-100">
+            <div className="mb-3 rounded-md bg-red-50 px-3 py-2 text-[13px] text-red-600 ring-1 ring-red-100">
               {error}
             </div>
           )}
 
           {/* Quick Login Dropdown */}
-          <div className="mb-4">
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
+          <div className="mb-3">
+            <label className={cls.label}>
               Quick Login (dev)
             </label>
             <select
               onChange={(e) => { if (e.target.value) quickLogin(e.target.value); }}
               disabled={loading}
-              className="w-full rounded-lg border border-amber-300 bg-amber-50 px-3.5 py-2.5 text-sm shadow-sm focus:border-amber-400 focus:outline-none focus:ring-4 focus:ring-amber-100 disabled:opacity-50"
+              className="w-full rounded-md border border-amber-300 bg-amber-50 px-3 py-1.5 text-[13px] shadow-sm focus:border-amber-400 focus:outline-none focus:ring-2 focus:ring-amber-100 disabled:opacity-50"
               defaultValue=""
             >
               <option value="">Select a user to login as...</option>
@@ -101,35 +102,31 @@ export default function LoginPage() {
             </select>
           </div>
 
-          <div className="relative mb-4">
+          <div className="relative mb-3">
             <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
             <div className="relative flex justify-center"><span className="bg-white px-3 text-xs text-gray-400">or sign in manually</span></div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Username
-              </label>
+              <label className={cls.label}>Username</label>
               <input
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={cls.input}
                 placeholder="Enter username"
                 required
               />
             </div>
 
             <div>
-              <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                Password
-              </label>
+              <label className={cls.label}>Password</label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3.5 py-2.5 text-sm shadow-sm placeholder:text-gray-400 focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                className={cls.input}
                 placeholder="Enter password"
                 required
               />
@@ -138,7 +135,7 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700 disabled:opacity-50"
+              className={`w-full ${cls.btnPrimary} justify-center py-2`}
             >
               {loading ? "Signing in..." : "Sign In"}
             </button>

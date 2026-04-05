@@ -5,6 +5,8 @@ import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
 import Modal from "../components/ui/Modal";
+import { cls, STATUS_COLOR, PRIORITY_COLOR } from "../lib/styles";
+import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import {
   TASK_TYPE_LABELS,
   SUB_TASK_TYPE_LABELS,
@@ -77,7 +79,7 @@ export default function TicketDetailPage() {
     if (!sentinel) return;
     const observer = new IntersectionObserver(
       ([entry]) => setShowStickyHeader(!entry.isIntersecting),
-      { threshold: 0, rootMargin: "-56px 0px 0px 0px" } // account for header height
+      { threshold: 0, rootMargin: "-48px 0px 0px 0px" } // h-12 = 48px header
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
@@ -234,35 +236,8 @@ export default function TicketDetailPage() {
     }
   };
 
-  const priorityColor = (p: string) => {
-    switch (p) {
-      case "CRITICAL":
-        return "bg-red-50 text-red-600";
-      case "HIGH":
-        return "bg-orange-50 text-orange-600";
-      case "MEDIUM":
-        return "bg-yellow-50 text-yellow-600";
-      case "LOW":
-        return "bg-blue-50 text-blue-600";
-      default:
-        return "bg-gray-50 text-gray-600";
-    }
-  };
-
-  const statusColor = (s: string) => {
-    switch (s) {
-      case "OPEN":
-        return "bg-blue-50 text-blue-600";
-      case "IN_PROGRESS":
-        return "bg-yellow-50 text-yellow-600";
-      case "OVERDUE":
-        return "bg-red-100 text-red-700";
-      case "COMPLETED":
-        return "bg-green-50 text-green-600";
-      default:
-        return "bg-gray-50 text-gray-600";
-    }
-  };
+  const priorityColor = (p: string) => PRIORITY_COLOR[p] || "bg-gray-100 text-gray-600";
+  const statusColor = (s: string) => STATUS_COLOR[s] || "bg-gray-100 text-gray-600";
 
   if (loading) {
     return (
@@ -282,10 +257,10 @@ export default function TicketDetailPage() {
     ticket.status !== "COMPLETED" && new Date(ticket.dueDate) < new Date();
 
   return (
-    <div className="pb-24 md:pb-0">
+    <div className="pb-20 md:pb-0">
       {/* ── Mobile Sticky Collapsed Header ── */}
       <div
-        className={`fixed inset-x-0 top-14 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 py-2.5 transition-all duration-200 md:hidden ${
+        className={`fixed inset-x-0 top-12 z-30 border-b border-gray-200 bg-white/95 backdrop-blur-sm px-4 py-2 transition-all duration-200 md:hidden ${
           showStickyHeader
             ? "translate-y-0 opacity-100"
             : "-translate-y-full opacity-0 pointer-events-none"
@@ -335,10 +310,10 @@ export default function TicketDetailPage() {
       </nav>
 
       {/* Header — desktop only shows the full action bar */}
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="mb-4 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-2 md:gap-3">
-            <h1 className="hidden text-xl font-semibold text-gray-900 md:block">{ticket.name}</h1>
+            <h1 className="hidden text-lg font-semibold text-gray-900 md:block">{ticket.name}</h1>
             <span
               className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColor(ticket.status)}`}
             >
@@ -360,7 +335,7 @@ export default function TicketDetailPage() {
           {hasPermission(PERMISSIONS.TICKETS.EDIT) && (
             <Link
               to={`/tickets/${ticket.id}/edit`}
-              className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-3 py-1.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
             >
               <Pencil size={16} />
               Edit
@@ -369,7 +344,7 @@ export default function TicketDetailPage() {
           {hasPermission(PERMISSIONS.TICKETS.ASSIGN) && (
             <button
               onClick={openAssignModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-3 py-1.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
             >
               <UserPlus size={16} />
               {ticket.assignedTo ? "Reassign" : "Assign"}
@@ -378,7 +353,7 @@ export default function TicketDetailPage() {
           {hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS) && ticket.status !== "COMPLETED" && (
             <button
               onClick={() => handleStatusChange("COMPLETED")}
-              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 shadow-sm transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-green-700 shadow-sm transition-all duration-200"
             >
               <CheckCircle2 size={16} />
               Complete
@@ -387,7 +362,7 @@ export default function TicketDetailPage() {
           {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
             <button
               onClick={() => handleStatusChange("OPEN")}
-              className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100 shadow-sm transition-all duration-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-blue-50 px-3 py-1.5 text-[13px] font-medium text-blue-700 hover:bg-blue-100 shadow-sm transition-all duration-200"
             >
               Reopen
             </button>
@@ -396,7 +371,7 @@ export default function TicketDetailPage() {
           {ticket.status !== "COMPLETED" && !ticket.blocks?.some((b: any) => !b.resolvedAt) && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
             <button
               onClick={openBlockModal}
-              className="inline-flex items-center gap-2 rounded-lg bg-orange-50 px-4 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100 shadow-sm transition-all duration-200 ring-1 ring-orange-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-100 shadow-sm transition-all duration-200 ring-1 ring-orange-200"
             >
               <ShieldAlert size={16} />
               Report Blocker
@@ -409,7 +384,7 @@ export default function TicketDetailPage() {
           ) && (
             <button
               onClick={() => { setUnblockNote(""); setUnblockModalOpen(true); }}
-              className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-4 py-2 text-sm font-medium text-green-700 hover:bg-green-100 shadow-sm transition-all duration-200 ring-1 ring-green-200"
+              className="inline-flex items-center gap-2 rounded-lg bg-green-50 px-3 py-1.5 text-[13px] font-medium text-green-700 hover:bg-green-100 shadow-sm transition-all duration-200 ring-1 ring-green-200"
             >
               <ShieldCheck size={16} />
               Unblock
@@ -420,7 +395,7 @@ export default function TicketDetailPage() {
 
       {/* Blocked Banner */}
       {ticket.blocks?.some((b: any) => !b.resolvedAt) && ticket.blocks?.[0] && (
-        <div className="mb-6 rounded-xl border border-orange-200 bg-orange-50 p-4">
+        <div className="mb-4 rounded-lg border border-orange-200 bg-orange-50 p-3">
           <div className="flex items-start gap-3">
             <ShieldAlert size={20} className="mt-0.5 flex-shrink-0 text-orange-500" />
             <div className="flex-1">
@@ -443,11 +418,11 @@ export default function TicketDetailPage() {
       )}
 
       {/* Content Grid */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
         {/* Left: Details */}
-        <div className="lg:col-span-2 space-y-6">
+        <div className="lg:col-span-2 space-y-4">
           {/* Description */}
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
             <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
               Description
             </h3>
@@ -457,7 +432,7 @@ export default function TicketDetailPage() {
           </div>
 
           {/* Image */}
-          <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
             <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
               Image
             </h3>
@@ -512,7 +487,7 @@ export default function TicketDetailPage() {
           </div>
 
           {/* Comments & Activity Tabs */}
-          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white ring-1 ring-gray-200">
             <div className="border-b border-gray-200">
               <nav className="flex">
                 <button
@@ -555,7 +530,7 @@ export default function TicketDetailPage() {
                         value={comment}
                         onChange={(e) => setComment(e.target.value)}
                         placeholder="Add a comment..."
-                        className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                        className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
                         onKeyDown={(e) => {
                           if (e.key === "Enter" && !e.shiftKey) {
                             e.preventDefault();
@@ -566,7 +541,7 @@ export default function TicketDetailPage() {
                       <button
                         onClick={handleAddComment}
                         disabled={sendingComment || !comment.trim()}
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-all duration-200"
+                        className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-3 py-1.5 text-[13px] font-medium text-white hover:bg-primary-700 disabled:opacity-50 shadow-sm transition-all duration-200"
                       >
                         <Send size={14} />
                       </button>
@@ -636,9 +611,9 @@ export default function TicketDetailPage() {
         </div>
 
         {/* Right: Sidebar info */}
-        <div className="space-y-4">
+        <div className="space-y-3">
           {/* Ticket ID — always at top */}
-          <div className="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
             <div className="flex items-center justify-between">
               <span className="text-sm text-gray-500">Ticket ID</span>
               <span className="flex items-center gap-1.5">
@@ -655,12 +630,12 @@ export default function TicketDetailPage() {
           </div>
 
           {/* ── Location Group ── */}
-          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white ring-1 ring-gray-200">
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
               <MapPin size={14} className="text-gray-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Location</span>
             </div>
-            <dl className="space-y-3 p-4 text-sm">
+            <dl className="space-y-2 p-3 text-sm">
               <div className="flex items-center justify-between">
                 <dt className="text-gray-500">Property</dt>
                 <dd>
@@ -689,12 +664,12 @@ export default function TicketDetailPage() {
           </div>
 
           {/* ── Classification Group ── */}
-          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white ring-1 ring-gray-200">
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
               <Tag size={14} className="text-gray-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Classification</span>
             </div>
-            <dl className="space-y-3 p-4 text-sm">
+            <dl className="space-y-2 p-3 text-sm">
               {ticket.department && (
                 <div className="flex items-center justify-between">
                   <dt className="text-gray-500">Department</dt>
@@ -719,12 +694,12 @@ export default function TicketDetailPage() {
           </div>
 
           {/* ── Meta Group ── */}
-          <div className="rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+          <div className="rounded-lg bg-white ring-1 ring-gray-200">
             <div className="flex items-center gap-2 border-b border-gray-100 px-4 py-2.5">
               <ClipboardList size={14} className="text-gray-400" />
               <span className="text-xs font-semibold uppercase tracking-wider text-gray-400">Meta</span>
             </div>
-            <dl className="space-y-3 p-4 text-sm">
+            <dl className="space-y-2 p-3 text-sm">
               <div className="flex items-center justify-between">
                 <dt className="text-gray-500">Due Date</dt>
                 <dd className={`font-medium ${isOverdue ? "text-red-600" : "text-gray-900"}`}>
@@ -761,7 +736,7 @@ export default function TicketDetailPage() {
 
           {/* Recurring Info */}
           {ticket.isRecurring && (
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+            <div className="rounded-lg bg-white p-3.5 ring-1 ring-gray-200">
               <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
                 Recurring Schedule
               </h3>
@@ -817,7 +792,7 @@ export default function TicketDetailPage() {
 
           {/* Block History */}
           {ticket.blocks?.length > 0 && (
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+            <div className="rounded-lg bg-white p-3.5 ring-1 ring-gray-200">
               <h3 className="mb-3 text-[13px] font-semibold text-gray-900">Block History</h3>
               <div className="space-y-3">
                 {ticket.blocks.map((b: any) => (
@@ -852,7 +827,7 @@ export default function TicketDetailPage() {
 
           {/* Tagged Assets */}
           {ticket.assets?.length > 0 && (
-            <div className="rounded-xl bg-white p-5 shadow-sm ring-1 ring-gray-950/5">
+            <div className="rounded-lg bg-white p-3.5 ring-1 ring-gray-200">
               <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
                 Tagged Assets
               </h3>
@@ -876,7 +851,7 @@ export default function TicketDetailPage() {
 
       {/* Block Modal */}
       <Modal isOpen={blockModalOpen} onClose={() => setBlockModalOpen(false)} title="Report Blocker">
-        <div className="space-y-4">
+        <div className="space-y-3">
           <p className="text-sm text-gray-500">Select the department and person who is blocking your progress, then describe what you need.</p>
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Department</label>
@@ -933,7 +908,7 @@ export default function TicketDetailPage() {
 
       {/* Unblock Modal */}
       <Modal isOpen={unblockModalOpen} onClose={() => setUnblockModalOpen(false)} title="Unblock Ticket">
-        <div className="space-y-4">
+        <div className="space-y-3">
           <p className="text-sm text-gray-500">Confirm you have resolved the blocker. Optionally leave a note (e.g. "Funds approved and transferred").</p>
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">Resolution note (optional)</label>
@@ -965,7 +940,7 @@ export default function TicketDetailPage() {
         onClose={() => setAssignModalOpen(false)}
         title={ticket.assignedTo ? "Reassign Ticket" : "Assign Ticket"}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
               Select User

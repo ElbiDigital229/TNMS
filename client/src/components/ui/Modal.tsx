@@ -6,28 +6,31 @@ interface ModalProps {
   onClose: () => void;
   title: string;
   children: ReactNode;
+  size?: "sm" | "md" | "lg";
 }
 
-export default function Modal({ isOpen, onClose, title, children }: ModalProps) {
+const widths = { sm: "max-w-sm", md: "max-w-lg", lg: "max-w-2xl" };
+
+export default function Modal({ isOpen, onClose, title, children, size = "md" }: ModalProps) {
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center">
       <div
-        className="fixed inset-0 bg-gray-950/60 backdrop-blur-sm animate-fade-in"
+        className="fixed inset-0 bg-sidebar/50 backdrop-blur-sm animate-fade-in"
         onClick={onClose}
       />
-      <div className="relative z-10 mx-4 w-full max-w-lg animate-scale-in rounded-xl bg-white shadow-xl ring-1 ring-gray-950/5 max-h-[90vh] overflow-y-auto">
-        <div className="flex items-center justify-between border-b border-gray-100 px-6 py-4">
-          <h2 className="text-base font-semibold text-gray-900">{title}</h2>
+      <div className={`relative z-10 mx-4 w-full ${widths[size]} animate-scale-in rounded-lg bg-white shadow-xl ring-1 ring-gray-200 max-h-[85vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+          <h2 className="text-[14px] font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
             className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"
           >
-            <X size={18} />
+            <X size={16} />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-4">{children}</div>
       </div>
     </div>
   );

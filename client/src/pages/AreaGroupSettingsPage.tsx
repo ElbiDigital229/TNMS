@@ -1,8 +1,11 @@
 import { useState, useEffect } from "react";
 import { areaGroupApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { cls } from "../lib/styles";
+import PageHeader from "../components/ui/PageHeader";
+import { TableLoading } from "../components/ui/DataTable";
 import { CITY_LABELS } from "../../../shared/types";
-import { Pencil, Save, X, Check } from "lucide-react";
+import { Pencil, Check, X } from "lucide-react";
 
 interface AreaGroup {
   id: string;
@@ -66,41 +69,26 @@ export default function AreaGroupSettingsPage() {
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-200 border-t-primary-600" />
-      </div>
-    );
-  }
+  if (loading) return <TableLoading />;
 
   const cities = ["LAHORE", "ISLAMABAD"];
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">Area Grouping</h1>
-        <p className="mt-1 text-[13px] text-gray-500">
-          Each city is assigned to one area group. Properties in that city will
-          automatically be associated with the group.
-        </p>
-      </div>
+      <PageHeader
+        title="Area Grouping"
+        subtitle="Each city is assigned to one area group. Properties in that city will automatically be associated with the group."
+      />
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
         {cities.map((city) => (
-          <div
-            key={city}
-            className="rounded-xl bg-white p-6 shadow-sm ring-1 ring-gray-950/5"
-          >
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-gray-900">
+          <div key={city} className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="text-[13px] font-semibold text-gray-900">
                 {CITY_LABELS[city]}
               </h3>
               {!editing[city] && (
-                <button
-                  onClick={() => handleEdit(city)}
-                  className="inline-flex items-center gap-1.5 rounded-lg bg-white px-3 py-1.5 text-xs font-medium text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-                >
+                <button onClick={() => handleEdit(city)} className={cls.btnSecondary}>
                   <Pencil size={14} />
                   Edit
                 </button>
@@ -109,9 +97,7 @@ export default function AreaGroupSettingsPage() {
 
             {editing[city] ? (
               <div>
-                <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-                  Group Name
-                </label>
+                <label className={cls.label}>Group Name</label>
                 <div className="flex gap-2">
                   <input
                     type="text"
@@ -122,34 +108,34 @@ export default function AreaGroupSettingsPage() {
                         [city]: e.target.value,
                       }))
                     }
-                    className="flex-1 rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+                    className={`flex-1 ${cls.input}`}
                     placeholder="Enter group name"
                     autoFocus
                   />
                   <button
                     onClick={() => handleSave(city)}
                     disabled={saving[city]}
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-primary-600 px-3 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700 disabled:opacity-50"
+                    className={cls.btnPrimary}
                     title="Save"
                   >
-                    <Check size={16} />
+                    <Check size={14} />
                     {saving[city] ? "Saving..." : "Save"}
                   </button>
                   <button
                     onClick={() => handleCancel(city)}
-                    className="inline-flex items-center rounded-lg bg-white px-3 py-2.5 text-sm text-gray-600 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+                    className={cls.btnSecondary}
                     title="Cancel"
                   >
-                    <X size={16} />
+                    <X size={14} />
                   </button>
                 </div>
               </div>
             ) : (
               <div>
-                <span className="text-xs font-medium uppercase tracking-wide text-gray-400">
+                <span className="text-[11px] font-medium uppercase tracking-wide text-gray-400">
                   Group Name
                 </span>
-                <p className="mt-1 text-base font-medium text-gray-900">
+                <p className="mt-0.5 text-[13px] font-medium text-gray-900">
                   {savedValues[city] || (
                     <span className="italic text-gray-400">Not set</span>
                   )}

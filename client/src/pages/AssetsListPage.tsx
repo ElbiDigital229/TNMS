@@ -4,14 +4,11 @@ import { assetApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
-import { CONDITION_LABELS } from "../../../shared/types";
-import {
-  Search,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  Package,
-} from "lucide-react";
+import { cls } from "../lib/styles";
+import { ActiveBadge, ConditionBadge } from "../components/ui/Badge";
+import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
+import PageHeader from "../components/ui/PageHeader";
+import { Search, Eye, Package } from "lucide-react";
 
 interface Asset {
   id: string;
@@ -87,36 +84,27 @@ export default function AssetsListPage() {
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-xl font-semibold text-gray-900">All Assets</h1>
-        <p className="mt-1 text-[13px] text-gray-500">
-          View all assets across all properties.
-        </p>
-      </div>
+      <PageHeader
+        title="All Assets"
+        subtitle="View all assets across all properties."
+      />
 
       {/* Filters */}
-      <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div className="relative sm:col-span-2">
-          <Search
-            size={16}
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400"
-          />
+          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
             placeholder="Search name or code..."
             value={searchInput}
             onChange={(e) => setSearchInput(e.target.value)}
-            className="w-full rounded-lg border border-gray-300 py-2 pl-9 pr-3 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+            className={`${cls.input} pl-8`}
           />
         </div>
-
         <select
           value={statusFilter}
-          onChange={(e) => {
-            setStatusFilter(e.target.value);
-            setPage(1);
-          }}
-          className="rounded-lg border border-gray-300 px-3 py-2 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
+          onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }}
+          className={cls.select}
         >
           <option value="">All Status</option>
           <option value="ACTIVE">Active</option>
@@ -125,139 +113,71 @@ export default function AssetsListPage() {
       </div>
 
       {/* Table */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+      <div className="rounded-lg bg-white ring-1 ring-gray-200">
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className={cls.table}>
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Code
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Name
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Category
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Property
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Unit
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Condition
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Status
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Actions
-                </th>
+                <th className={cls.th}>Code</th>
+                <th className={cls.th}>Name</th>
+                <th className={cls.th}>Category</th>
+                <th className={cls.th}>Property</th>
+                <th className={cls.th}>Unit</th>
+                <th className={cls.th}>Condition</th>
+                <th className={cls.th}>Status</th>
+                <th className={cls.th}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-12 text-center"
-                  >
-                    <div className="flex items-center justify-center">
-                      <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-primary-600" />
-                    </div>
-                  </td>
+                  <td colSpan={8}><TableLoading /></td>
                 </tr>
               ) : assets.length === 0 ? (
                 <tr>
-                  <td
-                    colSpan={8}
-                    className="px-5 py-12 text-center"
-                  >
-                    <Package size={48} className="mx-auto text-gray-300" />
-                    <p className="mt-3 font-medium text-gray-500">No assets found</p>
-                    <p className="mt-1 text-[13px] text-gray-400">Try adjusting your search or filters.</p>
+                  <td colSpan={8}>
+                    <EmptyState
+                      icon={<Package size={48} />}
+                      title="No assets found"
+                      subtitle="Try adjusting your search or filters."
+                    />
                   </td>
                 </tr>
               ) : (
                 assets.map((asset) => (
-                  <tr
-                    key={asset.id}
-                    className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
-                  >
-                    <td className="px-5 py-3.5 font-mono text-xs font-medium text-primary-600">
-                      {asset.code}
-                    </td>
-                    <td className="px-5 py-3.5 font-medium">{asset.name}</td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {asset.category.name}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Link
-                        to={`/properties/${asset.property.id}`}
-                        className="text-primary-600 hover:underline"
-                      >
+                  <tr key={asset.id} className={cls.tr}>
+                    <td className={`px-3 py-2 ${cls.mono}`}>{asset.code}</td>
+                    <td className="px-3 py-2 font-medium">{asset.name}</td>
+                    <td className="px-3 py-2 text-gray-600">{asset.category.name}</td>
+                    <td className="px-3 py-2">
+                      <Link to={`/properties/${asset.property.id}`} className={cls.link}>
                         {asset.property.name}
                       </Link>
-                      <span className="ml-1 text-xs text-gray-400">
-                        ({asset.property.code})
-                      </span>
+                      <span className="ml-1 text-xs text-gray-400">({asset.property.code})</span>
                     </td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {asset.unit?.name || "—"}
+                    <td className="px-3 py-2 text-gray-600">
+                      {asset.unit?.name || "\u2014"}
                       {asset.unit?.code && (
-                        <span className="ml-1 text-xs text-gray-400">
-                          ({asset.unit.code})
-                        </span>
+                        <span className="ml-1 text-xs text-gray-400">({asset.unit.code})</span>
                       )}
                     </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          asset.condition === "EXCELLENT"
-                            ? "bg-green-50 text-green-600"
-                            : asset.condition === "GOOD"
-                              ? "bg-blue-50 text-blue-600"
-                              : asset.condition === "FAIR"
-                                ? "bg-yellow-50 text-yellow-600"
-                                : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        {CONDITION_LABELS[asset.condition]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
-                          asset.status === "ACTIVE"
-                            ? "bg-green-50 text-green-600"
-                            : "bg-red-50 text-red-600"
-                        }`}
-                      >
-                        {asset.status}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/assets/${asset.code}`}
-                          className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                          title="View Details"
-                        >
-                          <Eye size={16} />
+                    <td className="px-3 py-2"><ConditionBadge condition={asset.condition} /></td>
+                    <td className="px-3 py-2"><ActiveBadge status={asset.status} /></td>
+                    <td className="px-3 py-2">
+                      <div className="flex items-center gap-1">
+                        <Link to={`/assets/${asset.code}`} className={cls.btnIcon} title="View Details">
+                          <Eye size={15} />
                         </Link>
                         {hasPermission(PERMISSIONS.ASSETS.DEACTIVATE) && (
                           <button
                             onClick={() => handleToggleStatus(asset)}
-                            className={`rounded px-2 py-0.5 text-xs font-medium ${
+                            className={`rounded px-2 py-0.5 text-xs font-medium transition-colors ${
                               asset.status === "ACTIVE"
                                 ? "text-red-600 hover:bg-red-50"
                                 : "text-green-600 hover:bg-green-50"
                             }`}
                           >
-                            {asset.status === "ACTIVE"
-                              ? "Deactivate"
-                              : "Activate"}
+                            {asset.status === "ACTIVE" ? "Deactivate" : "Activate"}
                           </button>
                         )}
                       </div>
@@ -268,38 +188,7 @@ export default function AssetsListPage() {
             </tbody>
           </table>
         </div>
-
-        {/* Pagination */}
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-5 py-3">
-            <span className="text-sm text-gray-600">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(pagination.page * pagination.limit, pagination.total)}{" "}
-              of {pagination.total}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-sm font-medium">
-                {page} / {pagination.totalPages}
-              </span>
-              <button
-                onClick={() =>
-                  setPage((p) => Math.min(pagination.totalPages, p + 1))
-                }
-                disabled={page === pagination.totalPages}
-                className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination pagination={pagination} onPageChange={setPage} />
       </div>
     </div>
   );
