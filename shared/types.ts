@@ -41,11 +41,30 @@ export const PRIORITY_LABELS: Record<string, string> = {
 };
 
 export const TICKET_STATUS_LABELS: Record<string, string> = {
-  OPEN: "Open",
+  UNASSIGNED: "Unassigned",
+  ASSIGNED: "Assigned",
   IN_PROGRESS: "In Progress",
-  OVERDUE: "Overdue",
+  BLOCKED: "Blocked",
   COMPLETED: "Completed",
 };
+
+export const URGENCY_LABELS: Record<string, string> = {
+  OVERDUE: "Overdue",
+  DUE_TODAY: "Due Today",
+  UPCOMING: "Upcoming",
+};
+
+/** Compute urgency from due date (client-side, never stored) */
+export function computeUrgency(dueDate: string | Date, status: string): "OVERDUE" | "DUE_TODAY" | "UPCOMING" | null {
+  if (status === "COMPLETED") return null;
+  const due = new Date(dueDate);
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfToday = new Date(startOfToday.getTime() + 86400000);
+  if (due < startOfToday) return "OVERDUE";
+  if (due < endOfToday) return "DUE_TODAY";
+  return "UPCOMING";
+}
 
 export const RECURRING_TYPE_LABELS: Record<string, string> = {
   DAILY: "Daily",

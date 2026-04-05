@@ -18,6 +18,7 @@ import {
   PRIORITY_LABELS,
   TICKET_STATUS_LABELS,
   RECURRING_TYPE_LABELS,
+  computeUrgency,
 } from "../../../shared/types";
 import {
   ArrowLeft,
@@ -386,8 +387,8 @@ export default function TicketDetailPage() {
     );
   }
 
-  const isOverdue =
-    ticket.status !== "COMPLETED" && new Date(ticket.dueDate) < new Date();
+  const urgency = computeUrgency(ticket.dueDate, ticket.status);
+  const isOverdue = urgency === "OVERDUE";
 
   return (
     <div className="pb-20 md:pb-0">
@@ -494,14 +495,14 @@ export default function TicketDetailPage() {
           )}
           {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
             <button
-              onClick={() => handleStatusChange("OPEN")}
+              onClick={() => handleStatusChange(ticket.assignedToId ? "ASSIGNED" : "UNASSIGNED")}
               className="inline-flex items-center gap-2 rounded-lg bg-primary-50 px-3 py-1.5 text-[13px] font-medium text-primary-700 hover:bg-primary-100 shadow-sm transition-all duration-200"
             >
               Reopen
             </button>
           )}
           {/* Block / Unblock */}
-          {ticket.status !== "COMPLETED" && !ticket.blocks?.some((b: any) => !b.resolvedAt) && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+          {ticket.status !== "COMPLETED" && ticket.status !== "BLOCKED" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
             <button
               onClick={openBlockModal}
               className="inline-flex items-center gap-2 rounded-lg bg-orange-50 px-3 py-1.5 text-[13px] font-medium text-orange-700 hover:bg-orange-100 shadow-sm transition-all duration-200 ring-1 ring-orange-200"
@@ -569,6 +570,7 @@ export default function TicketDetailPage() {
           activities={ticket.activities || []}
           createdAt={ticket.createdAt}
           completedAt={ticket.completedAt}
+          dueDate={ticket.dueDate}
         />
       </div>
 
@@ -1249,7 +1251,7 @@ export default function TicketDetailPage() {
            style={{ paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
         <div className="flex items-center gap-2 px-4 py-3">
           {/* Primary Action — always present */}
-          {(ticket.status === "OPEN" || ticket.status === "OVERDUE") && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+          {(ticket.status === "UNASSIGNED" || ticket.status === "ASSIGNED") && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
             <button
               onClick={() => handleStatusChange("IN_PROGRESS")}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-primary-700"
@@ -1269,7 +1271,7 @@ export default function TicketDetailPage() {
           )}
           {ticket.status === "COMPLETED" && hasPermission(PERMISSIONS.TICKETS.REOPEN) && (
             <button
-              onClick={() => handleStatusChange("OPEN")}
+              onClick={() => handleStatusChange(ticket.assignedToId ? "ASSIGNED" : "UNASSIGNED")}
               className="flex flex-1 items-center justify-center gap-2 rounded-xl bg-primary-600 px-4 py-3 text-sm font-semibold text-white shadow-sm active:bg-primary-700"
             >
               <RotateCcw size={16} />
@@ -1362,7 +1364,7 @@ export default function TicketDetailPage() {
                   />
                 </label>
               )}
-              {ticket.status !== "COMPLETED" && !ticket.blocks?.some((b: any) => !b.resolvedAt) && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
+              {ticket.status !== "COMPLETED" && ticket.status !== "BLOCKED" && (isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)) && (
                 <button
                   onClick={() => { setMoreSheetOpen(false); openBlockModal(); }}
                   className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-orange-700 active:bg-orange-50"

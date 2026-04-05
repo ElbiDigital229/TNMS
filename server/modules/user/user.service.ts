@@ -364,7 +364,7 @@ export const userService = {
 
     // Check for open assigned tickets
     const openTicketCount = await prisma.ticket.count({
-      where: { assignedToId: id, status: { in: ["OPEN", "IN_PROGRESS"] } },
+      where: { assignedToId: id, status: { in: ["UNASSIGNED", "ASSIGNED", "IN_PROGRESS", "BLOCKED"] } },
     });
     if (openTicketCount > 0) {
       throw new Error(

@@ -1,10 +1,12 @@
-import { Check } from "lucide-react";
+import { Check, ShieldAlert } from "lucide-react";
+import { computeUrgency } from "../../../../shared/types";
 
 interface StatusTimelineProps {
   status: string;
   activities: any[];
   createdAt: string;
   completedAt?: string | null;
+  dueDate: string;
 }
 
 interface Step {
@@ -12,6 +14,7 @@ interface Step {
   shortLabel: string;
   state: "completed" | "current" | "future";
   timestamp?: string | null;
+  isBlocked?: boolean;
 }
 
 function formatTimestamp(dateStr?: string | null): string {
@@ -34,7 +37,6 @@ function findActivityTimestamp(
   action: string,
   detailMatch?: string
 ): string | null {
-  // Search in reverse to get the most recent matching activity
   for (let i = activities.length - 1; i >= 0; i--) {
     const a = activities[i];
     if (a.action === action) {
@@ -53,10 +55,10 @@ function findActivityTimestamp(
   return null;
 }
 
-const STATUS_ORDER = ["OPEN", "IN_PROGRESS", "COMPLETED"];
+const STATUS_ORDER = ["UNASSIGNED", "ASSIGNED", "IN_PROGRESS", "COMPLETED"];
 
 function getStatusIndex(status: string): number {
-  if (status === "OVERDUE") return 1; // OVERDUE is treated like IN_PROGRESS position
+  if (status === "BLOCKED") return 2; // BLOCKED sits at IN_PROGRESS position
   const idx = STATUS_ORDER.indexOf(status);
   return idx >= 0 ? idx : 0;
 }
@@ -66,15 +68,17 @@ export default function StatusTimeline({
   activities,
   createdAt,
   completedAt,
+  dueDate,
 }: StatusTimelineProps) {
   const currentIdx = getStatusIndex(status);
-  const isOverdue = status === "OVERDUE";
+  const isBlocked = status === "BLOCKED";
+  const urgency = computeUrgency(dueDate, status);
+  const isOverdue = urgency === "OVERDUE";
 
-  // Derive timestamps
-  const openTimestamp =
-    findActivityTimestamp(activities, "STATUS_CHANGED", "IN_PROGRESS") ||
-    findActivityTimestamp(activities, "STATUS_CHANGED", "OPEN") ||
-    createdAt;
+  const assignedTimestamp =
+    findActivityTimestamp(activities, "ASSIGNED") ||
+    findActivityTimestamp(activities, "STATUS_CHANGED", "ASSIGNED") ||
+    null;
 
   const inProgressTimestamp =
     findActivityTimestamp(activities, "STATUS_CHANGED", "IN_PROGRESS") || null;
@@ -85,36 +89,39 @@ export default function StatusTimeline({
     {
       label: "Created",
       shortLabel: "Created",
-      state: "completed", // always completed
+      state: "completed",
       timestamp: createdAt,
     },
     {
-      label: "Open",
-      shortLabel: "Open",
-      state:
-        currentIdx > 0
-          ? "completed"
-          : currentIdx === 0
-          ? "current"
-          : "future",
-      timestamp: currentIdx >= 0 ? openTimestamp : null,
-    },
-    {
-      label: "In Progress",
-      shortLabel: "In Prog.",
+      label: "Assigned",
+      shortLabel: "Assigned",
       state:
         currentIdx > 1
           ? "completed"
           : currentIdx === 1
           ? "current"
+          : currentIdx > 0
+          ? "completed"
           : "future",
-      timestamp: currentIdx >= 1 ? inProgressTimestamp : null,
+      timestamp: currentIdx >= 1 ? assignedTimestamp || createdAt : null,
+    },
+    {
+      label: isBlocked ? "Blocked" : "In Progress",
+      shortLabel: isBlocked ? "Blocked" : "In Prog.",
+      state:
+        currentIdx > 2
+          ? "completed"
+          : currentIdx === 2
+          ? "current"
+          : "future",
+      timestamp: currentIdx >= 2 ? inProgressTimestamp : null,
+      isBlocked,
     },
     {
       label: "Completed",
       shortLabel: "Done",
-      state: currentIdx >= 2 ? "completed" : "future",
-      timestamp: currentIdx >= 2 ? completedTimestamp : null,
+      state: currentIdx >= 3 ? "completed" : "future",
+      timestamp: currentIdx >= 3 ? completedTimestamp : null,
     },
   ];
 
@@ -134,17 +141,23 @@ export default function StatusTimeline({
                 <div className="relative flex h-5 w-5 items-center justify-center">
                   <span
                     className={`absolute inset-0 rounded-full ${
-                      isOverdue ? "bg-red-500" : "bg-primary-600"
+                      step.isBlocked ? "bg-orange-500" : isOverdue ? "bg-red-500" : "bg-primary-600"
                     } opacity-20 animate-ping`}
                     style={{ animationDuration: "2s" }}
                   />
-                  <span
-                    className={`relative block h-3.5 w-3.5 rounded-full border-[2.5px] ${
-                      isOverdue
-                        ? "border-red-500 bg-red-50"
-                        : "border-primary-600 bg-primary-50"
-                    }`}
-                  />
+                  {step.isBlocked ? (
+                    <span className="relative flex h-3.5 w-3.5 items-center justify-center rounded-full border-[2.5px] border-orange-500 bg-orange-50">
+                      <ShieldAlert size={8} className="text-orange-500" />
+                    </span>
+                  ) : (
+                    <span
+                      className={`relative block h-3.5 w-3.5 rounded-full border-[2.5px] ${
+                        isOverdue
+                          ? "border-red-500 bg-red-50"
+                          : "border-primary-600 bg-primary-50"
+                      }`}
+                    />
+                  )}
                 </div>
               ) : (
                 <div className="flex h-5 w-5 items-center justify-center">
@@ -155,7 +168,9 @@ export default function StatusTimeline({
               {/* Label + timestamp */}
               <span
                 className={`mt-1.5 text-[11px] font-medium leading-tight text-center ${
-                  step.state === "current" && isOverdue
+                  step.isBlocked && step.state === "current"
+                    ? "text-orange-600"
+                    : step.state === "current" && isOverdue
                     ? "text-red-600"
                     : step.state === "completed" || step.state === "current"
                     ? "text-gray-700"
@@ -180,7 +195,9 @@ export default function StatusTimeline({
                     step.state === "completed"
                       ? "bg-primary-600"
                       : step.state === "current"
-                      ? isOverdue
+                      ? step.isBlocked
+                        ? "bg-gradient-to-r from-orange-400 to-gray-200"
+                        : isOverdue
                         ? "bg-gradient-to-r from-red-400 to-gray-200"
                         : "bg-gradient-to-r from-primary-400 to-gray-200"
                       : "border-t-2 border-dashed border-gray-200 bg-transparent h-0"

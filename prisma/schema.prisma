@@ -51,9 +51,10 @@ enum Priority {
 }
 
 enum TicketStatus {
-  OPEN
+  UNASSIGNED
+  ASSIGNED
   IN_PROGRESS
-  OVERDUE
+  BLOCKED
   COMPLETED
 }
 
@@ -288,7 +289,7 @@ model Ticket {
   categoryId      String
   category        TicketCategory @relation(fields: [categoryId], references: [id])
   priority        Priority
-  status          TicketStatus  @default(OPEN)
+  status          TicketStatus  @default(UNASSIGNED)
   createdById     String?
   createdBy       User?         @relation("TicketCreator", fields: [createdById], references: [id])
   assignedToId    String?

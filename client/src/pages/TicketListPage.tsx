@@ -4,9 +4,9 @@ import { ticketApi, propertyApi, userApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
-import { TASK_TYPE_LABELS, PRIORITY_LABELS, TICKET_STATUS_LABELS } from "../../../shared/types";
+import { TASK_TYPE_LABELS, PRIORITY_LABELS, TICKET_STATUS_LABELS, computeUrgency } from "../../../shared/types";
 import { cls } from "../lib/styles";
-import { StatusBadge, PriorityBadge, Badge } from "../components/ui/Badge";
+import { StatusBadge, PriorityBadge, UrgencyBadge, Badge } from "../components/ui/Badge";
 import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
 import PageHeader from "../components/ui/PageHeader";
 import {
@@ -245,7 +245,7 @@ export default function TicketListPage() {
 
         {/* Status quick pills */}
         <div className="flex gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
-          {[["", "All"], ["OPEN", "Open"], ["IN_PROGRESS", "In Progress"], ["OVERDUE", "Overdue"], ["COMPLETED", "Completed"]].map(([val, label]) => (
+          {[["", "All"], ["UNASSIGNED", "Unassigned"], ["ASSIGNED", "Assigned"], ["IN_PROGRESS", "In Progress"], ["BLOCKED", "Blocked"], ["COMPLETED", "Completed"]].map(([val, label]) => (
             <button
               key={val}
               onClick={() => { setStatusFilter(val); setPage(1); }}
@@ -290,7 +290,7 @@ export default function TicketListPage() {
                 {ticket.assignedTo && <p className="mt-0.5 text-[11px] text-gray-500">{ticket.assignedTo.fullName || ticket.assignedTo.username}</p>}
                 <div className="mt-2 flex flex-wrap items-center gap-1">
                   <StatusBadge status={ticket.status} />
-                  {ticket.activeBlock && <Badge color="bg-orange-100 text-orange-700">Blocked</Badge>}
+                  <UrgencyBadge urgency={computeUrgency(ticket.dueDate, ticket.status)} />
                   {isLate(ticket) && <Badge color="bg-orange-50 text-orange-600">Late</Badge>}
                   <span className="text-[11px] text-gray-400">-</span>
                   <span className="text-[11px] text-gray-500">{TASK_TYPE_LABELS[ticket.taskType]}</span>
@@ -299,7 +299,7 @@ export default function TicketListPage() {
                 </div>
                 <div className="mt-1.5 flex items-center justify-between">
                   <span className="text-[11px] text-gray-400">Due {new Date(ticket.dueDate).toLocaleDateString()}</span>
-                  {ticket.status === "OVERDUE" && <span className="text-[11px] font-semibold text-red-500">{overdueDays(ticket.dueDate)}d overdue</span>}
+                  {computeUrgency(ticket.dueDate, ticket.status) === "OVERDUE" && <span className="text-[11px] font-semibold text-red-500">{overdueDays(ticket.dueDate)}d overdue</span>}
                 </div>
               </Link>
             ))}
@@ -336,6 +336,7 @@ export default function TicketListPage() {
                       <td className={cls.td}>
                         <div className="flex items-center gap-1 flex-wrap">
                           <StatusBadge status={ticket.status} />
+                          <UrgencyBadge urgency={computeUrgency(ticket.dueDate, ticket.status)} />
                           {isLate(ticket) && <Badge color="bg-orange-50 text-orange-600">Late</Badge>}
                         </div>
                       </td>
@@ -361,7 +362,7 @@ export default function TicketListPage() {
                       </td>
                       <td className={cls.td}>
                         <span className="text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</span>
-                        {ticket.status === "OVERDUE" && <p className="text-[11px] font-medium text-red-500">{overdueDays(ticket.dueDate)}d overdue</p>}
+                        {computeUrgency(ticket.dueDate, ticket.status) === "OVERDUE" && <p className="text-[11px] font-medium text-red-500">{overdueDays(ticket.dueDate)}d overdue</p>}
                         {isLate(ticket) && ticket.completedAt && <p className="text-[11px] font-medium text-orange-500">{lateDays(ticket.completedAt, ticket.dueDate)}d late</p>}
                       </td>
                       <td className={cls.td}>

@@ -9,6 +9,9 @@ import {
   departmentApi,
 } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { cls } from "../lib/styles";
+import PageHeader from "../components/ui/PageHeader";
+import { EmptyState, TableLoading } from "../components/ui/DataTable";
 import { ArrowLeft, BarChart3, Plus, X, Download, Loader2 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────
@@ -133,7 +136,7 @@ const FILTER_FIELD_OPTIONS: Record<Entity, { value: string; label: string }[]> =
 };
 
 const ENUM_OPTIONS: Record<string, { value: string; label: string }[]> = {
-  "tickets.status": [{ value: "OPEN", label: "Open" }, { value: "IN_PROGRESS", label: "In Progress" }, { value: "OVERDUE", label: "Overdue" }, { value: "COMPLETED", label: "Completed" }],
+  "tickets.status": [{ value: "UNASSIGNED", label: "Unassigned" }, { value: "ASSIGNED", label: "Assigned" }, { value: "IN_PROGRESS", label: "In Progress" }, { value: "BLOCKED", label: "Blocked" }, { value: "COMPLETED", label: "Completed" }],
   "tickets.priority": [{ value: "CRITICAL", label: "Critical" }, { value: "HIGH", label: "High" }, { value: "MEDIUM", label: "Medium" }, { value: "LOW", label: "Low" }],
   "assets.status": [{ value: "ACTIVE", label: "Active" }, { value: "INACTIVE", label: "Inactive" }],
   "assets.condition": [{ value: "EXCELLENT", label: "Excellent" }, { value: "GOOD", label: "Good" }, { value: "FAIR", label: "Fair" }, { value: "POOR", label: "Poor" }],
@@ -280,15 +283,11 @@ function LineChart({ data, activeLines }: LineChartProps) {
     }).join(" ");
   };
 
-  // Y-axis ticks
   const yTicks = [0, 0.25, 0.5, 0.75, 1].map((f) => Math.round(f * maxVal));
-
-  // X-axis labels: show at most 8
   const xLabelStep = Math.max(1, Math.ceil(data.length / 8));
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ maxHeight: 260 }}>
-      {/* Grid lines */}
       {yTicks.map((tick) => {
         const y = PAD.top + chartH - (tick / maxVal) * chartH;
         return (
@@ -298,8 +297,6 @@ function LineChart({ data, activeLines }: LineChartProps) {
           </g>
         );
       })}
-
-      {/* Lines */}
       {activeKeys.map((key) => (
         <path
           key={key}
@@ -311,8 +308,6 @@ function LineChart({ data, activeLines }: LineChartProps) {
           strokeLinecap="round"
         />
       ))}
-
-      {/* Dots */}
       {activeKeys.map((key) =>
         data.map((d, i) => {
           const x = PAD.left + i * xStep;
@@ -320,8 +315,6 @@ function LineChart({ data, activeLines }: LineChartProps) {
           return <circle key={`${key}-${i}`} cx={x} cy={y} r={3} fill={TREND_COLORS[key as keyof typeof TREND_COLORS]?.stroke ?? "#6b7280"} />;
         })
       )}
-
-      {/* X-axis labels */}
       {data.map((d, i) => {
         if (i % xLabelStep !== 0 && i !== data.length - 1) return null;
         const x = PAD.left + i * xStep;
@@ -358,7 +351,7 @@ function PieChart({ data }: { data: StandardRow[] }) {
   });
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
       <svg viewBox="0 0 200 200" className="w-48 flex-shrink-0">
         {slices.map((s, i) => (
           <path key={i} d={s.path} fill={s.color} stroke="white" strokeWidth={1.5} />
@@ -366,7 +359,7 @@ function PieChart({ data }: { data: StandardRow[] }) {
       </svg>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5">
         {slices.map((s, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-xs">
+          <div key={i} className="flex items-center gap-1.5 text-[11px]">
             <span className="h-2.5 w-2.5 rounded-sm flex-shrink-0" style={{ background: s.color }} />
             <span className="text-gray-700">{s.label}</span>
             <span className="font-semibold text-gray-900">{s.value.toLocaleString()}</span>
@@ -389,7 +382,7 @@ function GroupedBarChart({ data }: { data: BreakdownRow[] }) {
     <div className="space-y-3">
       {data.map((row) => (
         <div key={row.groupKey ?? "null"}>
-          <div className="mb-1 text-xs font-medium text-gray-700 truncate">{row.label}</div>
+          <div className="mb-1 text-[11px] font-medium text-gray-700 truncate">{row.label}</div>
           <div className="space-y-0.5">
             {keys.map((key) => {
               const val = row[key] as number;
@@ -416,6 +409,7 @@ function GroupedBarChart({ data }: { data: BreakdownRow[] }) {
 
 export default function ReportBuilderPage() {
   const toast = useToast();
+  const navigate = useNavigate();
 
   const [entity, setEntity] = useState<Entity>("tickets");
   const [measure, setMeasure] = useState<Measure>("count");
@@ -455,7 +449,6 @@ export default function ReportBuilderPage() {
     assetCategoryApi.list().then((res) => setAssetCategories((res.data.data || []).map((c: any) => ({ id: c.id, name: c.name })))).catch(() => {});
     ticketCategoryApi.list().then((res) => setTicketCategories((res.data.data || []).map((c: any) => ({ id: c.id, name: c.name })))).catch(() => {});
     departmentApi.list().then((res) => setDepartments((res.data.data || []).map((d: any) => ({ id: d.id, name: d.name })))).catch(() => {});
-    // fetch roles from userApi list with a workaround - just extract unique roles from users
     import("../lib/api").then(({ roleApi }) => {
       roleApi.list({ activeOnly: "true" }).then((res) => setRoles((res.data.data || []).map((r: any) => ({ id: r.id, name: r.name })))).catch(() => {});
     });
@@ -554,10 +547,8 @@ export default function ReportBuilderPage() {
     }
   };
 
-  // Chart type
   const chartType: ChartType = getChartType(measure, groupBy);
 
-  // Summary stats
   const getSummary = () => {
     if (!results || results.length === 0) return null;
     if (resultType === "breakdown") {
@@ -584,42 +575,39 @@ export default function ReportBuilderPage() {
   const isBreakdown = resultType === "breakdown";
   const trendHasMulti = isTrend && results && results.length > 0 && "total" in results[0];
 
-  const navigate = useNavigate();
-const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100";
-
   return (
     <div>
       {/* Back Button */}
       <button
         onClick={() => navigate(-1)}
-        className="mb-4 inline-flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-900 transition-colors"
+        className={cls.btnGhost + " mb-3"}
       >
         <ArrowLeft size={16} />
         Back
       </button>
 
-      <div className="mb-3">
-        <h1 className="text-lg font-semibold text-gray-900">Report Builder</h1>
-        <p className="text-xs text-gray-500">Build and run custom queries across your data</p>
-      </div>
+      <PageHeader
+        title="Report Builder"
+        subtitle="Build and run custom queries across your data"
+      />
 
       {/* Query Builder */}
       <div className="mb-3 rounded-lg bg-white p-4 ring-1 ring-gray-200">
         <h2 className="mb-3 text-[13px] font-semibold text-gray-700">Query Builder</h2>
 
         {/* Row 1: Entity + Measure */}
-        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Report On</label>
-            <select value={entity} onChange={(e) => handleEntityChange(e.target.value as Entity)} className={`w-full ${inputCls}`}>
+            <label className={cls.label}>Report On</label>
+            <select value={entity} onChange={(e) => handleEntityChange(e.target.value as Entity)} className={`w-full ${cls.select}`}>
               {(Object.keys(ENTITY_LABELS) as Entity[]).map((e) => (
                 <option key={e} value={e}>{ENTITY_LABELS[e]}</option>
               ))}
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-500">Measure</label>
-            <select value={measure} onChange={(e) => handleMeasureChange(e.target.value as Measure)} className={`w-full ${inputCls}`}>
+            <label className={cls.label}>Measure</label>
+            <select value={measure} onChange={(e) => handleMeasureChange(e.target.value as Measure)} className={`w-full ${cls.select}`}>
               {MEASURE_OPTIONS[entity].map((m) => (
                 <option key={m.value} value={m.value}>{m.label}</option>
               ))}
@@ -629,38 +617,37 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
 
         {/* Trend Options */}
         {measure === "trend" ? (
-          <div className="mb-4 rounded-lg bg-gray-50 p-4 space-y-3">
+          <div className="mb-3 rounded-lg bg-gray-50 p-3 space-y-3">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-gray-500 mr-1">Granularity:</span>
+              <span className="text-[11px] font-medium text-gray-500 mr-1">Granularity:</span>
               {(["daily", "weekly", "monthly"] as Granularity[]).map((g) => (
                 <button key={g} onClick={() => setGranularity(g)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${granularity === g ? "bg-primary-600 text-white" : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50"}`}>
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${granularity === g ? "bg-primary-600 text-white" : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50"}`}>
                   {g.charAt(0).toUpperCase() + g.slice(1)}
                 </button>
               ))}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-medium text-gray-500 mr-1">Date Range:</span>
+              <span className="text-[11px] font-medium text-gray-500 mr-1">Date Range:</span>
               {(["this_week", "this_month", "this_year", "custom"] as DatePreset[]).map((p) => (
                 <button key={p} onClick={() => setDatePreset(p)}
-                  className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${datePreset === p ? "bg-primary-600 text-white" : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50"}`}>
+                  className={`rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${datePreset === p ? "bg-primary-600 text-white" : "bg-white text-gray-600 ring-1 ring-gray-300 hover:bg-gray-50"}`}>
                   {p === "this_week" ? "This Week" : p === "this_month" ? "This Month" : p === "this_year" ? "This Year" : "Custom"}
                 </button>
               ))}
             </div>
             {datePreset === "custom" && (
               <div className="flex items-center gap-2">
-                <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={inputCls} />
-                <span className="text-xs text-gray-400">to</span>
-                <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className={inputCls} />
+                <input type="date" value={customStart} onChange={(e) => setCustomStart(e.target.value)} className={cls.input + " w-auto"} />
+                <span className="text-[11px] text-gray-400">to</span>
+                <input type="date" value={customEnd} onChange={(e) => setCustomEnd(e.target.value)} className={cls.input + " w-auto"} />
               </div>
             )}
           </div>
         ) : (
-          /* Group By */
-          <div className="mb-4">
-            <label className="mb-1 block text-xs font-medium text-gray-500">Group By</label>
-            <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className={`w-full sm:w-64 ${inputCls}`}>
+          <div className="mb-3">
+            <label className={cls.label}>Group By</label>
+            <select value={groupBy} onChange={(e) => setGroupBy(e.target.value)} className={`w-full sm:w-64 ${cls.select}`}>
               <option value="">Select...</option>
               {GROUP_BY_OPTIONS[entity].map((g) => (
                 <option key={g.value} value={g.value}>{g.label}</option>
@@ -670,14 +657,14 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
         )}
 
         {/* Filters */}
-        <div className="mb-4">
+        <div className="mb-3">
           <div className="mb-2 flex items-center justify-between">
-            <label className="text-xs font-medium text-gray-500">Filters</label>
-            <button onClick={addFilter} className="inline-flex items-center gap-1 rounded-md px-2 py-1 text-xs font-medium text-primary-600 hover:bg-primary-50">
+            <label className={cls.label + " !mb-0"}>Filters</label>
+            <button onClick={addFilter} className={cls.btnGhost + " !py-0.5 !px-2 text-primary-600"}>
               <Plus size={14} /> Add Filter
             </button>
           </div>
-          {filters.length === 0 && <p className="text-xs text-gray-400">No filters applied.</p>}
+          {filters.length === 0 && <p className="text-[11px] text-gray-400">No filters applied.</p>}
           <div className="space-y-2">
             {filters.map((filter) => (
               <FilterRow
@@ -695,9 +682,8 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
           </div>
         </div>
 
-        <button onClick={runReport} disabled={loading || (measure !== "trend" && !groupBy)}
-          className="inline-flex items-center gap-1.5 rounded-md bg-primary-600 px-3 py-1.5 text-[13px] font-medium text-white shadow-sm hover:bg-primary-700 disabled:opacity-50 transition-colors">
-          {loading ? <Loader2 size={15} className="animate-spin" /> : <BarChart3 size={15} />}
+        <button onClick={runReport} disabled={loading || (measure !== "trend" && !groupBy)} className={cls.btnPrimary}>
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <BarChart3 size={14} />}
           Run Report
         </button>
       </div>
@@ -708,20 +694,20 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[13px] font-semibold text-gray-700">Results</h2>
             {results && results.length > 0 && (
-              <button onClick={() => exportCsv(results, measure, resultType)}
-                className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-2.5 py-1 text-[12px] font-medium text-gray-600 hover:bg-gray-50 transition-colors">
-                <Download size={14} /> Export CSV
+              <button onClick={() => exportCsv(results, measure, resultType)} className={cls.btnSecondary}>
+                <Download size={13} /> Export CSV
               </button>
             )}
           </div>
 
           {loading ? (
-            <div className="flex justify-center py-12"><Loader2 size={32} className="animate-spin text-primary-400" /></div>
+            <TableLoading />
           ) : !results || results.length === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-12">
-              <BarChart3 size={48} className="text-gray-300" />
-              <p className="text-sm font-medium text-gray-500">No data found.</p>
-            </div>
+            <EmptyState
+              icon={<BarChart3 size={40} />}
+              title="No data found."
+              subtitle="Try adjusting filters or grouping."
+            />
           ) : (
             <>
               {/* Summary */}
@@ -754,31 +740,31 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
               )}
 
               {/* Table */}
-              <div className="mb-4 overflow-hidden rounded-lg ring-1 ring-gray-200">
+              <div className="mb-3 overflow-hidden rounded-lg ring-1 ring-gray-200">
                 <div className="overflow-x-auto">
-                  <table className="w-full text-[13px]">
+                  <table className={cls.table}>
                     <thead>
                       <tr className="border-b border-gray-200 bg-gray-50">
-                        <th className="px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-gray-400">Group</th>
+                        <th className={cls.th}>Group</th>
                         {isBreakdown ? (
                           Object.values(BREAKDOWN_COLORS).map((cfg) => (
-                            <th key={cfg.label} className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">{cfg.label}</th>
+                            <th key={cfg.label} className={cls.th + " text-right"}>{cfg.label}</th>
                           ))
                         ) : isTrend && trendHasMulti ? (
                           <>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Total</th>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Open</th>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Completed</th>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Overdue</th>
+                            <th className={cls.th + " text-right"}>Total</th>
+                            <th className={cls.th + " text-right"}>Open</th>
+                            <th className={cls.th + " text-right"}>Completed</th>
+                            <th className={cls.th + " text-right"}>Overdue</th>
                           </>
                         ) : measure === "completed_late" ? (
                           <>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Late Tickets</th>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Avg Days Late</th>
-                            <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">Avg Days Blocked</th>
+                            <th className={cls.th + " text-right"}>Late Tickets</th>
+                            <th className={cls.th + " text-right"}>Avg Days Late</th>
+                            <th className={cls.th + " text-right"}>Avg Days Blocked</th>
                           </>
                         ) : (
-                          <th className="px-3 py-2 text-right text-[11px] font-semibold uppercase tracking-wider text-gray-400">
+                          <th className={cls.th + " text-right"}>
                             {measure === "avg_completion_time" ? "Avg Hours" : measure === "overdue_count" ? "Overdue" : "Count"}
                           </th>
                         )}
@@ -786,29 +772,31 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
                     </thead>
                     <tbody>
                       {results.map((row, i) => (
-                        <tr key={i} className="border-b border-gray-100 last:border-b-0 hover:bg-gray-50">
-                          <td className="px-3 py-2 font-medium text-gray-800">
+                        <tr key={i} className={cls.tr}>
+                          <td className={cls.td + " font-medium text-gray-800"}>
                             {isTrend ? (row as TrendRow).label : (row as StandardRow | BreakdownRow).label}
                           </td>
                           {isBreakdown ? (
                             Object.keys(BREAKDOWN_COLORS).map((key) => (
-                              <td key={key} className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as BreakdownRow)[key as keyof BreakdownRow] as number).toLocaleString()}</td>
+                              <td key={key} className={cls.td + " text-right tabular-nums text-gray-600"}>
+                                {((row as BreakdownRow)[key as keyof BreakdownRow] as number).toLocaleString()}
+                              </td>
                             ))
                           ) : isTrend && trendHasMulti ? (
                             <>
-                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).total ?? 0).toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).open ?? 0).toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).completed ?? 0).toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{((row as TrendRow).overdue ?? 0).toLocaleString()}</td>
+                              <td className={cls.td + " text-right tabular-nums text-gray-600"}>{((row as TrendRow).total ?? 0).toLocaleString()}</td>
+                              <td className={cls.td + " text-right tabular-nums text-gray-600"}>{((row as TrendRow).open ?? 0).toLocaleString()}</td>
+                              <td className={cls.td + " text-right tabular-nums text-gray-600"}>{((row as TrendRow).completed ?? 0).toLocaleString()}</td>
+                              <td className={cls.td + " text-right tabular-nums text-gray-600"}>{((row as TrendRow).overdue ?? 0).toLocaleString()}</td>
                             </>
                           ) : measure === "completed_late" ? (
                             <>
-                              <td className="px-3 py-2 text-right tabular-nums text-gray-600">{(row as any).value.toLocaleString()}</td>
-                              <td className="px-3 py-2 text-right tabular-nums text-orange-600 font-medium">{(row as any).avgDaysLate?.toFixed(1) ?? "—"}</td>
-                              <td className="px-3 py-2 text-right tabular-nums text-blue-600">{(row as any).avgDaysBlocked > 0 ? (row as any).avgDaysBlocked.toFixed(1) : "—"}</td>
+                              <td className={cls.td + " text-right tabular-nums text-gray-600"}>{(row as any).value.toLocaleString()}</td>
+                              <td className={cls.td + " text-right tabular-nums text-orange-600 font-medium"}>{(row as any).avgDaysLate?.toFixed(1) ?? "—"}</td>
+                              <td className={cls.td + " text-right tabular-nums text-blue-600"}>{(row as any).avgDaysBlocked > 0 ? (row as any).avgDaysBlocked.toFixed(1) : "—"}</td>
                             </>
                           ) : (
-                            <td className="px-3 py-2 text-right tabular-nums text-gray-600">
+                            <td className={cls.td + " text-right tabular-nums text-gray-600"}>
                               {isTrend ? ((row as TrendRow).value ?? 0).toLocaleString() : measure === "avg_completion_time" ? (row as StandardRow).value.toFixed(1) : (row as StandardRow).value.toLocaleString()}
                             </td>
                           )}
@@ -821,16 +809,15 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
 
               {/* Chart */}
               <div>
-                <h3 className="mb-3 text-xs font-medium text-gray-500 uppercase tracking-wide">Chart</h3>
+                <h3 className="mb-3 text-[11px] font-medium text-gray-500 uppercase tracking-wide">Chart</h3>
 
-                {/* Trend line chart */}
                 {chartType === "line" && (
                   <div>
                     {trendHasMulti && (
                       <div className="mb-3 flex flex-wrap gap-2">
                         {Object.entries(TREND_COLORS).filter(([k]) => k !== "value").map(([key, cfg]) => (
                           <button key={key} onClick={() => setActiveLines((prev) => ({ ...prev, [key]: !prev[key] }))}
-                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-medium transition-colors ${activeLines[key] !== false ? "text-white" : "bg-white ring-1 ring-gray-300 text-gray-500"}`}
+                            className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-[11px] font-medium transition-colors ${activeLines[key] !== false ? "text-white" : "bg-white ring-1 ring-gray-300 text-gray-500"}`}
                             style={activeLines[key] !== false ? { background: cfg.stroke } : {}}>
                             <span className="h-2 w-2 rounded-full" style={{ background: cfg.stroke }} />
                             {cfg.label}
@@ -842,13 +829,9 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
                   </div>
                 )}
 
-                {/* Pie chart */}
                 {chartType === "pie" && <PieChart data={results as StandardRow[]} />}
-
-                {/* Grouped bar chart (breakdown) */}
                 {chartType === "grouped_bar" && <GroupedBarChart data={results as BreakdownRow[]} />}
 
-                {/* Standard horizontal bar chart */}
                 {chartType === "bar" && (() => {
                   const rows = results as StandardRow[];
                   const maxVal = Math.max(...rows.map((r) => r.value), 1);
@@ -856,12 +839,12 @@ const inputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shad
                     <div className="space-y-2">
                       {rows.map((row, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <span className="w-32 flex-shrink-0 truncate text-right text-xs text-gray-600">{row.label}</span>
+                          <span className="w-32 flex-shrink-0 truncate text-right text-[11px] text-gray-600">{row.label}</span>
                           <div className="flex-1">
                             <div className="h-6 rounded bg-primary-500 transition-all duration-500"
                               style={{ width: `${maxVal > 0 ? (row.value / maxVal) * 100 : 0}%`, minWidth: row.value > 0 ? 2 : 0 }} />
                           </div>
-                          <span className="w-16 flex-shrink-0 text-right text-xs tabular-nums font-medium text-gray-700">
+                          <span className="w-16 flex-shrink-0 text-right text-[11px] tabular-nums font-medium text-gray-700">
                             {measure === "avg_completion_time" ? row.value.toFixed(1) : row.value.toLocaleString()}
                           </span>
                         </div>
@@ -897,20 +880,19 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
   const isDate = isDateField(filter.field);
   const isApi = isApiField(filter.field);
   const isMulti = filter.operator === "in";
-  const filterInputCls = "rounded-md border border-gray-300 px-3 py-1.5 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100";
 
   const renderValue = () => {
     if (isDate) {
       if (filter.operator === "between") {
         return (
           <div className="flex items-center gap-1.5">
-            <input type="date" value={Array.isArray(filter.value) ? filter.value[0] || "" : ""} onChange={(e) => onValueChange([e.target.value, Array.isArray(filter.value) ? filter.value[1] || "" : ""])} className={`w-full ${filterInputCls}`} />
-            <span className="text-xs text-gray-400">to</span>
-            <input type="date" value={Array.isArray(filter.value) ? filter.value[1] || "" : ""} onChange={(e) => onValueChange([Array.isArray(filter.value) ? filter.value[0] || "" : "", e.target.value])} className={`w-full ${filterInputCls}`} />
+            <input type="date" value={Array.isArray(filter.value) ? filter.value[0] || "" : ""} onChange={(e) => onValueChange([e.target.value, Array.isArray(filter.value) ? filter.value[1] || "" : ""])} className={`w-full ${cls.input}`} />
+            <span className="text-[11px] text-gray-400">to</span>
+            <input type="date" value={Array.isArray(filter.value) ? filter.value[1] || "" : ""} onChange={(e) => onValueChange([Array.isArray(filter.value) ? filter.value[0] || "" : "", e.target.value])} className={`w-full ${cls.input}`} />
           </div>
         );
       }
-      return <input type="date" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${filterInputCls}`} />;
+      return <input type="date" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${cls.input}`} />;
     }
 
     if (enumOpts) {
@@ -922,7 +904,7 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
               const sel = selected.includes(opt.value);
               return (
                 <button key={opt.value} type="button" onClick={() => onValueChange(sel ? selected.filter((v) => v !== opt.value) : [...selected, opt.value])}
-                  className={`rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors ${sel ? "bg-primary-100 text-primary-700 ring-1 ring-primary-300" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
+                  className={`rounded-full px-2.5 py-0.5 text-[11px] font-medium transition-colors ${sel ? "bg-primary-100 text-primary-700 ring-1 ring-primary-300" : "bg-gray-100 text-gray-600 hover:bg-gray-200"}`}>
                   {opt.label}
                 </button>
               );
@@ -931,7 +913,7 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
         );
       }
       return (
-        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${filterInputCls}`}>
+        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${cls.select}`}>
           <option value="">Select...</option>
           {enumOpts.map((opt) => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
         </select>
@@ -943,7 +925,7 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
         const selected: string[] = Array.isArray(filter.value) ? filter.value : [];
         return (
           <div>
-            <select value="" onChange={(e) => { if (e.target.value && !selected.includes(e.target.value)) onValueChange([...selected, e.target.value]); }} className={`w-full ${filterInputCls}`}>
+            <select value="" onChange={(e) => { if (e.target.value && !selected.includes(e.target.value)) onValueChange([...selected, e.target.value]); }} className={`w-full ${cls.select}`}>
               <option value="">Add item...</option>
               {apiOptions.filter((o) => !selected.includes(o.id)).map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
             </select>
@@ -952,7 +934,7 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
                 {selected.map((id) => {
                   const opt = apiOptions.find((o) => o.id === id);
                   return (
-                    <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-xs font-medium text-primary-700">
+                    <span key={id} className="inline-flex items-center gap-1 rounded-full bg-primary-50 px-2 py-0.5 text-[11px] font-medium text-primary-700">
                       {opt?.label || id}
                       <button type="button" onClick={() => onValueChange(selected.filter((v) => v !== id))} className="text-primary-400 hover:text-primary-600"><X size={12} /></button>
                     </span>
@@ -964,26 +946,26 @@ function FilterRow({ filter, entity, operators, apiOptions, onFieldChange, onOpe
         );
       }
       return (
-        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${filterInputCls}`}>
+        <select value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} className={`w-full ${cls.select}`}>
           <option value="">Select...</option>
           {apiOptions.map((opt) => <option key={opt.id} value={opt.id}>{opt.label}</option>)}
         </select>
       );
     }
 
-    return <input type="text" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} placeholder="Enter value..." className={`w-full ${filterInputCls}`} />;
+    return <input type="text" value={filter.value || ""} onChange={(e) => onValueChange(e.target.value)} placeholder="Enter value..." className={`w-full ${cls.input}`} />;
   };
 
   return (
     <div className="flex flex-col gap-2 rounded-lg bg-gray-50 p-3 sm:flex-row sm:items-start">
-      <select value={filter.field} onChange={(e) => onFieldChange(e.target.value)} className={`sm:w-40 ${filterInputCls}`}>
+      <select value={filter.field} onChange={(e) => onFieldChange(e.target.value)} className={`sm:w-40 ${cls.select}`}>
         {fields.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}
       </select>
-      <select value={filter.operator} onChange={(e) => onOperatorChange(e.target.value as Operator)} className={`sm:w-24 ${filterInputCls}`}>
+      <select value={filter.operator} onChange={(e) => onOperatorChange(e.target.value as Operator)} className={`sm:w-24 ${cls.select}`}>
         {operators.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
       </select>
       <div className="min-w-0 flex-1">{renderValue()}</div>
-      <button onClick={onRemove} className="self-start rounded-md p-2 text-gray-400 hover:bg-gray-200 hover:text-gray-600"><X size={16} /></button>
+      <button onClick={onRemove} className={cls.btnIcon}><X size={16} /></button>
     </div>
   );
 }

@@ -211,9 +211,32 @@ export const ticketService = {
     const ticketNumber = await this.generateTicketNumber();
     const { assetIds, ...ticketData } = data;
 
+    // Auto-assign: if department is set but no assignee, find department manager
+    let effectiveAssigneeId = data.assignedToId;
+    let autoAssigned = false;
+    if (!effectiveAssigneeId && data.departmentId) {
+      const deptManager = await prisma.user.findFirst({
+        where: {
+          departmentId: data.departmentId,
+          status: "ACTIVE",
+          role: { name: "Manager" },
+        },
+        select: { id: true },
+      });
+      if (deptManager) {
+        effectiveAssigneeId = deptManager.id;
+        autoAssigned = true;
+      }
+    }
+
+    // Determine initial status: ASSIGNED if someone owns it, UNASSIGNED otherwise
+    const initialStatus = effectiveAssigneeId ? "ASSIGNED" : "UNASSIGNED";
+
     const ticket = await prisma.ticket.create({
       data: {
         ...ticketData,
+        assignedToId: effectiveAssigneeId || null,
+        status: initialStatus as any,
         ticketNumber,
         assets: assetIds?.length
           ? {
@@ -241,14 +264,27 @@ export const ticketService = {
       },
     });
 
+    // Log auto-assignment activity if applicable
+    if (autoAssigned && effectiveAssigneeId) {
+      const mgr = await prisma.user.findUnique({ where: { id: effectiveAssigneeId }, select: { fullName: true, username: true } });
+      await prisma.ticketActivity.create({
+        data: {
+          ticketId: ticket.id,
+          action: "ASSIGNED",
+          details: `Auto-assigned to department manager ${mgr?.fullName || mgr?.username}`,
+          performedById: data.createdById || null,
+        },
+      });
+    }
+
     // Fire-and-forget notifications
     if (data.createdById) {
       notificationTrigger.onTicketCreated(ticket.id, data.createdById).catch(console.error);
     }
 
-    // Notify the assignee if ticket is assigned on creation
-    if (data.assignedToId && data.createdById) {
-      notificationTrigger.onTicketAssigned(ticket.id, data.assignedToId, data.createdById, null).catch(console.error);
+    // Notify the assignee if ticket is assigned on creation (manual or auto)
+    if (effectiveAssigneeId && data.createdById) {
+      notificationTrigger.onTicketAssigned(ticket.id, effectiveAssigneeId, data.createdById, null).catch(console.error);
     }
 
     return ticket;
@@ -368,7 +404,7 @@ export const ticketService = {
       where: { id },
       data: {
         status,
-        completedAt: status === "COMPLETED" ? new Date() : (status === "OPEN" || status === "IN_PROGRESS" ? null : undefined),
+        completedAt: status === "COMPLETED" ? new Date() : null,
       },
     });
 
@@ -472,9 +508,15 @@ export const ticketService = {
     });
     if (!ticket) throw new Error("Ticket not found");
 
+    // Auto-transition UNASSIGNED → ASSIGNED when assigning
+    const updateData: any = { assignedToId: assigneeId };
+    if (ticket.assignedToId === null || (ticket as any).status === "UNASSIGNED") {
+      updateData.status = "ASSIGNED";
+    }
+
     const updated = await prisma.ticket.update({
       where: { id: ticketId },
-      data: { assignedToId: assigneeId },
+      data: updateData,
       include: {
         assignedTo: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
       },
@@ -520,6 +562,12 @@ export const ticketService = {
       },
     });
 
+    // Set ticket status to BLOCKED
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status: "BLOCKED" },
+    });
+
     // Resolve display names for activity log
     const [blockedByUser, blockingUserRecord, deptRecord] = await Promise.all([
       prisma.user.findUnique({ where: { id: blockedById }, select: { fullName: true, username: true } }),
@@ -548,13 +596,19 @@ export const ticketService = {
   async unblock(ticketId: string, resolvedNote: string | undefined, resolvedById: string) {
     const activeBlock = await prisma.ticketBlock.findFirst({
       where: { ticketId, resolvedAt: null },
-      select: { id: true, blockedById: true },
+      select: { id: true, blockedById: true, previousStatus: true },
     });
     if (!activeBlock) throw new Error("No active block found");
 
     await prisma.ticketBlock.update({
       where: { id: activeBlock.id },
       data: { resolvedAt: new Date(), resolvedById, resolvedNote: resolvedNote || null },
+    });
+
+    // Restore previous status
+    await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { status: activeBlock.previousStatus },
     });
 
     const resolvedByUser = await prisma.user.findUnique({ where: { id: resolvedById }, select: { fullName: true, username: true } });

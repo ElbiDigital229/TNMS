@@ -1,8 +1,9 @@
-import { STATUS_COLOR, PRIORITY_COLOR, CONDITION_COLOR } from "../../lib/styles";
+import { STATUS_COLOR, PRIORITY_COLOR, CONDITION_COLOR, URGENCY_COLOR } from "../../lib/styles";
 import {
   TICKET_STATUS_LABELS,
   PRIORITY_LABELS,
   CONDITION_LABELS,
+  URGENCY_LABELS,
 } from "../../../../shared/types";
 
 interface BadgeProps {
@@ -43,6 +44,16 @@ export function ConditionBadge({ condition, className = "" }: { condition: strin
   return (
     <Badge color={CONDITION_COLOR[condition] || "bg-gray-100 text-gray-600"} className={className}>
       {CONDITION_LABELS[condition] || condition}
+    </Badge>
+  );
+}
+
+/** Urgency badge — computed from due date, shows Overdue / Due Today / Upcoming */
+export function UrgencyBadge({ urgency, className = "" }: { urgency: string | null; className?: string }) {
+  if (!urgency || urgency === "UPCOMING") return null;
+  return (
+    <Badge color={URGENCY_COLOR[urgency] || "bg-gray-100 text-gray-600"} className={className}>
+      {URGENCY_LABELS[urgency] || urgency}
     </Badge>
   );
 }

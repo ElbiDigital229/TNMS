@@ -5,12 +5,19 @@
 
 // ── Status badge colors ──
 export const STATUS_COLOR: Record<string, string> = {
-  OPEN: "bg-blue-50 text-blue-700",
+  UNASSIGNED: "bg-gray-100 text-gray-600",
+  ASSIGNED: "bg-blue-50 text-blue-700",
   IN_PROGRESS: "bg-amber-50 text-amber-700",
-  OVERDUE: "bg-red-50 text-red-700",
+  BLOCKED: "bg-orange-50 text-orange-700",
   COMPLETED: "bg-emerald-50 text-emerald-700",
   ACTIVE: "bg-emerald-50 text-emerald-700",
   INACTIVE: "bg-gray-100 text-gray-500",
+};
+
+export const URGENCY_COLOR: Record<string, string> = {
+  OVERDUE: "bg-red-50 text-red-700",
+  DUE_TODAY: "bg-amber-50 text-amber-700",
+  UPCOMING: "bg-sky-50 text-sky-700",
 };
 
 export const PRIORITY_COLOR: Record<string, string> = {
@@ -29,10 +36,11 @@ export const CONDITION_COLOR: Record<string, string> = {
 
 // ── Chart / progress bar fills ──
 export const STATUS_BAR: Record<string, string> = {
-  OPEN: "bg-blue-500",
+  UNASSIGNED: "bg-gray-400",
+  ASSIGNED: "bg-blue-500",
   IN_PROGRESS: "bg-amber-500",
+  BLOCKED: "bg-orange-500",
   COMPLETED: "bg-emerald-500",
-  OVERDUE: "bg-red-500",
 };
 
 export const PRIORITY_BAR: Record<string, string> = {

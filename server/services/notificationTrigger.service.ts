@@ -274,17 +274,12 @@ export const notificationTrigger = {
   async checkOverdueTickets() {
     const now = new Date();
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    // First: promote any OPEN/IN_PROGRESS tickets past due date to OVERDUE status
-    // Only mark overdue if due date is BEFORE today (not today itself)
-    await prisma.ticket.updateMany({
-      where: { dueDate: { lt: startOfToday }, status: { in: ["OPEN", "IN_PROGRESS"] } },
-      data: { status: "OVERDUE" },
-    });
-
+    // Overdue is now computed live — no status mutation needed.
+    // Find all non-completed tickets past due date.
     const overdueTickets = await prisma.ticket.findMany({
       where: {
         dueDate: { lt: startOfToday },
-        status: "OVERDUE",
+        status: { not: "COMPLETED" },
       },
       select: {
         id: true,
@@ -368,7 +363,7 @@ export const notificationTrigger = {
     const dueSoonTickets = await prisma.ticket.findMany({
       where: {
         dueDate: { gt: now, lte: in24h },
-        status: { in: ["OPEN", "IN_PROGRESS"] },
+        status: { not: "COMPLETED" },
         assignedToId: { not: null },
       },
       select: {

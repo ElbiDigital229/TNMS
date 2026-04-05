@@ -96,7 +96,7 @@ export default function DashboardPage() {
 
       {/* Ticket Metrics Row */}
       <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-2">
-        <StatCard to="/tickets?status=OVERDUE" icon={<AlertTriangle size={18} />} iconBg="bg-red-50 text-red-600" label="Overdue Tickets" value={stats.tickets.overdue} valueColor="text-red-600" />
+        <StatCard to="/tickets" icon={<AlertTriangle size={18} />} iconBg="bg-red-50 text-red-600" label="Overdue Tickets" value={stats.tickets.overdue} valueColor="text-red-600" />
         <StatCard to="/tickets?status=COMPLETED" icon={<CheckCircle2 size={18} />} iconBg="bg-green-50 text-green-600" label="Completion Rate" value={`${stats.tickets.completionRate}%`} valueColor="text-green-600" />
       </div>
 

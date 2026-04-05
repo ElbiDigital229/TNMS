@@ -52,7 +52,7 @@ const EMPTY_FILTERS: ActiveFilters = {
 // ─── Colors / Labels ──────────────────────────────────────────────────────────
 
 const STATUS_LABELS: Record<string, string> = {
-  OPEN: "Open", IN_PROGRESS: "In Progress", OVERDUE: "Overdue", COMPLETED: "Completed",
+  UNASSIGNED: "Unassigned", ASSIGNED: "Assigned", IN_PROGRESS: "In Progress", BLOCKED: "Blocked", COMPLETED: "Completed",
 };
 
 const CHART_COLORS = ["#3b82f6", "#22c55e", "#f59e0b", "#ef4444", "#8b5cf6", "#06b6d4", "#f97316", "#84cc16", "#ec4899", "#14b8a6"];
@@ -349,7 +349,7 @@ export default function EntityReportPage() {
       total: filteredTickets.length,
       completed: completed.length,
       inProgress: filteredTickets.filter((t) => t.status === "IN_PROGRESS").length,
-      overdue: filteredTickets.filter((t) => t.status === "OVERDUE").length,
+      overdue: filteredTickets.filter((t) => t.status !== "COMPLETED" && new Date(t.dueDate) < new Date()).length,
       blocked: filteredTickets.filter((t) => t.isBlocked).length,
       avgHours,
       onTimePct,
@@ -574,7 +574,7 @@ export default function EntityReportPage() {
 
           {/* Status pills */}
           <div className="flex flex-wrap gap-1.5">
-            {["OPEN", "IN_PROGRESS", "OVERDUE", "COMPLETED"].map((s) => (
+            {["UNASSIGNED", "ASSIGNED", "IN_PROGRESS", "BLOCKED", "COMPLETED"].map((s) => (
               <button
                 key={s}
                 onClick={() => toggleStatus(s)}

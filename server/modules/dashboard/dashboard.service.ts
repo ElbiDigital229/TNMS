@@ -96,8 +96,10 @@ export const dashboardService = {
       },
       tickets: {
         byStatus: {
-          OPEN: statusMap.OPEN || 0,
+          UNASSIGNED: statusMap.UNASSIGNED || 0,
+          ASSIGNED: statusMap.ASSIGNED || 0,
           IN_PROGRESS: statusMap.IN_PROGRESS || 0,
+          BLOCKED: statusMap.BLOCKED || 0,
           COMPLETED: statusMap.COMPLETED || 0,
         },
         byPriority: {
