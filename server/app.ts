@@ -23,6 +23,7 @@ import { userRoutes } from "./modules/user/user.routes.js";
 import { auditRoutes } from "./modules/audit/audit.routes.js";
 import { reportRoutes } from "./modules/report/report.routes.js";
 import { notificationRoutes } from "./modules/notification/notification.routes.js";
+import { ticketScheduleRoutes } from "./modules/ticketSchedule/ticketSchedule.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -93,6 +94,7 @@ app.use("/api/users", userRoutes);
 app.use("/api/audit-logs", auditRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/ticket-schedules", ticketScheduleRoutes);
 
 // Error handler
 app.use(errorHandler);

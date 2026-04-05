@@ -1,7 +1,40 @@
 import { prisma } from "../../config/db.js";
+import { rbacService } from "../../services/rbac.service.js";
 
 export const dashboardService = {
-  async getStats() {
+  async getStats(userId: string, isSuperAdmin: boolean, allProperties: boolean, roleLevel: number) {
+    // Build property scope filter
+    let scopeFilter: any = {};
+    if (!isSuperAdmin && !allProperties) {
+      const propertyIds = await rbacService.getUserPropertyIds(userId);
+      if (propertyIds !== "all") {
+        scopeFilter.propertyId = { in: propertyIds as string[] };
+      }
+    }
+
+    // Build ticket-specific scope (for technicians/supervisors)
+    let ticketScopeFilter: any = { ...scopeFilter };
+    if (roleLevel === 6) {
+      // Technician: only see assigned tickets
+      ticketScopeFilter.assignedToId = userId;
+    } else if (roleLevel === 5) {
+      // Supervisor: see own + direct subordinates' tickets
+      const subordinates = await prisma.user.findMany({
+        where: { reportsToId: userId },
+        select: { id: true },
+      });
+      const teamIds = [userId, ...subordinates.map(s => s.id)];
+      ticketScopeFilter.assignedToId = { in: teamIds };
+    }
+
+    // Build where clauses for property/unit/asset counts
+    const propertyWhere = !isSuperAdmin && !allProperties && scopeFilter.propertyId
+      ? { id: scopeFilter.propertyId }
+      : {};
+    const unitAssetWhere = !isSuperAdmin && !allProperties && scopeFilter.propertyId
+      ? { propertyId: scopeFilter.propertyId }
+      : {};
+
     const [
       totalProperties,
       totalUnits,
@@ -12,24 +45,27 @@ export const dashboardService = {
       ticketsByTaskType,
       completedTickets,
     ] = await Promise.all([
-      prisma.property.count(),
-      prisma.unit.count(),
-      prisma.asset.count(),
-      prisma.ticket.count(),
+      prisma.property.count({ where: propertyWhere }),
+      prisma.unit.count({ where: unitAssetWhere }),
+      prisma.asset.count({ where: unitAssetWhere }),
+      prisma.ticket.count({ where: ticketScopeFilter }),
       prisma.ticket.groupBy({
         by: ["status"],
+        where: ticketScopeFilter,
         _count: { id: true },
       }),
       prisma.ticket.groupBy({
         by: ["priority"],
+        where: ticketScopeFilter,
         _count: { id: true },
       }),
       prisma.ticket.groupBy({
         by: ["taskType"],
+        where: ticketScopeFilter,
         _count: { id: true },
       }),
       prisma.ticket.findMany({
-        where: { status: "COMPLETED" },
+        where: { ...ticketScopeFilter, status: "COMPLETED" },
         select: { createdAt: true, updatedAt: true },
       }),
     ]);
@@ -70,6 +106,7 @@ export const dashboardService = {
     // Recent tickets (last 5)
     const recentTickets = await prisma.ticket.findMany({
       take: 5,
+      where: ticketScopeFilter,
       orderBy: { createdAt: "desc" },
       include: {
         property: { select: { name: true } },
@@ -82,6 +119,7 @@ export const dashboardService = {
     const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const overdueTickets = await prisma.ticket.count({
       where: {
+        ...ticketScopeFilter,
         status: { not: "COMPLETED" },
         dueDate: { lt: startOfToday },
       },

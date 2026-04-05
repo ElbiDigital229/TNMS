@@ -254,6 +254,19 @@ export const reportApi = {
     api.get(`/reports/entity/${entityType}/${entityId}`),
 };
 
+// Ticket Schedule API
+export const ticketScheduleApi = {
+  list: (params?: Record<string, string | number>) =>
+    api.get("/ticket-schedules", { params }),
+  getById: (id: string) => api.get(`/ticket-schedules/${id}`),
+  create: (data: Record<string, unknown>) =>
+    api.post("/ticket-schedules", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.patch(`/ticket-schedules/${id}`, data),
+  remove: (id: string) => api.delete(`/ticket-schedules/${id}`),
+  toggle: (id: string) => api.patch(`/ticket-schedules/${id}/toggle`),
+};
+
 // Notification API
 export const notificationApi = {
   list: (params?: Record<string, string | number>) =>

@@ -5,6 +5,7 @@ import {
   Building2,
   Package,
   ClipboardList,
+  CalendarClock,
   Settings,
   Layers,
   Tag,
@@ -100,6 +101,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavLink to="/tickets" className={linkClass} onClick={onClose}>
                 <ClipboardList size={18} />
                 Tickets
+              </NavLink>
+            )}
+
+            {hasPermission(P.TICKETS.CREATE) && (
+              <NavLink to="/ticket-schedules" className={linkClass} onClick={onClose}>
+                <CalendarClock size={18} />
+                Schedules
               </NavLink>
             )}
 

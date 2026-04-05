@@ -3,6 +3,7 @@ import { prisma } from "./config/db.js";
 import { env } from "./config/env.js";
 import { seed } from "./config/seed.js";
 import { notificationTrigger } from "./services/notificationTrigger.service.js";
+import { ticketScheduleService } from "./modules/ticketSchedule/ticketSchedule.service.js";
 
 // Run overdue/due-soon checks every hour
 function startScheduledNotificationChecks() {
@@ -17,6 +18,13 @@ function startScheduledNotificationChecks() {
       }
     } catch (err) {
       console.error("Scheduled notification check failed:", err);
+    }
+
+    // Process recurring/scheduled ticket creation
+    try {
+      await ticketScheduleService.processDueSchedules();
+    } catch (err) {
+      console.error("Scheduled ticket processing failed:", err);
     }
   };
 

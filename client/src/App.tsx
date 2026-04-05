@@ -17,6 +17,7 @@ import TicketListPage from "./pages/TicketListPage";
 import TicketFormPage from "./pages/TicketFormPage";
 import TicketDetailPage from "./pages/TicketDetailPage";
 import TicketCategoriesPage from "./pages/TicketCategoriesPage";
+import TicketSchedulesPage from "./pages/TicketSchedulesPage";
 import DepartmentsPage from "./pages/DepartmentsPage";
 import DashboardPage from "./pages/DashboardPage";
 import TodoListPage from "./pages/TodoListPage";
@@ -70,6 +71,7 @@ export default function App() {
               <Route path="/tickets/new" element={<RequirePermission permission={P.TICKETS.CREATE}><TicketFormPage /></RequirePermission>} />
               <Route path="/tickets/:id" element={<RequirePermission any={[P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED]}><TicketDetailPage /></RequirePermission>} />
               <Route path="/tickets/:id/edit" element={<RequirePermission permission={P.TICKETS.EDIT}><TicketFormPage /></RequirePermission>} />
+              <Route path="/ticket-schedules" element={<RequirePermission permission={P.TICKETS.CREATE}><TicketSchedulesPage /></RequirePermission>} />
               <Route path="/settings/area-groups" element={<RequirePermission permission={P.SETTINGS.AREA_GROUPS_MANAGE}><AreaGroupSettingsPage /></RequirePermission>} />
               <Route path="/settings/asset-categories" element={<RequirePermission permission={P.SETTINGS.ASSET_CATEGORIES_MANAGE}><AssetCategoriesPage /></RequirePermission>} />
               <Route path="/settings/ticket-categories" element={<RequirePermission permission={P.SETTINGS.TICKET_CATEGORIES_MANAGE}><TicketCategoriesPage /></RequirePermission>} />

@@ -64,6 +64,14 @@ enum RecurringType {
   MONTHLY
 }
 
+enum ScheduleFrequency {
+  DAILY
+  WEEKLY
+  MONTHLY
+  QUARTERLY
+  YEARLY
+}
+
 enum TodoStatus {
   OPEN
   COMPLETED
@@ -184,6 +192,8 @@ model User {
   blocksResolved      TicketBlock[] @relation("BlockResolvedBy")
   ticketActivities    TicketActivity[] @relation("ActivityPerformedBy")
   ticketComments      TicketComment[] @relation("CommentAuthor")
+  schedulesAssigned   TicketSchedule[] @relation("ScheduleAssignee")
+  schedulesCreated    TicketSchedule[] @relation("ScheduleCreator")
 }
 
 model AreaGroup {
@@ -217,6 +227,7 @@ model Property {
   assets          Asset[]
   tickets         Ticket[]
   userAssignments UserPropertyAssignment[]
+  ticketSchedules TicketSchedule[]
 }
 
 model Floor {
@@ -247,6 +258,7 @@ model Unit {
   updatedAt   DateTime @updatedAt
 
   tickets Ticket[]
+  ticketSchedules TicketSchedule[]
 }
 
 model Asset {
@@ -351,6 +363,7 @@ model TicketCategory {
   updatedAt DateTime @updatedAt
 
   tickets Ticket[]
+  ticketSchedules TicketSchedule[]
 }
 
 model Department {
@@ -363,6 +376,7 @@ model Department {
   users        User[]
   tickets      Ticket[]
   ticketBlocks TicketBlock[]
+  ticketSchedules TicketSchedule[]
 }
 
 model TicketBlock {
@@ -382,6 +396,40 @@ model TicketBlock {
   resolvedBy      User?        @relation("BlockResolvedBy", fields: [resolvedById], references: [id])
   resolvedNote    String?
   createdAt       DateTime     @default(now())
+}
+
+model TicketSchedule {
+  id           String             @id @default(cuid())
+  name         String
+  description  String?
+  propertyId   String
+  unitId       String?
+  categoryId   String?
+  departmentId String?
+  assignedToId String?
+  priority     Priority           @default(MEDIUM)
+  taskType     TaskType
+  subTaskType  SubTaskType        @default(PREVENTIVE)
+  frequency    ScheduleFrequency
+  dayOfWeek    Int?               // 0=Sun..6=Sat for WEEKLY
+  dayOfMonth   Int?               // 1-31 for MONTHLY/QUARTERLY/YEARLY
+  monthOfYear  Int?               // 1-12 for QUARTERLY/YEARLY
+  nextRunAt    DateTime
+  lastRunAt    DateTime?
+  isActive     Boolean            @default(true)
+  createdById  String
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  property     Property           @relation(fields: [propertyId], references: [id])
+  unit         Unit?              @relation(fields: [unitId], references: [id])
+  category     TicketCategory?    @relation(fields: [categoryId], references: [id])
+  department   Department?        @relation(fields: [departmentId], references: [id])
+  assignedTo   User?              @relation("ScheduleAssignee", fields: [assignedToId], references: [id])
+  createdBy    User               @relation("ScheduleCreator", fields: [createdById], references: [id])
+
+  @@index([nextRunAt, isActive])
+  @@index([propertyId])
 }
 
 model AssetCategory {
