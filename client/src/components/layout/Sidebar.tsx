@@ -39,8 +39,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     `flex items-center gap-3 px-3 py-2 rounded-md text-[13px] font-medium transition-all duration-200 ${
       isActive
-        ? "bg-white/10 text-white"
-        : "text-gray-400 hover:bg-white/[0.06] hover:text-gray-200"
+        ? "bg-sidebar-active text-white"
+        : "text-sidebar-text hover:bg-sidebar-hover hover:text-gray-200"
     }`;
 
   const P = PERMISSIONS;
@@ -60,18 +60,18 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
       {/* Mobile overlay — only between md and lg (tablet). On <md we use bottom tab bar */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 hidden bg-gray-950/60 backdrop-blur-sm md:block lg:hidden"
+          className="fixed inset-0 z-40 hidden bg-sidebar/60 backdrop-blur-sm md:block lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 hidden w-[260px] flex-col bg-[#0C111D] transition-transform duration-300 ease-in-out md:flex lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 hidden w-[260px] flex-col bg-sidebar transition-transform duration-300 ease-in-out md:flex lg:static lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
         {/* Header */}
-        <div className="flex h-16 items-center justify-between border-b border-white/[0.08] px-5">
+        <div className="flex h-16 items-center justify-between border-b border-sidebar-border px-5">
           <Link to="/" className="flex items-center gap-2.5">
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary-600">
               <Building2 size={16} className="text-white" />
@@ -85,7 +85,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
-          <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-600">
+          <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-text/60">
             Main
           </div>
           <div className="space-y-0.5">
@@ -141,7 +141,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
           {hasAnySettingsPermission && (
             <>
-              <div className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-gray-600">
+              <div className="mb-2 mt-6 px-3 text-[11px] font-semibold uppercase tracking-wider text-sidebar-text/60">
                 Configuration
               </div>
               <div className="space-y-0.5">
@@ -149,8 +149,8 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                   onClick={() => setSettingsOpen(!settingsOpen)}
                   className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium transition-all duration-200 ${
                     isOnSettingsPage
-                      ? "bg-white/10 text-white"
-                      : "text-gray-400 hover:bg-white/[0.06] hover:text-gray-200"
+                      ? "bg-sidebar-active text-white"
+                      : "text-sidebar-text hover:bg-sidebar-hover hover:text-gray-200"
                   }`}
                 >
                   <Settings size={18} />
@@ -166,7 +166,7 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                 </button>
 
                 {settingsOpen && (
-                  <div className="ml-3 space-y-0.5 border-l border-white/[0.06] pl-3">
+                  <div className="ml-3 space-y-0.5 border-l border-sidebar-border pl-3">
                     {hasPermission(P.SETTINGS.AREA_GROUPS_MANAGE) && (
                       <NavLink
                         to="/settings/area-groups"
@@ -245,10 +245,10 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
         </nav>
 
         {/* Logout */}
-        <div className="border-t border-white/[0.08] p-3">
+        <div className="border-t border-sidebar-border p-3">
           <button
             onClick={logout}
-            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-gray-500 transition-all duration-200 hover:bg-red-500/10 hover:text-red-400"
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[13px] font-medium text-sidebar-text transition-all duration-200 hover:bg-red-500/10 hover:text-red-400"
           >
             <LogOut size={18} />
             Sign Out
