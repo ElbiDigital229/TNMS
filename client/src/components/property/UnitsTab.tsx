@@ -3,6 +3,9 @@ import { unitApi, floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
+import { cls } from "../../lib/styles";
+import { ActiveBadge } from "../ui/Badge";
+import { TableLoading, EmptyState } from "../ui/DataTable";
 import { Plus, Pencil, Building2, Upload, Trash2, Download } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { PERMISSIONS } from "../../../../shared/permissions";
@@ -163,24 +166,15 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
     }
   };
 
-  if (loading)
-    return (
-      <div className="flex items-center justify-center py-12">
-        <div className="h-6 w-6 animate-spin rounded-full border-2 border-gray-200 border-t-primary-600" />
-      </div>
-    );
+  if (loading) return <TableLoading />;
 
   return (
     <div>
-      <div className="mb-4 flex items-center justify-between">
+      <div className="mb-3 flex items-center justify-between">
         <div>
           {selectedIds.size > 0 && hasPermission(P.UNITS.DEACTIVATE) && (
-            <button
-              onClick={handleBulkDelete}
-              disabled={deleting}
-              className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-red-700 disabled:opacity-50"
-            >
-              <Trash2 size={16} />
+            <button onClick={handleBulkDelete} disabled={deleting} className={cls.btnDanger}>
+              <Trash2 size={14} />
               {deleting ? "Deleting..." : `Delete ${selectedIds.size} selected`}
             </button>
           )}
@@ -197,27 +191,21 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
                 a.download = `${propertyName ?? "property"}_units.csv`;
                 a.click();
               }}
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
+              className={cls.btnSecondary}
             >
-              <Download size={16} />
+              <Download size={14} />
               Export
             </button>
           )}
           {hasPermission(P.UNITS.IMPORT) && (
-            <button
-              onClick={() => setBulkOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-            >
-              <Upload size={16} />
+            <button onClick={() => setBulkOpen(true)} className={cls.btnSecondary}>
+              <Upload size={14} />
               Bulk Import
             </button>
           )}
           {hasPermission(P.UNITS.CREATE) && (
-            <button
-              onClick={openAdd}
-              className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-            >
-              <Plus size={16} />
+            <button onClick={openAdd} className={cls.btnPrimary}>
+              <Plus size={14} />
               Add Unit
             </button>
           )}
@@ -225,63 +213,59 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
       </div>
 
       {units.length === 0 ? (
-        <div className="flex flex-col items-center py-12 text-center">
-          <Building2 size={48} className="mb-3 text-gray-300" />
-          <p className="font-medium text-gray-500">No units added yet</p>
-          <p className="mt-1 text-sm text-gray-400">Add your first unit to get started</p>
-        </div>
+        <EmptyState
+          icon={<Building2 size={40} />}
+          title="No units added yet"
+          subtitle="Add your first unit to get started"
+        />
       ) : (
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className={cls.table}>
             <thead>
               <tr className="border-b border-gray-200">
-                <th className="px-3 py-3 text-left">
+                <th className="px-3 py-2 text-left">
                   <input
                     type="checkbox"
                     checked={selectedIds.size === units.length && units.length > 0}
                     onChange={toggleSelectAll}
-                    className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                    className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Code</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Name</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Floor</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Type</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
+                <th className={cls.th}>Code</th>
+                <th className={cls.th}>Name</th>
+                <th className={cls.th}>Floor</th>
+                <th className={cls.th}>Type</th>
+                <th className={cls.th}>Status</th>
+                <th className={cls.th}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {units.map((unit) => (
-                <tr key={unit.id} className={`border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80 ${selectedIds.has(unit.id) ? "bg-primary-50/40" : ""}`}>
-                  <td className="px-3 py-3.5">
+                <tr key={unit.id} className={`${cls.tr} ${selectedIds.has(unit.id) ? "bg-primary-50/40" : ""}`}>
+                  <td className="px-3 py-2">
                     <input
                       type="checkbox"
                       checked={selectedIds.has(unit.id)}
                       onChange={() => toggleSelect(unit.id)}
-                      className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                     />
                   </td>
-                  <td className="px-5 py-3.5 font-mono text-xs font-medium text-primary-600">{unit.code}</td>
-                  <td className="px-5 py-3.5 font-medium">{unit.name}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{unit.floor?.name || "—"}</td>
-                  <td className="px-5 py-3.5 text-gray-600">{unit.unitType || "—"}</td>
-                  <td className="px-5 py-3.5">
-                    <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${unit.status === "ACTIVE" ? "bg-green-50 text-green-600" : "bg-red-50 text-red-600"}`}>
-                      {unit.status}
-                    </span>
-                  </td>
-                  <td className="px-5 py-3.5">
-                    <div className="flex items-center gap-2">
+                  <td className={`${cls.td} ${cls.mono}`}>{unit.code}</td>
+                  <td className={`${cls.td} font-medium`}>{unit.name}</td>
+                  <td className={`${cls.td} text-gray-600`}>{unit.floor?.name || "\u2014"}</td>
+                  <td className={`${cls.td} text-gray-600`}>{unit.unitType || "\u2014"}</td>
+                  <td className={cls.td}><ActiveBadge status={unit.status} /></td>
+                  <td className={cls.td}>
+                    <div className="flex items-center gap-1">
                       {hasPermission(P.UNITS.EDIT) && (
-                        <button onClick={() => openEdit(unit)} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700">
-                          <Pencil size={16} />
+                        <button onClick={() => openEdit(unit)} className={cls.btnIcon}>
+                          <Pencil size={15} />
                         </button>
                       )}
                       {hasPermission(P.UNITS.DEACTIVATE) && (
                         <button
                           onClick={() => handleToggleStatus(unit)}
-                          className={`rounded px-2 py-0.5 text-xs font-medium ${unit.status === "ACTIVE" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
+                          className={`rounded px-1.5 py-0.5 text-[11px] font-medium ${unit.status === "ACTIVE" ? "text-red-600 hover:bg-red-50" : "text-green-600 hover:bg-green-50"}`}
                         >
                           {unit.status === "ACTIVE" ? "Deactivate" : "Activate"}
                         </button>
@@ -300,80 +284,40 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
         onClose={() => setModalOpen(false)}
         title={editingUnit ? "Edit Unit" : "Add Unit"}
       >
-        <div className="space-y-4">
+        <div className="space-y-3">
           {editingUnit && (
-            <div className="rounded-lg bg-gray-50 px-4 py-2">
-              <span className="text-sm text-gray-500">Unit Code: </span>
-              <span className="font-mono text-sm font-bold text-primary-600">{editingUnit.code}</span>
+            <div className="rounded-md bg-gray-50 px-3 py-2">
+              <span className="text-[13px] text-gray-500">Unit Code: </span>
+              <span className={cls.mono}>{editingUnit.code}</span>
             </div>
           )}
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Unit Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-              placeholder="Enter unit name"
-            />
+            <label className={cls.label}>Unit Name <span className="text-red-500">*</span></label>
+            <input type="text" value={name} onChange={(e) => setName(e.target.value)} className={cls.input} placeholder="Enter unit name" />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Select Floor
-            </label>
-            <select
-              value={floorId}
-              onChange={(e) => setFloorId(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-            >
+            <label className={cls.label}>Select Floor</label>
+            <select value={floorId} onChange={(e) => setFloorId(e.target.value)} className={`w-full ${cls.select}`}>
               <option value="">Select floor</option>
-              {floors.map((f) => (
-                <option key={f.id} value={f.id}>{f.name}</option>
-              ))}
+              {floors.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Unit Type
-            </label>
-            <input
-              type="text"
-              value={unitType}
-              onChange={(e) => setUnitType(e.target.value)}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-              placeholder="e.g. Office, Retail, Storage"
-            />
+            <label className={cls.label}>Unit Type</label>
+            <input type="text" value={unitType} onChange={(e) => setUnitType(e.target.value)} className={cls.input} placeholder="e.g. Office, Retail, Storage" />
           </div>
 
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-gray-700">
-              Additional Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={2}
-              className="w-full rounded-lg border border-gray-300 px-4 py-2.5 text-sm shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-              placeholder="Optional description..."
-            />
+            <label className={cls.label}>Additional Description</label>
+            <textarea value={description} onChange={(e) => setDescription(e.target.value)} rows={2} className={cls.textarea} placeholder="Optional description..." />
           </div>
 
-          <div className="flex justify-end gap-3">
-            <button
-              onClick={() => setModalOpen(false)}
-              className="rounded-lg bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm ring-1 ring-gray-300 hover:bg-gray-50"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              className="rounded-lg bg-primary-600 px-4 py-2 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
-            >
+          <div className="flex justify-end gap-2">
+            <button onClick={() => setModalOpen(false)} className={cls.btnSecondary}>Cancel</button>
+            <button onClick={handleSave} className={cls.btnPrimary}>
               {editingUnit ? "Update" : "Save"}
             </button>
           </div>

@@ -2,6 +2,10 @@ import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { reportApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
+import { cls, STATUS_COLOR, PRIORITY_COLOR } from "../lib/styles";
+import PageHeader from "../components/ui/PageHeader";
+import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
+import { StatusBadge, PriorityBadge, Badge } from "../components/ui/Badge";
 import {
   ArrowLeft, Download, Users, Building2, LayoutGrid, Package,
   Clock, CheckCircle2, AlertCircle, Loader2, TrendingUp, ShieldAlert
@@ -45,20 +49,6 @@ const EMPTY_FILTERS: ActiveFilters = {
 
 // ─── Colors / Labels ──────────────────────────────────────────────────────────
 
-const STATUS_COLORS: Record<string, string> = {
-  OPEN: "bg-blue-50 text-blue-700",
-  IN_PROGRESS: "bg-amber-50 text-amber-700",
-  OVERDUE: "bg-red-50 text-red-700",
-  COMPLETED: "bg-green-50 text-green-700",
-};
-
-const PRIORITY_COLORS: Record<string, string> = {
-  CRITICAL: "bg-red-50 text-red-600",
-  HIGH: "bg-orange-50 text-orange-600",
-  MEDIUM: "bg-yellow-50 text-yellow-600",
-  LOW: "bg-blue-50 text-blue-600",
-};
-
 const STATUS_LABELS: Record<string, string> = {
   OPEN: "Open", IN_PROGRESS: "In Progress", OVERDUE: "Overdue", COMPLETED: "Completed",
 };
@@ -89,20 +79,20 @@ function fmtDate(iso: string | null | undefined): string {
 // ─── SVG Horizontal Bar Chart ─────────────────────────────────────────────────
 
 function HBarChart({ data }: { data: BreakdownSlice[] }) {
-  if (data.length === 0) return <p className="text-sm text-gray-400 py-4 text-center">No data</p>;
+  if (data.length === 0) return <p className="text-[13px] text-gray-400 py-4 text-center">No data</p>;
   const max = Math.max(...data.map((d) => d.count), 1);
   return (
     <div className="space-y-2.5">
       {data.slice(0, 10).map((row, i) => (
         <div key={row.key ?? i} className="flex items-center gap-2">
-          <span className="w-28 shrink-0 text-xs text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
+          <span className="w-28 shrink-0 text-[11px] text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
           <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
             <div
               className="h-3 rounded-full transition-all duration-500"
               style={{ width: `${(row.count / max) * 100}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length], minWidth: row.count > 0 ? 6 : 0 }}
             />
           </div>
-          <span className="w-7 shrink-0 text-right text-xs font-semibold text-gray-700">{row.count}</span>
+          <span className="w-7 shrink-0 text-right text-[11px] font-semibold text-gray-700">{row.count}</span>
         </div>
       ))}
     </div>
@@ -112,9 +102,9 @@ function HBarChart({ data }: { data: BreakdownSlice[] }) {
 // ─── SVG Donut Chart ──────────────────────────────────────────────────────────
 
 function DonutChart({ data }: { data: BreakdownSlice[] }) {
-  if (data.length === 0) return <p className="text-sm text-gray-400 py-4 text-center">No data</p>;
+  if (data.length === 0) return <p className="text-[13px] text-gray-400 py-4 text-center">No data</p>;
   const total = data.reduce((s, d) => s + d.count, 0);
-  if (total === 0) return <p className="text-sm text-gray-400 py-4 text-center">No data</p>;
+  if (total === 0) return <p className="text-[13px] text-gray-400 py-4 text-center">No data</p>;
 
   const R = 70; const r = 42; const CX = 90; const CY = 90;
   let angle = -Math.PI / 2;
@@ -132,7 +122,7 @@ function DonutChart({ data }: { data: BreakdownSlice[] }) {
   });
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
+    <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
       <svg viewBox="0 0 180 180" className="w-36 shrink-0">
         {slices.map((s, i) => <path key={i} d={s.path} fill={s.color} stroke="white" strokeWidth={1.5} />)}
         <text x={CX} y={CY - 4} textAnchor="middle" fontSize={14} fontWeight="bold" fill="#111827">{total}</text>
@@ -140,7 +130,7 @@ function DonutChart({ data }: { data: BreakdownSlice[] }) {
       </svg>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-1">
         {slices.map((s, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-xs">
+          <div key={i} className="flex items-center gap-1.5 text-[11px]">
             <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
             <span className="text-gray-700">{s.label}</span>
             <span className="font-semibold text-gray-900">{s.count}</span>
@@ -204,9 +194,9 @@ function TimelineChart({ data }: { data: TimelinePoint[] }) {
 
 function KpiCard({ label, value, sub, color }: { label: string; value: string | number; sub?: string; color: string }) {
   return (
-    <div className="rounded-xl bg-white p-4 ring-1 ring-gray-950/5 shadow-sm">
-      <p className="text-xs text-gray-500 mb-1">{label}</p>
-      <p className={`text-2xl font-bold ${color}`}>{value}</p>
+    <div className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
+      <p className="text-[11px] text-gray-500 mb-0.5">{label}</p>
+      <p className={`text-xl font-bold ${color}`}>{value}</p>
       {sub && <p className="text-[11px] text-gray-400 mt-0.5">{sub}</p>}
     </div>
   );
@@ -216,8 +206,8 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string | 
 
 function BreakdownCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl bg-white p-5 ring-1 ring-gray-950/5 shadow-sm">
-      <h3 className="text-sm font-semibold text-gray-800 mb-4">{title}</h3>
+    <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200">
+      <h3 className="text-[13px] font-semibold text-gray-800 mb-3">{title}</h3>
       {children}
     </div>
   );
@@ -407,32 +397,32 @@ export default function EntityReportPage() {
     if (entityType === "user") {
       return (
         <div>
-          <p className="text-xl font-bold text-gray-900">{meta.fullName ?? meta.username}</p>
-          <p className="text-sm text-gray-500 mt-0.5">{meta.role?.name} · {meta.department?.name} · <span className={meta.status === "ACTIVE" ? "text-green-600" : "text-gray-400"}>{meta.status}</span></p>
+          <p className="text-lg font-bold text-gray-900">{meta.fullName ?? meta.username}</p>
+          <p className="text-[13px] text-gray-500 mt-0.5">{meta.role?.name} · {meta.department?.name} · <span className={meta.status === "ACTIVE" ? "text-green-600" : "text-gray-400"}>{meta.status}</span></p>
         </div>
       );
     }
     if (entityType === "department") {
       return (
         <div>
-          <p className="text-xl font-bold text-gray-900">{meta.name}</p>
-          <p className="text-sm text-gray-500 mt-0.5">{meta.memberCount} member{meta.memberCount !== 1 ? "s" : ""}</p>
+          <p className="text-lg font-bold text-gray-900">{meta.name}</p>
+          <p className="text-[13px] text-gray-500 mt-0.5">{meta.memberCount} member{meta.memberCount !== 1 ? "s" : ""}</p>
         </div>
       );
     }
     if (entityType === "property") {
       return (
         <div>
-          <p className="text-xl font-bold text-gray-900">{meta.name}</p>
-          <p className="text-sm text-gray-500 mt-0.5">{meta.code} · {meta.city} · {meta.floorCount} floors · {meta.unitCount} units · {meta.assetCount} assets</p>
+          <p className="text-lg font-bold text-gray-900">{meta.name}</p>
+          <p className="text-[13px] text-gray-500 mt-0.5">{meta.code} · {meta.city} · {meta.floorCount} floors · {meta.unitCount} units · {meta.assetCount} assets</p>
         </div>
       );
     }
     if (entityType === "asset") {
       return (
         <div>
-          <p className="text-xl font-bold text-gray-900">{meta.name}</p>
-          <p className="text-sm text-gray-500 mt-0.5">{meta.code} · {meta.category?.name} · {meta.condition} · {meta.property?.name}</p>
+          <p className="text-lg font-bold text-gray-900">{meta.name}</p>
+          <p className="text-[13px] text-gray-500 mt-0.5">{meta.code} · {meta.category?.name} · {meta.condition} · {meta.property?.name}</p>
         </div>
       );
     }
@@ -442,19 +432,18 @@ export default function EntityReportPage() {
   // ── Render ─────────────────────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="flex items-center justify-center py-32">
-        <Loader2 size={28} className="animate-spin text-gray-400" />
-      </div>
-    );
+    return <TableLoading />;
   }
 
   if (error) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-16 text-center">
-        <AlertCircle size={40} className="mx-auto mb-3 text-red-400" />
-        <p className="text-base font-medium text-gray-800">{error}</p>
-        <button onClick={() => navigate("/reports")} className="mt-4 text-sm text-blue-600 hover:underline">← Back to Reports</button>
+        <EmptyState
+          icon={<AlertCircle size={40} />}
+          title={error}
+          subtitle="Could not load the report data."
+        />
+        <button onClick={() => navigate("/reports")} className={`mt-3 ${cls.btnGhost}`}>← Back to Reports</button>
       </div>
     );
   }
@@ -462,12 +451,12 @@ export default function EntityReportPage() {
   const entityTypeLabel = entityType ? entityType.charAt(0).toUpperCase() + entityType.slice(1) : "Entity";
 
   return (
-    <div className="mx-auto max-w-6xl px-4 py-6">
+    <div className="mx-auto max-w-6xl px-4 py-4">
       {/* Header */}
-      <div className="mb-6 flex items-start justify-between gap-4 flex-wrap">
+      <div className="mb-3 flex items-start justify-between gap-3 flex-wrap">
         <div className="flex items-start gap-3">
-          <button onClick={() => navigate("/reports")} className="mt-1 rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-            <ArrowLeft size={16} className="text-gray-500" />
+          <button onClick={() => navigate("/reports")} className={cls.btnIcon}>
+            <ArrowLeft size={16} />
           </button>
           <div className="flex items-start gap-3">
             <div className="mt-0.5 rounded-lg bg-gray-100 p-2">
@@ -479,17 +468,14 @@ export default function EntityReportPage() {
             </div>
           </div>
         </div>
-        <button
-          onClick={exportCsv}
-          className="flex items-center gap-1.5 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors shadow-sm"
-        >
+        <button onClick={exportCsv} className={cls.btnSecondary}>
           <Download size={13} />
           Export CSV
         </button>
       </div>
 
       {/* Filter Bar */}
-      <div className="mb-6 rounded-xl bg-white p-4 ring-1 ring-gray-950/5 shadow-sm">
+      <div className="mb-3 rounded-lg bg-white p-3 ring-1 ring-gray-200">
         <div className="flex flex-wrap items-end gap-3">
           {/* Date range */}
           <div className="flex items-center gap-1.5">
@@ -497,14 +483,14 @@ export default function EntityReportPage() {
               type="date"
               value={activeFilters.dateFrom}
               onChange={(e) => setFilter("dateFrom", e.target.value)}
-              className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+              className={cls.input + " w-auto"}
             />
-            <span className="text-xs text-gray-400">to</span>
+            <span className="text-[11px] text-gray-400">to</span>
             <input
               type="date"
               value={activeFilters.dateTo}
               onChange={(e) => setFilter("dateTo", e.target.value)}
-              className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+              className={cls.input + " w-auto"}
             />
           </div>
 
@@ -513,7 +499,7 @@ export default function EntityReportPage() {
             <select
               value={activeFilters.propertyId}
               onChange={(e) => setFilter("propertyId", e.target.value)}
-              className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+              className={cls.select}
             >
               <option value="">All Properties</option>
               {filterOptions.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
@@ -525,7 +511,7 @@ export default function EntityReportPage() {
             <select
               value={activeFilters.categoryId}
               onChange={(e) => setFilter("categoryId", e.target.value)}
-              className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+              className={cls.select}
             >
               <option value="">All Categories</option>
               {filterOptions.categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
@@ -536,7 +522,7 @@ export default function EntityReportPage() {
           <select
             value={activeFilters.subTaskType}
             onChange={(e) => setFilter("subTaskType", e.target.value)}
-            className="rounded-lg border border-gray-200 px-2.5 py-1.5 text-xs outline-none focus:border-blue-400 focus:ring-1 focus:ring-blue-100"
+            className={cls.select}
           >
             <option value="">All Types</option>
             <option value="REACTIVE">Reactive</option>
@@ -550,7 +536,7 @@ export default function EntityReportPage() {
                 key={s}
                 onClick={() => toggleStatus(s)}
                 className={`rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors ${
-                  activeFilters.status.includes(s) ? STATUS_COLORS[s] + " ring-1 ring-current" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
+                  activeFilters.status.includes(s) ? (STATUS_COLOR[s] ?? "bg-gray-100 text-gray-600") + " ring-1 ring-current" : "bg-gray-100 text-gray-500 hover:bg-gray-200"
                 }`}
               >
                 {STATUS_LABELS[s]}
@@ -559,7 +545,7 @@ export default function EntityReportPage() {
           </div>
 
           {hasActiveFilters && (
-            <button onClick={clearFilters} className="text-xs text-blue-600 hover:underline ml-1">
+            <button onClick={clearFilters} className="text-[11px] text-blue-600 hover:underline ml-1">
               Clear
             </button>
           )}
@@ -573,7 +559,7 @@ export default function EntityReportPage() {
       </div>
 
       {/* Summary KPI cards */}
-      <div className="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
+      <div className="mb-3 grid grid-cols-2 gap-3 sm:grid-cols-4 lg:grid-cols-8">
         <div className="col-span-1"><KpiCard label="Total" value={summary.total} color="text-gray-900" /></div>
         <div className="col-span-1"><KpiCard label="Completed" value={summary.completed} color="text-green-600" /></div>
         <div className="col-span-1"><KpiCard label="In Progress" value={summary.inProgress} color="text-amber-600" /></div>
@@ -585,7 +571,7 @@ export default function EntityReportPage() {
       </div>
 
       {/* Breakdowns */}
-      <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <BreakdownCard title="By Status">
           <DonutChart data={breakdowns.byStatus} />
         </BreakdownCard>
@@ -616,88 +602,84 @@ export default function EntityReportPage() {
       </div>
 
       {/* Timeline */}
-      <div className="mb-6 rounded-xl bg-white p-5 ring-1 ring-gray-950/5 shadow-sm">
-        <h3 className="text-sm font-semibold text-gray-800 mb-4">Tickets Created — Last 12 Months</h3>
+      <div className="mb-3 rounded-lg bg-white p-4 ring-1 ring-gray-200">
+        <h3 className="text-[13px] font-semibold text-gray-800 mb-3">Tickets Created — Last 12 Months</h3>
         <TimelineChart data={breakdowns.byTimeline} />
       </div>
 
       {/* Ticket Table */}
-      <div className="rounded-xl bg-white ring-1 ring-gray-950/5 shadow-sm overflow-hidden">
-        <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-sm font-semibold text-gray-800">
+      <div className="rounded-lg bg-white ring-1 ring-gray-200 overflow-hidden">
+        <div className="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between">
+          <h3 className="text-[13px] font-semibold text-gray-800">
             All Tickets
-            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-xs font-medium text-gray-500">
+            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
               {filteredTickets.length}
             </span>
           </h3>
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className={cls.table}>
             <thead>
               <tr className="border-b border-gray-100 bg-gray-50/50">
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Ticket</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Name</th>
+                <th className={cls.th}>Ticket</th>
+                <th className={cls.th}>Name</th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700 select-none"
+                  className={cls.th + " cursor-pointer hover:text-gray-700 select-none"}
                   onClick={() => toggleSort("status")}
                 >
                   Status {sortCol === "status" && (sortDir === "desc" ? "↓" : "↑")}
                 </th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Priority</th>
-                {entityType !== "asset" && <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Property</th>}
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Assignee</th>
+                <th className={cls.th}>Priority</th>
+                {entityType !== "asset" && <th className={cls.th}>Property</th>}
+                <th className={cls.th}>Assignee</th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700 select-none"
+                  className={cls.th + " cursor-pointer hover:text-gray-700 select-none"}
                   onClick={() => toggleSort("dueDate")}
                 >
                   Due {sortCol === "dueDate" && (sortDir === "desc" ? "↓" : "↑")}
                 </th>
                 <th
-                  className="px-4 py-3 text-left text-xs font-medium text-gray-500 cursor-pointer hover:text-gray-700 select-none"
+                  className={cls.th + " cursor-pointer hover:text-gray-700 select-none"}
                   onClick={() => toggleSort("createdAt")}
                 >
                   Created {sortCol === "createdAt" && (sortDir === "desc" ? "↓" : "↑")}
                 </th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-50">
+            <tbody>
               {pagedTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-12 text-center text-sm text-gray-400">No tickets found</td>
+                  <td colSpan={8} className="py-10 text-center text-[13px] text-gray-400">No tickets found</td>
                 </tr>
               ) : (
                 pagedTickets.map((t) => (
-                  <tr key={t.id} className="hover:bg-gray-50/50 transition-colors">
-                    <td className="px-4 py-3">
-                      <Link to={`/tickets/${t.id}`} className="font-mono text-xs font-semibold text-blue-600 hover:underline">
+                  <tr key={t.id} className={cls.tr}>
+                    <td className={cls.td}>
+                      <Link to={`/tickets/${t.id}`} className={cls.mono + " hover:underline"}>
                         {t.ticketNumber}
                       </Link>
                       {t.isBlocked && (
-                        <span className="ml-1.5 inline-flex items-center rounded-full bg-orange-50 px-1.5 py-0.5 text-[10px] font-medium text-orange-600">Blocked</span>
+                        <Badge color="bg-orange-50 text-orange-600" className="ml-1.5 text-[10px]">Blocked</Badge>
                       )}
                     </td>
-                    <td className="px-4 py-3">
-                      <p className="max-w-[200px] truncate text-gray-800 text-xs">{t.name}</p>
+                    <td className={cls.td}>
+                      <p className="max-w-[200px] truncate text-gray-800 text-[13px]">{t.name}</p>
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLORS[t.status] ?? "bg-gray-100 text-gray-600"}`}>
-                        {STATUS_LABELS[t.status] ?? t.status}
-                      </span>
+                    <td className={cls.td}>
+                      <StatusBadge status={t.status} />
                     </td>
-                    <td className="px-4 py-3">
-                      <span className={`rounded-full px-2 py-0.5 text-[11px] font-medium ${PRIORITY_COLORS[t.priority] ?? "bg-gray-100 text-gray-600"}`}>
-                        {t.priority}
-                      </span>
+                    <td className={cls.td}>
+                      <PriorityBadge priority={t.priority} />
                     </td>
                     {entityType !== "asset" && (
-                      <td className="px-4 py-3 text-xs text-gray-500 max-w-[120px] truncate">{t.property.name}</td>
+                      <td className={cls.td + " text-[13px] text-gray-500 max-w-[120px] truncate"}>{t.property.name}</td>
                     )}
-                    <td className="px-4 py-3 text-xs text-gray-500">
+                    <td className={cls.td + " text-[13px] text-gray-500"}>
                       {t.assignedTo ? (t.assignedTo.fullName ?? t.assignedTo.username) : <span className="text-gray-300">—</span>}
                     </td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{fmtDate(t.dueDate)}</td>
-                    <td className="px-4 py-3 text-xs text-gray-500">{fmtDate(t.createdAt)}</td>
+                    <td className={cls.td + " text-[13px] text-gray-500"}>{fmtDate(t.dueDate)}</td>
+                    <td className={cls.td + " text-[13px] text-gray-500"}>{fmtDate(t.createdAt)}</td>
                   </tr>
                 ))
               )}
@@ -706,29 +688,10 @@ export default function EntityReportPage() {
         </div>
 
         {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-100 px-5 py-3">
-            <p className="text-xs text-gray-500">
-              Page {tablePage} of {totalPages} · {filteredTickets.length} tickets
-            </p>
-            <div className="flex gap-1.5">
-              <button
-                onClick={() => setTablePage((p) => Math.max(1, p - 1))}
-                disabled={tablePage === 1}
-                className="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40"
-              >
-                Prev
-              </button>
-              <button
-                onClick={() => setTablePage((p) => Math.min(totalPages, p + 1))}
-                disabled={tablePage === totalPages}
-                className="rounded px-2.5 py-1 text-xs font-medium text-gray-600 hover:bg-gray-100 disabled:opacity-40"
-              >
-                Next
-              </button>
-            </div>
-          </div>
-        )}
+        <Pagination
+          pagination={{ page: tablePage, totalPages, total: filteredTickets.length, limit: TABLE_PAGE_SIZE }}
+          onPageChange={setTablePage}
+        />
       </div>
     </div>
   );
