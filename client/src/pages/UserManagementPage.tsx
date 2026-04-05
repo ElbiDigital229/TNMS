@@ -739,7 +739,8 @@ export default function UserManagementPage() {
                   const userRole = roles.find((r) => r.name === u.role?.name);
                   if (!userRole) return false;
                   // Show users with a higher role (lower level number) in the same department
-                  return u.departmentId === form.departmentId && userRole.level < selectedRole.level;
+                  const userDeptId = u.departmentId || u.department?.id;
+                  return userDeptId === form.departmentId && userRole.level < selectedRole.level;
                 })
                 .map((u) => (
                   <option key={u.id} value={u.id}>
