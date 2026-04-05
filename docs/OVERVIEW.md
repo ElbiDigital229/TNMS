@@ -88,7 +88,7 @@ AreaGroup (city-level grouping)
 
 ## Deployment
 
-- **Server**: Ubuntu VPS at 3.95.184.156
+- **Server**: Ubuntu VPS at 18.234.126.30
 - **Process Manager**: PM2 (`pm2 restart tnms`)
 - **Deploy**: SSH with key `~/.ssh/tnms_deploy`, then `git pull && npx prisma db push && npx prisma generate && npm run build && pm2 restart tnms`
 - **Mobile APK**: Android WebView wrapper in separate repo (`ElbiDigital229/TNMS-Mobile.git`)

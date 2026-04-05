@@ -19,7 +19,7 @@ import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcrypt";
 
-const LIVE_URL = process.env.LIVE_API_URL || "http://3.95.184.156:5000";
+const LIVE_URL = process.env.LIVE_API_URL || "http://18.234.126.30:5000";
 const LIVE_USER = process.env.LIVE_USERNAME || "admin";
 const LIVE_PASS = process.env.LIVE_PASSWORD || "admin";
 
