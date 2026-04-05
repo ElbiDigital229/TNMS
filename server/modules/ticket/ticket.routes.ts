@@ -15,6 +15,8 @@ ticketRoutes.put("/:id", requirePermission(PERMISSIONS.TICKETS.EDIT), uploadMult
 ticketRoutes.delete("/:id/images", requirePermission(PERMISSIONS.TICKETS.EDIT), ticketController.deleteImage);
 ticketRoutes.patch("/:id/status", requirePermission(PERMISSIONS.TICKETS.UPDATE_STATUS), ticketController.updateStatus);
 ticketRoutes.post("/:id/comments", requirePermission(PERMISSIONS.TICKETS.COMMENT), ticketController.addComment);
+ticketRoutes.put("/:id/comments/:commentId", requirePermission(PERMISSIONS.TICKETS.COMMENT), ticketController.editComment);
+ticketRoutes.delete("/:id/comments/:commentId", requirePermission(PERMISSIONS.TICKETS.COMMENT), ticketController.deleteComment);
 ticketRoutes.patch("/:id/assign", requirePermission(PERMISSIONS.TICKETS.ASSIGN), ticketController.assign);
 ticketRoutes.get("/:id/assignable-users", requirePermission(PERMISSIONS.TICKETS.ASSIGN), ticketController.getAssignableUsers);
 ticketRoutes.get("/:id/related", ticketController.findRelated);

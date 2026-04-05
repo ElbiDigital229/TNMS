@@ -154,6 +154,10 @@ export const ticketApi = {
     api.patch(`/tickets/${id}/status`, { status }),
   addComment: (id: string, content: string) =>
     api.post(`/tickets/${id}/comments`, { content }),
+  editComment: (ticketId: string, commentId: string, content: string) =>
+    api.put(`/tickets/${ticketId}/comments/${commentId}`, { content }),
+  deleteComment: (ticketId: string, commentId: string) =>
+    api.delete(`/tickets/${ticketId}/comments/${commentId}`),
   assign: (id: string, assigneeId: string) =>
     api.patch(`/tickets/${id}/assign`, { assigneeId }),
   getAssignableUsers: (id: string) =>

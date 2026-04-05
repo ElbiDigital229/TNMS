@@ -87,6 +87,7 @@ enum NotificationType {
   USER_STATUS_CHANGED
   USER_NEW_SUBORDINATE
   USER_CREATED_UNDER_YOU
+  TICKET_MENTION
 }
 
 // ─── RBAC Models ───────────────────────────────────────────
@@ -320,13 +321,14 @@ model TicketAsset {
 }
 
 model TicketComment {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   ticketId    String
-  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  ticket      Ticket    @relation(fields: [ticketId], references: [id], onDelete: Cascade)
   content     String
   commenterId String?
-  commenter   User?    @relation("CommentAuthor", fields: [commenterId], references: [id])
-  createdAt   DateTime @default(now())
+  commenter   User?     @relation("CommentAuthor", fields: [commenterId], references: [id])
+  editedAt    DateTime?
+  createdAt   DateTime  @default(now())
 }
 
 model TicketActivity {

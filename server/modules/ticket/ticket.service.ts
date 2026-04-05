@@ -406,9 +406,63 @@ export const ticketService = {
     // Fire-and-forget notification
     if (commenterId) {
       notificationTrigger.onTicketCommentAdded(ticketId, commenterId).catch(console.error);
+
+      // Parse @mentions and notify mentioned users
+      const mentionPattern = /@([A-Za-z\u00C0-\u024F]+(?: [A-Za-z\u00C0-\u024F]+)?)/g;
+      const mentions: string[] = [];
+      let match: RegExpExecArray | null;
+      while ((match = mentionPattern.exec(content)) !== null) {
+        mentions.push(match[1]);
+      }
+
+      if (mentions.length > 0) {
+        const mentionedUsers = await prisma.user.findMany({
+          where: {
+            status: "ACTIVE",
+            OR: mentions.flatMap((name) => [
+              { fullName: { equals: name, mode: "insensitive" as const } },
+              { username: { equals: name, mode: "insensitive" as const } },
+            ]),
+          },
+          select: { id: true },
+        });
+
+        if (mentionedUsers.length > 0) {
+          notificationTrigger
+            .onTicketMention(ticketId, mentionedUsers.map((u) => u.id), commenterId)
+            .catch(console.error);
+        }
+      }
     }
 
     return comment;
+  },
+
+  async editComment(commentId: string, content: string, userId: string) {
+    const comment = await prisma.ticketComment.findUnique({ where: { id: commentId } });
+    if (!comment) throw new Error("Comment not found");
+    if (comment.commenterId !== userId) throw new Error("You can only edit your own comments");
+
+    const ageMs = Date.now() - new Date(comment.createdAt).getTime();
+    if (ageMs > 15 * 60 * 1000) throw new Error("Comments can only be edited within 15 minutes");
+
+    return prisma.ticketComment.update({
+      where: { id: commentId },
+      data: { content, editedAt: new Date() },
+      include: { commenter: { select: { id: true, fullName: true, username: true } } },
+    });
+  },
+
+  async deleteComment(commentId: string, userId: string) {
+    const comment = await prisma.ticketComment.findUnique({ where: { id: commentId } });
+    if (!comment) throw new Error("Comment not found");
+    if (comment.commenterId !== userId) throw new Error("You can only delete your own comments");
+
+    const ageMs = Date.now() - new Date(comment.createdAt).getTime();
+    if (ageMs > 15 * 60 * 1000) throw new Error("Comments can only be deleted within 15 minutes");
+
+    await prisma.ticketComment.delete({ where: { id: commentId } });
+    return { success: true };
   },
 
   async assign(ticketId: string, assigneeId: string, assignerId: string) {

@@ -460,6 +460,45 @@ export const notificationTrigger = {
     });
   },
 
+  /** Mentioned in a ticket comment */
+  async onTicketMention(
+    ticketId: string,
+    mentionedUserIds: string[],
+    commenterUserId: string
+  ) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: {
+        ticketNumber: true,
+        name: true,
+        property: { select: { name: true } },
+      },
+    });
+    if (!ticket) return;
+
+    const commenterName = await getUserName(commenterUserId);
+
+    // Exclude the commenter from receiving a mention notification
+    const recipients = mentionedUserIds.filter((id) => id !== commenterUserId);
+    if (recipients.length === 0) return;
+
+    await notificationService.createMany(
+      recipients.map((userId) => ({
+        userId,
+        type: "TICKET_MENTION" as NotificationType,
+        title: "You Were Mentioned",
+        message: `${commenterName} mentioned you in a comment on ${ticket.ticketNumber} — "${ticket.name}"`,
+        linkUrl: `/tickets/${ticketId}`,
+        metadata: {
+          ticketId,
+          ticketNumber: ticket.ticketNumber,
+          commenterName,
+          propertyName: ticket.property.name,
+        },
+      }))
+    );
+  },
+
   // ─── ASSET EVENTS ───────────────────────────────────────
 
   /** #12 Asset condition marked POOR */

@@ -11,6 +11,7 @@ import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
 import SlaBar from "../components/ticket/SlaBar";
 import StatusTimeline from "../components/ticket/StatusTimeline";
 import RelatedTickets from "../components/ticket/RelatedTickets";
+import MentionInput from "../components/ticket/MentionInput";
 import {
   TASK_TYPE_LABELS,
   SUB_TASK_TYPE_LABELS,
@@ -74,6 +75,29 @@ const DAY_NAMES: Record<string, string> = {
   "7": "Sunday",
 };
 
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  if (diffSec < 60) return "just now";
+  const diffMin = Math.floor(diffSec / 60);
+  if (diffMin < 60) return `${diffMin}m ago`;
+  const diffHr = Math.floor(diffMin / 60);
+  if (diffHr < 24) return `${diffHr}h ago`;
+  const diffDay = Math.floor(diffHr / 24);
+  return `${diffDay}d ago`;
+}
+
+function isWithin15Min(dateStr: string): boolean {
+  return Date.now() - new Date(dateStr).getTime() < 15 * 60 * 1000;
+}
+
+function getInitials(name: string | undefined): string {
+  if (!name) return "?";
+  return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
 export default function TicketDetailPage() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -83,6 +107,8 @@ export default function TicketDetailPage() {
   const [loading, setLoading] = useState(true);
   const [comment, setComment] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
+  const [editingCommentId, setEditingCommentId] = useState<string | null>(null);
+  const [editingCommentContent, setEditingCommentContent] = useState("");
   const [activeTab, setActiveTab] = useState<"comments" | "activity">(
     "comments"
   );
@@ -96,6 +122,16 @@ export default function TicketDetailPage() {
   const commentInputRef = useRef<HTMLInputElement>(null);
   const headerSentinelRef = useRef<HTMLDivElement>(null);
   const [showStickyHeader, setShowStickyHeader] = useState(false);
+  const [mentionableUsers, setMentionableUsers] = useState<any[]>([]);
+
+  // Fetch mentionable users once on mount
+  useEffect(() => {
+    if (!id) return;
+    ticketApi
+      .getAssignableUsers(id)
+      .then((res) => setMentionableUsers(res.data.data))
+      .catch(() => {}); // silently fail — mentions just won't autocomplete
+  }, [id]);
 
   // Sticky header — observe when the title area scrolls out of view
   useEffect(() => {
@@ -175,6 +211,42 @@ export default function TicketDetailPage() {
       toast.error("Failed to add comment");
     } finally {
       setSendingComment(false);
+    }
+  };
+
+  const handleEditComment = async (commentId: string) => {
+    if (!editingCommentContent.trim()) return;
+    const prevTicket = { ...ticket, comments: [...(ticket.comments || [])] };
+    setTicket((prev: any) => ({
+      ...prev,
+      comments: prev.comments.map((c: any) =>
+        c.id === commentId ? { ...c, content: editingCommentContent.trim(), editedAt: new Date().toISOString() } : c
+      ),
+    }));
+    setEditingCommentId(null);
+    setEditingCommentContent("");
+    try {
+      await ticketApi.editComment(id!, commentId, editingCommentContent.trim());
+      fetchTicket();
+    } catch (err: any) {
+      setTicket(prevTicket);
+      toast.error(err.response?.data?.error || "Failed to edit comment");
+    }
+  };
+
+  const handleDeleteComment = async (commentId: string) => {
+    const prevTicket = { ...ticket, comments: [...(ticket.comments || [])] };
+    setTicket((prev: any) => ({
+      ...prev,
+      comments: prev.comments.filter((c: any) => c.id !== commentId),
+    }));
+    toast.success("Comment deleted");
+    try {
+      await ticketApi.deleteComment(id!, commentId);
+      fetchTicket();
+    } catch (err: any) {
+      setTicket(prevTicket);
+      toast.error(err.response?.data?.error || "Failed to delete comment");
     }
   };
 
@@ -633,19 +705,12 @@ export default function TicketDetailPage() {
                   {/* Add comment */}
                   {hasPermission(PERMISSIONS.TICKETS.COMMENT) && (
                     <div className="mb-4 flex gap-2">
-                      <input
-                        ref={commentInputRef}
-                        type="text"
+                      <MentionInput
                         value={comment}
-                        onChange={(e) => setComment(e.target.value)}
-                        placeholder="Add a comment..."
-                        className="flex-1 rounded-lg border border-gray-300 px-3 py-1.5 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-4 focus:ring-primary-100"
-                        onKeyDown={(e) => {
-                          if (e.key === "Enter" && !e.shiftKey) {
-                            e.preventDefault();
-                            handleAddComment();
-                          }
-                        }}
+                        onChange={setComment}
+                        onSubmit={handleAddComment}
+                        placeholder="Add a comment... (type @ to mention)"
+                        users={mentionableUsers}
                       />
                       <button
                         onClick={handleAddComment}
@@ -662,18 +727,103 @@ export default function TicketDetailPage() {
                     <p className="py-2 text-center text-sm text-gray-400">No comments yet</p>
                   ) : (
                     <div className="space-y-3">
-                      {ticket.comments?.map((c: any) => (
-                        <div
-                          key={c.id}
-                          className="rounded-lg bg-gray-50/80 ring-1 ring-gray-100 p-3"
-                        >
-                          <div className="flex items-center justify-between mb-1">
-                            <p className="text-xs font-medium text-gray-700">{c.commenter?.fullName || c.commenter?.username || "System"}</p>
-                            <p className="text-xs text-gray-400">{new Date(c.createdAt).toLocaleString()}</p>
+                      {ticket.comments?.map((c: any) => {
+                        const commenterName = c.commenter?.fullName || c.commenter?.username || "System";
+                        const isOwn = user && c.commenter?.id === user.id;
+                        const canModify = isOwn && isWithin15Min(c.createdAt);
+                        const isEditing = editingCommentId === c.id;
+
+                        return (
+                          <div
+                            key={c.id}
+                            className="group rounded-lg bg-gray-50/80 ring-1 ring-gray-100 p-3"
+                          >
+                            <div className="flex items-start gap-2.5">
+                              {/* Initials circle */}
+                              <div className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-primary-50 text-[11px] font-semibold text-primary-600">
+                                {getInitials(commenterName)}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                {/* Header row */}
+                                <div className="flex items-center gap-2">
+                                  <span className="text-[13px] font-medium text-gray-800">{commenterName}</span>
+                                  <span
+                                    className="text-[11px] text-gray-400"
+                                    title={new Date(c.createdAt).toLocaleString()}
+                                  >
+                                    {relativeTime(c.createdAt)}
+                                  </span>
+                                  {c.editedAt && (
+                                    <span
+                                      className="text-[11px] italic text-gray-400"
+                                      title={`Edited ${new Date(c.editedAt).toLocaleString()}`}
+                                    >
+                                      (edited)
+                                    </span>
+                                  )}
+                                  {/* Edit / Delete actions */}
+                                  {canModify && !isEditing && (
+                                    <span className="ml-auto flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                      <button
+                                        onClick={() => { setEditingCommentId(c.id); setEditingCommentContent(c.content); }}
+                                        className="rounded p-0.5 text-gray-400 hover:bg-gray-200 hover:text-gray-600"
+                                        title="Edit comment"
+                                      >
+                                        <Pencil size={12} />
+                                      </button>
+                                      <button
+                                        onClick={() => handleDeleteComment(c.id)}
+                                        className="rounded p-0.5 text-gray-400 hover:bg-red-50 hover:text-red-500"
+                                        title="Delete comment"
+                                      >
+                                        <Trash2 size={12} />
+                                      </button>
+                                    </span>
+                                  )}
+                                </div>
+                                {/* Content or edit input */}
+                                {isEditing ? (
+                                  <div className="mt-1.5 flex gap-2">
+                                    <input
+                                      type="text"
+                                      value={editingCommentContent}
+                                      onChange={(e) => setEditingCommentContent(e.target.value)}
+                                      className="flex-1 rounded-md border border-gray-300 px-2.5 py-1 text-[13px] shadow-sm focus:border-primary-400 focus:outline-none focus:ring-2 focus:ring-primary-100"
+                                      onKeyDown={(e) => {
+                                        if (e.key === "Enter") handleEditComment(c.id);
+                                        if (e.key === "Escape") { setEditingCommentId(null); setEditingCommentContent(""); }
+                                      }}
+                                      autoFocus
+                                    />
+                                    <button
+                                      onClick={() => handleEditComment(c.id)}
+                                      className="rounded-md bg-primary-600 px-2.5 py-1 text-[12px] font-medium text-white hover:bg-primary-700"
+                                    >
+                                      Save
+                                    </button>
+                                    <button
+                                      onClick={() => { setEditingCommentId(null); setEditingCommentContent(""); }}
+                                      className="rounded-md px-2.5 py-1 text-[12px] font-medium text-gray-500 hover:bg-gray-100"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <p className="mt-0.5 text-[13px] text-gray-700">
+                                    {c.content.split(/(@[A-Za-z\u00C0-\u024F]+(?: [A-Za-z\u00C0-\u024F]+)?)/g).map((part: string, i: number) =>
+                                      part.startsWith("@") ? (
+                                        <span key={i} className="text-primary-600 font-medium">{part}</span>
+                                      ) : (
+                                        <span key={i}>{part}</span>
+                                      )
+                                    )}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <p className="text-sm">{c.content}</p>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   )}
                 </div>

@@ -231,6 +231,29 @@ export const ticketController = {
     }
   },
 
+  async editComment(req: Request, res: Response) {
+    try {
+      const { content } = req.body;
+      if (!content) return sendError(res, "Comment content is required", 400);
+
+      const comment = await ticketService.editComment(req.params.commentId, content, req.user!.id);
+      sendSuccess(res, comment, "Comment updated");
+    } catch (error: any) {
+      const status = error.message.includes("not found") ? 404 : error.message.includes("only") ? 403 : 400;
+      sendError(res, error.message, status);
+    }
+  },
+
+  async deleteComment(req: Request, res: Response) {
+    try {
+      await ticketService.deleteComment(req.params.commentId, req.user!.id);
+      sendSuccess(res, null, "Comment deleted");
+    } catch (error: any) {
+      const status = error.message.includes("not found") ? 404 : error.message.includes("only") ? 403 : 400;
+      sendError(res, error.message, status);
+    }
+  },
+
   async assign(req: Request, res: Response) {
     try {
       const { assigneeId } = req.body;
