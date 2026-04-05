@@ -8,7 +8,7 @@ import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable
 import { StatusBadge, PriorityBadge, Badge } from "../components/ui/Badge";
 import {
   ArrowLeft, Download, Users, Building2, LayoutGrid, Package,
-  Clock, CheckCircle2, AlertCircle, Loader2, TrendingUp, ShieldAlert
+  Clock, CheckCircle2, AlertCircle, Loader2, TrendingUp, ShieldAlert, X
 } from "lucide-react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -39,6 +39,8 @@ interface ActiveFilters {
   status: string[];
   subTaskType: string;
 }
+
+interface ChartFilter { type: string; label: string; value: string | null; }
 
 interface BreakdownSlice { key: string | null; label: string; count: number; }
 interface TimelinePoint { period: string; label: string; count: number; }
@@ -78,17 +80,23 @@ function fmtDate(iso: string | null | undefined): string {
 
 // ─── SVG Horizontal Bar Chart ─────────────────────────────────────────────────
 
-function HBarChart({ data }: { data: BreakdownSlice[] }) {
+function HBarChart({ data, onSegmentClick }: { data: BreakdownSlice[]; onSegmentClick?: (slice: BreakdownSlice) => void }) {
   if (data.length === 0) return <p className="text-[13px] text-gray-400 py-4 text-center">No data</p>;
   const max = Math.max(...data.map((d) => d.count), 1);
+  const clickable = !!onSegmentClick;
   return (
     <div className="space-y-2.5">
       {data.slice(0, 10).map((row, i) => (
-        <div key={row.key ?? i} className="flex items-center gap-2">
+        <div
+          key={row.key ?? i}
+          className={`flex items-center gap-2 group${clickable ? " cursor-pointer" : ""}`}
+          onClick={clickable ? () => onSegmentClick(row) : undefined}
+          title={clickable ? `Click to filter by ${row.label}` : undefined}
+        >
           <span className="w-28 shrink-0 text-[11px] text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
           <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
             <div
-              className="h-3 rounded-full transition-all duration-500"
+              className={`h-3 rounded-full transition-all duration-500${clickable ? " group-hover:brightness-110" : ""}`}
               style={{ width: `${(row.count / max) * 100}%`, backgroundColor: CHART_COLORS[i % CHART_COLORS.length], minWidth: row.count > 0 ? 6 : 0 }}
             />
           </div>
@@ -101,13 +109,14 @@ function HBarChart({ data }: { data: BreakdownSlice[] }) {
 
 // ─── SVG Donut Chart ──────────────────────────────────────────────────────────
 
-function DonutChart({ data }: { data: BreakdownSlice[] }) {
+function DonutChart({ data, onSegmentClick }: { data: BreakdownSlice[]; onSegmentClick?: (slice: BreakdownSlice) => void }) {
   if (data.length === 0) return <p className="text-[13px] text-gray-400 py-4 text-center">No data</p>;
   const total = data.reduce((s, d) => s + d.count, 0);
   if (total === 0) return <p className="text-[13px] text-gray-400 py-4 text-center">No data</p>;
 
   const R = 70; const r = 42; const CX = 90; const CY = 90;
   let angle = -Math.PI / 2;
+  const clickable = !!onSegmentClick;
 
   const slices = data.map((row, i) => {
     const sweep = (row.count / total) * 2 * Math.PI;
@@ -118,19 +127,35 @@ function DonutChart({ data }: { data: BreakdownSlice[] }) {
     const x2i = CX + r * Math.cos(angle); const y2i = CY + r * Math.sin(angle);
     const large = sweep > Math.PI ? 1 : 0;
     const path = `M ${x1i} ${y1i} L ${x1o} ${y1o} A ${R} ${R} 0 ${large} 1 ${x2o} ${y2o} L ${x2i} ${y2i} A ${r} ${r} 0 ${large} 0 ${x1i} ${y1i} Z`;
-    return { path, color: CHART_COLORS[i % CHART_COLORS.length], label: row.label, count: row.count, pct: Math.round((row.count / total) * 100) };
+    return { path, color: CHART_COLORS[i % CHART_COLORS.length], label: row.label, count: row.count, pct: Math.round((row.count / total) * 100), key: row.key };
   });
 
   return (
     <div className="flex flex-col items-center gap-3 sm:flex-row sm:items-start">
       <svg viewBox="0 0 180 180" className="w-36 shrink-0">
-        {slices.map((s, i) => <path key={i} d={s.path} fill={s.color} stroke="white" strokeWidth={1.5} />)}
+        {slices.map((s, i) => (
+          <path
+            key={i}
+            d={s.path}
+            fill={s.color}
+            stroke="white"
+            strokeWidth={1.5}
+            className={clickable ? "cursor-pointer transition-opacity hover:opacity-75" : ""}
+            onClick={clickable ? () => onSegmentClick({ key: s.key, label: s.label, count: s.count }) : undefined}
+          >
+            <title>{`${s.label}: ${s.count} (${s.pct}%)`}</title>
+          </path>
+        ))}
         <text x={CX} y={CY - 4} textAnchor="middle" fontSize={14} fontWeight="bold" fill="#111827">{total}</text>
         <text x={CX} y={CY + 12} textAnchor="middle" fontSize={9} fill="#9ca3af">total</text>
       </svg>
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 pt-1">
         {slices.map((s, i) => (
-          <div key={i} className="flex items-center gap-1.5 text-[11px]">
+          <div
+            key={i}
+            className={`flex items-center gap-1.5 text-[11px]${clickable ? " cursor-pointer hover:opacity-70 transition-opacity" : ""}`}
+            onClick={clickable ? () => onSegmentClick({ key: s.key, label: s.label, count: s.count }) : undefined}
+          >
             <span className="h-2.5 w-2.5 rounded-sm shrink-0" style={{ background: s.color }} />
             <span className="text-gray-700">{s.label}</span>
             <span className="font-semibold text-gray-900">{s.count}</span>
@@ -261,6 +286,7 @@ export default function EntityReportPage() {
   const [tablePage, setTablePage] = useState(1);
   const [sortCol, setSortCol] = useState<"createdAt" | "dueDate" | "status">("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
+  const [chartFilter, setChartFilter] = useState<ChartFilter | null>(null);
 
   const TABLE_PAGE_SIZE = 25;
 
@@ -295,8 +321,19 @@ export default function EntityReportPage() {
     if (activeFilters.categoryId) r = r.filter((t) => t.category?.id === activeFilters.categoryId);
     if (activeFilters.status.length) r = r.filter((t) => activeFilters.status.includes(t.status));
     if (activeFilters.subTaskType) r = r.filter((t) => t.subTaskType === activeFilters.subTaskType);
+    // Chart drill-down filter
+    if (chartFilter) {
+      switch (chartFilter.type) {
+        case "status": r = r.filter((t) => t.status === chartFilter.value); break;
+        case "property": r = r.filter((t) => t.property.id === chartFilter.value); break;
+        case "category": r = r.filter((t) => (t.category?.id ?? null) === chartFilter.value); break;
+        case "assignee": r = r.filter((t) => (t.assignedTo?.id ?? null) === chartFilter.value); break;
+        case "unit": r = r.filter((t) => (t.unit?.id ?? null) === chartFilter.value); break;
+        case "priority": r = r.filter((t) => t.priority === chartFilter.value); break;
+      }
+    }
     return r;
-  }, [rawTickets, activeFilters]);
+  }, [rawTickets, activeFilters, chartFilter]);
 
   // ── Summary ────────────────────────────────────────────────────────────────
   const summary = useMemo(() => {
@@ -370,8 +407,14 @@ export default function EntityReportPage() {
     setActiveFilters((f) => ({ ...f, [key]: val }));
     setTablePage(1);
   };
-  const clearFilters = () => { setActiveFilters(EMPTY_FILTERS); setTablePage(1); };
-  const hasActiveFilters = Object.values(activeFilters).some((v) => (Array.isArray(v) ? v.length > 0 : v !== ""));
+  const clearFilters = () => { setActiveFilters(EMPTY_FILTERS); setChartFilter(null); setTablePage(1); };
+  const hasActiveFilters = Object.values(activeFilters).some((v) => (Array.isArray(v) ? v.length > 0 : v !== "")) || chartFilter !== null;
+
+  const applyChartFilter = (type: string, slice: BreakdownSlice) => {
+    setChartFilter({ type, label: slice.label, value: slice.key });
+    setTablePage(1);
+  };
+  const clearChartFilter = () => { setChartFilter(null); setTablePage(1); };
 
   // ── CSV export ─────────────────────────────────────────────────────────────
   const exportCsv = () => {
@@ -573,31 +616,37 @@ export default function EntityReportPage() {
       {/* Breakdowns */}
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <BreakdownCard title="By Status">
-          <DonutChart data={breakdowns.byStatus} />
+          <DonutChart data={breakdowns.byStatus} onSegmentClick={(s) => applyChartFilter("status", s)} />
+          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
         </BreakdownCard>
 
         {entityType !== "asset" && breakdowns.byProperty.length > 0 && (
           <BreakdownCard title="By Property">
-            <HBarChart data={breakdowns.byProperty} />
+            <HBarChart data={breakdowns.byProperty} onSegmentClick={(s) => applyChartFilter("property", s)} />
+            <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
           </BreakdownCard>
         )}
 
         <BreakdownCard title="By Category">
-          <HBarChart data={breakdowns.byCategory} />
+          <HBarChart data={breakdowns.byCategory} onSegmentClick={(s) => applyChartFilter("category", s)} />
+          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
         </BreakdownCard>
 
         <BreakdownCard title="By Assignee">
-          <HBarChart data={breakdowns.byAssignee} />
+          <HBarChart data={breakdowns.byAssignee} onSegmentClick={(s) => applyChartFilter("assignee", s)} />
+          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
         </BreakdownCard>
 
         {entityType === "property" && breakdowns.byUnit.filter(s => s.key !== null).length > 0 && (
           <BreakdownCard title="By Unit">
-            <HBarChart data={breakdowns.byUnit.filter(s => s.key !== null)} />
+            <HBarChart data={breakdowns.byUnit.filter(s => s.key !== null)} onSegmentClick={(s) => applyChartFilter("unit", s)} />
+            <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
           </BreakdownCard>
         )}
 
         <BreakdownCard title="By Priority">
-          <HBarChart data={breakdowns.byPriority} />
+          <HBarChart data={breakdowns.byPriority} onSegmentClick={(s) => applyChartFilter("priority", s)} />
+          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
         </BreakdownCard>
       </div>
 
@@ -610,12 +659,22 @@ export default function EntityReportPage() {
       {/* Ticket Table */}
       <div className="rounded-lg bg-white ring-1 ring-gray-200 overflow-hidden">
         <div className="px-3 py-2.5 border-b border-gray-100 flex items-center justify-between">
-          <h3 className="text-[13px] font-semibold text-gray-800">
-            All Tickets
-            <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
-              {filteredTickets.length}
-            </span>
-          </h3>
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="text-[13px] font-semibold text-gray-800">
+              All Tickets
+              <span className="ml-2 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-500">
+                {filteredTickets.length}
+              </span>
+            </h3>
+            {chartFilter && (
+              <span className="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-medium text-blue-700 ring-1 ring-blue-200">
+                Filtered by: {chartFilter.type.charAt(0).toUpperCase() + chartFilter.type.slice(1)} = {chartFilter.label}
+                <button onClick={clearChartFilter} className="ml-0.5 rounded-full p-0.5 hover:bg-blue-100 transition-colors" title="Remove filter">
+                  <X size={10} />
+                </button>
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="overflow-x-auto">
@@ -654,9 +713,9 @@ export default function EntityReportPage() {
                 </tr>
               ) : (
                 pagedTickets.map((t) => (
-                  <tr key={t.id} className={cls.tr}>
+                  <tr key={t.id} className={cls.trClick} onClick={() => navigate(`/tickets/${t.id}`)}>
                     <td className={cls.td}>
-                      <Link to={`/tickets/${t.id}`} className={cls.mono + " hover:underline"}>
+                      <Link to={`/tickets/${t.id}`} className={cls.mono + " hover:underline"} onClick={(e) => e.stopPropagation()}>
                         {t.ticketNumber}
                       </Link>
                       {t.isBlocked && (

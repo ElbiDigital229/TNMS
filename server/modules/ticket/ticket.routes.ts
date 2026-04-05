@@ -16,5 +16,6 @@ ticketRoutes.patch("/:id/status", requirePermission(PERMISSIONS.TICKETS.UPDATE_S
 ticketRoutes.post("/:id/comments", requirePermission(PERMISSIONS.TICKETS.COMMENT), ticketController.addComment);
 ticketRoutes.patch("/:id/assign", requirePermission(PERMISSIONS.TICKETS.ASSIGN), ticketController.assign);
 ticketRoutes.get("/:id/assignable-users", requirePermission(PERMISSIONS.TICKETS.ASSIGN), ticketController.getAssignableUsers);
+ticketRoutes.get("/:id/related", ticketController.findRelated);
 ticketRoutes.post("/:id/block", requireAnyPermission(PERMISSIONS.TICKETS.UPDATE_STATUS, PERMISSIONS.TICKETS.VIEW_ASSIGNED), ticketController.blockTicket);
 ticketRoutes.post("/:id/unblock", requireAnyPermission(PERMISSIONS.TICKETS.UPDATE_STATUS, PERMISSIONS.TICKETS.VIEW_ASSIGNED), ticketController.unblockTicket);

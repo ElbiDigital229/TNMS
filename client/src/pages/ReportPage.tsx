@@ -1,10 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import { userApi, departmentApi, propertyApi, assetApi } from "../lib/api";
 import { cls } from "../lib/styles";
 import PageHeader from "../components/ui/PageHeader";
 import { TableLoading } from "../components/ui/DataTable";
-import { Users, Building2, LayoutGrid, Package, Search, ChevronRight } from "lucide-react";
+import { Users, Building2, LayoutGrid, Package, Search, ChevronRight, Settings2 } from "lucide-react";
 
 // Minimum chars before fetching for large collections
 const MIN_SEARCH_CHARS: Record<string, number> = { asset: 2, user: 0, property: 0, department: 0 };
@@ -127,10 +127,16 @@ export default function ReportPage() {
 
   return (
     <div className="mx-auto max-w-3xl px-4 py-6">
-      <PageHeader
-        title="Reports"
-        subtitle="Select an entity to generate a full report automatically."
-      />
+      <div className="flex items-center justify-between mb-1">
+        <PageHeader
+          title="Reports"
+          subtitle="Select an entity to generate a full report automatically."
+        />
+        <Link to="/reports/builder" className={cls.btnSecondary}>
+          <Settings2 size={15} />
+          Report Builder
+        </Link>
+      </div>
 
       {/* Entity type cards */}
       <div className="grid grid-cols-2 gap-3 mb-3 sm:grid-cols-4">

@@ -158,6 +158,7 @@ export const ticketApi = {
     api.post(`/tickets/${id}/block`, data),
   unblock: (id: string, resolvedNote?: string) =>
     api.post(`/tickets/${id}/unblock`, { resolvedNote }),
+  getRelated: (id: string) => api.get(`/tickets/${id}/related`),
 };
 
 // Ticket Category API

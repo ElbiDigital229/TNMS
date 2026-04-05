@@ -241,6 +241,31 @@ export const ticketController = {
     }
   },
 
+  async findRelated(req: Request, res: Response) {
+    try {
+      const ticket = await ticketService.findById(req.params.id);
+      if (!ticket) return sendError(res, "Ticket not found", 404);
+
+      const u = req.user!;
+      const hasViewAll = u.isSuperAdmin || u.permissions.includes(PERMISSIONS.TICKETS.VIEW_ALL);
+      const hasViewAssigned = u.permissions.includes(PERMISSIONS.TICKETS.VIEW_ASSIGNED);
+      const isAssignee = ticket.assignedToId === u.id;
+      const isCreator = ticket.createdById === u.id;
+      const isActiveBlocker = (ticket as any).blocks?.some(
+        (b: any) => b.blockingUserId === u.id && !b.resolvedAt
+      );
+
+      if (!hasViewAll && !(hasViewAssigned && (isAssignee || isCreator)) && !isActiveBlocker) {
+        return sendError(res, "Access denied", 403);
+      }
+
+      const related = await ticketService.findRelated(req.params.id);
+      sendSuccess(res, related);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
   async blockTicket(req: Request, res: Response) {
     try {
       const { blockingUserId, departmentId, reason } = req.body;

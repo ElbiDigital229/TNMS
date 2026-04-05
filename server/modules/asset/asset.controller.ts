@@ -5,12 +5,15 @@ import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 export const assetController = {
   async findAll(req: Request, res: Response) {
     try {
-      const { page, limit, search, status } = req.query;
+      const { page, limit, search, status, condition, categoryId, propertyId } = req.query;
       const result = await assetService.findAll({
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
         search: search as string,
         status: status as string,
+        condition: condition as string,
+        categoryId: categoryId as string,
+        propertyId: propertyId as string,
         userId: (req as any).user?.id,
         allProperties: (req as any).user?.allProperties,
       });

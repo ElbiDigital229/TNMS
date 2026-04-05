@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
-import { assetApi } from "../lib/api";
+import { assetApi, assetCategoryApi, propertyApi, floorApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -8,7 +8,8 @@ import { cls } from "../lib/styles";
 import { ActiveBadge, ConditionBadge } from "../components/ui/Badge";
 import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
 import PageHeader from "../components/ui/PageHeader";
-import { Search, Eye, Package } from "lucide-react";
+import Modal from "../components/ui/Modal";
+import { Search, Eye, Package, Plus } from "lucide-react";
 
 interface Asset {
   id: string;
@@ -21,6 +22,17 @@ interface Asset {
   property: { id: string; name: string; code: string };
 }
 
+interface SelectOption {
+  id: string;
+  name: string;
+}
+
+interface Floor {
+  id: string;
+  name: string;
+  status: string;
+}
+
 export default function AssetsListPage() {
   const toast = useToast();
   const { hasPermission } = useAuth();
@@ -29,6 +41,9 @@ export default function AssetsListPage() {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [conditionFilter, setConditionFilter] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("");
+  const [propertyFilter, setPropertyFilter] = useState("");
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({
     total: 0,
@@ -37,12 +52,53 @@ export default function AssetsListPage() {
     limit: 10,
   });
 
+  // Dropdown data
+  const [categories, setCategories] = useState<SelectOption[]>([]);
+  const [properties, setProperties] = useState<SelectOption[]>([]);
+
+  // Create modal state
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [createLoading, setCreateLoading] = useState(false);
+  const [createForm, setCreateForm] = useState({
+    propertyId: "",
+    floorId: "",
+    name: "",
+    categoryId: "",
+    condition: "GOOD",
+    serialNumber: "",
+    purchaseDate: "",
+  });
+  const [createImage, setCreateImage] = useState<File | null>(null);
+  const [modalFloors, setModalFloors] = useState<Floor[]>([]);
+  const [floorsLoading, setFloorsLoading] = useState(false);
+
+  // Fetch filter dropdown data on mount
+  useEffect(() => {
+    const loadFilterData = async () => {
+      try {
+        const [catRes, propRes] = await Promise.all([
+          assetCategoryApi.list(),
+          propertyApi.list({ limit: 500 }),
+        ]);
+        setCategories(catRes.data.data || []);
+        const propData = propRes.data.data;
+        setProperties(Array.isArray(propData) ? propData : propData.data || []);
+      } catch {
+        // Silently fail - filters just won't be populated
+      }
+    };
+    loadFilterData();
+  }, []);
+
   const fetchAssets = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, string | number> = { page, limit: 10 };
       if (search) params.search = search;
       if (statusFilter) params.status = statusFilter;
+      if (conditionFilter) params.condition = conditionFilter;
+      if (categoryFilter) params.categoryId = categoryFilter;
+      if (propertyFilter) params.propertyId = propertyFilter;
 
       const res = await assetApi.listAll(params);
       setAssets(res.data.data.data);
@@ -52,7 +108,7 @@ export default function AssetsListPage() {
     } finally {
       setLoading(false);
     }
-  }, [page, search, statusFilter]);
+  }, [page, search, statusFilter, conditionFilter, categoryFilter, propertyFilter]);
 
   useEffect(() => {
     fetchAssets();
@@ -82,16 +138,83 @@ export default function AssetsListPage() {
     }
   };
 
+  // Fetch floors when property changes in the create modal
+  useEffect(() => {
+    if (!createForm.propertyId) {
+      setModalFloors([]);
+      return;
+    }
+    const loadFloors = async () => {
+      setFloorsLoading(true);
+      try {
+        const res = await floorApi.list(createForm.propertyId);
+        const floors: Floor[] = res.data.data || [];
+        setModalFloors(floors.filter((f) => f.status === "ACTIVE"));
+      } catch {
+        setModalFloors([]);
+      } finally {
+        setFloorsLoading(false);
+      }
+    };
+    loadFloors();
+  }, [createForm.propertyId]);
+
+  const handleCreateFormChange = (field: string, value: string) => {
+    setCreateForm((prev) => {
+      const next = { ...prev, [field]: value };
+      // Reset floor when property changes
+      if (field === "propertyId") next.floorId = "";
+      return next;
+    });
+  };
+
+  const handleCreateSubmit = async () => {
+    if (!createForm.propertyId || !createForm.floorId || !createForm.name || !createForm.categoryId) {
+      toast.error("Property, floor, name, and category are required");
+      return;
+    }
+
+    setCreateLoading(true);
+    try {
+      const fd = new FormData();
+      fd.append("name", createForm.name);
+      fd.append("categoryId", createForm.categoryId);
+      fd.append("floorId", createForm.floorId);
+      fd.append("condition", createForm.condition);
+      if (createForm.serialNumber) fd.append("serialNumber", createForm.serialNumber);
+      if (createForm.purchaseDate) fd.append("purchaseDate", createForm.purchaseDate);
+      if (createImage) fd.append("image", createImage);
+
+      await assetApi.create(createForm.propertyId, fd);
+      toast.success("Asset created");
+      setShowCreateModal(false);
+      setCreateForm({ propertyId: "", floorId: "", name: "", categoryId: "", condition: "GOOD", serialNumber: "", purchaseDate: "" });
+      setCreateImage(null);
+      fetchAssets();
+    } catch {
+      toast.error("Failed to create asset");
+    } finally {
+      setCreateLoading(false);
+    }
+  };
+
   return (
     <div>
       <PageHeader
         title="All Assets"
         subtitle="View all assets across all properties."
+        actions={
+          hasPermission(PERMISSIONS.ASSETS.CREATE) && (
+            <button className={cls.btnPrimary} onClick={() => setShowCreateModal(true)}>
+              <Plus size={14} /> New Asset
+            </button>
+          )
+        }
       />
 
       {/* Filters */}
-      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <div className="relative sm:col-span-2">
+      <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="relative sm:col-span-2 lg:col-span-1">
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input
             type="text"
@@ -109,6 +232,37 @@ export default function AssetsListPage() {
           <option value="">All Status</option>
           <option value="ACTIVE">Active</option>
           <option value="INACTIVE">Inactive</option>
+        </select>
+        <select
+          value={conditionFilter}
+          onChange={(e) => { setConditionFilter(e.target.value); setPage(1); }}
+          className={cls.select}
+        >
+          <option value="">All Conditions</option>
+          <option value="EXCELLENT">Excellent</option>
+          <option value="GOOD">Good</option>
+          <option value="FAIR">Fair</option>
+          <option value="POOR">Poor</option>
+        </select>
+        <select
+          value={categoryFilter}
+          onChange={(e) => { setCategoryFilter(e.target.value); setPage(1); }}
+          className={cls.select}
+        >
+          <option value="">All Categories</option>
+          {categories.map((c) => (
+            <option key={c.id} value={c.id}>{c.name}</option>
+          ))}
+        </select>
+        <select
+          value={propertyFilter}
+          onChange={(e) => { setPropertyFilter(e.target.value); setPage(1); }}
+          className={cls.select}
+        >
+          <option value="">All Properties</option>
+          {properties.map((p) => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
         </select>
       </div>
 
@@ -190,6 +344,143 @@ export default function AssetsListPage() {
         </div>
         <Pagination pagination={pagination} onPageChange={setPage} />
       </div>
+
+      {/* Create Asset Modal */}
+      <Modal isOpen={showCreateModal} onClose={() => setShowCreateModal(false)} title="New Asset" size="md">
+        <div className="space-y-3">
+          {/* Property */}
+          <div>
+            <label className={cls.label}>Property <span className="text-red-500">*</span></label>
+            <select
+              value={createForm.propertyId}
+              onChange={(e) => handleCreateFormChange("propertyId", e.target.value)}
+              className={`${cls.select} w-full`}
+            >
+              <option value="">Select property...</option>
+              {properties.map((p) => (
+                <option key={p.id} value={p.id}>{p.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Floor */}
+          <div>
+            <label className={cls.label}>Floor <span className="text-red-500">*</span></label>
+            <select
+              value={createForm.floorId}
+              onChange={(e) => handleCreateFormChange("floorId", e.target.value)}
+              className={`${cls.select} w-full`}
+              disabled={!createForm.propertyId || floorsLoading}
+            >
+              <option value="">
+                {!createForm.propertyId
+                  ? "Select a property first"
+                  : floorsLoading
+                    ? "Loading floors..."
+                    : "Select floor..."}
+              </option>
+              {modalFloors.map((f) => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Name */}
+          <div>
+            <label className={cls.label}>Name <span className="text-red-500">*</span></label>
+            <input
+              type="text"
+              value={createForm.name}
+              onChange={(e) => handleCreateFormChange("name", e.target.value)}
+              className={cls.input}
+              placeholder="e.g. Split AC Unit"
+            />
+          </div>
+
+          {/* Category */}
+          <div>
+            <label className={cls.label}>Category <span className="text-red-500">*</span></label>
+            <select
+              value={createForm.categoryId}
+              onChange={(e) => handleCreateFormChange("categoryId", e.target.value)}
+              className={`${cls.select} w-full`}
+            >
+              <option value="">Select category...</option>
+              {categories.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Condition */}
+          <div>
+            <label className={cls.label}>Condition</label>
+            <select
+              value={createForm.condition}
+              onChange={(e) => handleCreateFormChange("condition", e.target.value)}
+              className={`${cls.select} w-full`}
+            >
+              <option value="EXCELLENT">Excellent</option>
+              <option value="GOOD">Good</option>
+              <option value="FAIR">Fair</option>
+              <option value="POOR">Poor</option>
+            </select>
+          </div>
+
+          {/* Serial Number */}
+          <div>
+            <label className={cls.label}>Serial Number</label>
+            <input
+              type="text"
+              value={createForm.serialNumber}
+              onChange={(e) => handleCreateFormChange("serialNumber", e.target.value)}
+              className={cls.input}
+              placeholder="Optional"
+            />
+          </div>
+
+          {/* Purchase Date */}
+          <div>
+            <label className={cls.label}>Purchase Date</label>
+            <input
+              type="date"
+              value={createForm.purchaseDate}
+              onChange={(e) => handleCreateFormChange("purchaseDate", e.target.value)}
+              className={cls.input}
+              max={new Date().toISOString().split("T")[0]}
+            />
+          </div>
+
+          {/* Image */}
+          <div>
+            <label className={cls.label}>Image</label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setCreateImage(e.target.files?.[0] || null)}
+              className="block w-full text-[13px] text-gray-500 file:mr-2 file:rounded-md file:border-0 file:bg-primary-50 file:px-3 file:py-1.5 file:text-[13px] file:font-medium file:text-primary-700 hover:file:bg-primary-100"
+            />
+          </div>
+
+          {/* Actions */}
+          <div className="flex justify-end gap-2 pt-2 border-t border-gray-100">
+            <button
+              onClick={() => setShowCreateModal(false)}
+              className={cls.btnSecondary}
+              disabled={createLoading}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleCreateSubmit}
+              className={cls.btnPrimary}
+              disabled={createLoading}
+            >
+              {createLoading ? "Creating..." : "Create Asset"}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

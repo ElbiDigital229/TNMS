@@ -7,6 +7,9 @@ import { PERMISSIONS } from "../../../shared/permissions";
 import Modal from "../components/ui/Modal";
 import { cls, STATUS_COLOR, PRIORITY_COLOR } from "../lib/styles";
 import { StatusBadge, PriorityBadge } from "../components/ui/Badge";
+import SlaBar from "../components/ticket/SlaBar";
+import StatusTimeline from "../components/ticket/StatusTimeline";
+import RelatedTickets from "../components/ticket/RelatedTickets";
 import {
   TASK_TYPE_LABELS,
   SUB_TASK_TYPE_LABELS,
@@ -109,25 +112,45 @@ export default function TicketDetailPage() {
     fetchTicket();
   }, [id]);
 
-  const handleStatusChange = async (status: string) => {
+  const handleStatusChange = async (newStatus: string) => {
+    const prevTicket = { ...ticket };
+    setTicket((prev: any) => ({
+      ...prev,
+      status: newStatus,
+      completedAt: newStatus === "COMPLETED" ? new Date().toISOString() : prev.completedAt,
+    }));
+    toast.success(`Ticket marked as ${TICKET_STATUS_LABELS[newStatus]}`);
     try {
-      await ticketApi.updateStatus(id!, status);
-      toast.success(`Ticket marked as ${TICKET_STATUS_LABELS[status]}`);
+      await ticketApi.updateStatus(id!, newStatus);
       fetchTicket();
     } catch {
+      setTicket(prevTicket);
       toast.error("Failed to update status");
     }
   };
 
   const handleAddComment = async () => {
     if (!comment.trim()) return;
+    const commentText = comment.trim();
+    const optimisticComment = {
+      id: `temp-${Date.now()}`,
+      content: commentText,
+      createdAt: new Date().toISOString(),
+      author: user ? { id: user.id, fullName: user.fullName || user.username, username: user.username } : undefined,
+    };
+    const prevTicket = { ...ticket, comments: [...(ticket.comments || [])] };
+    setTicket((prev: any) => ({
+      ...prev,
+      comments: [...(prev.comments || []), optimisticComment],
+    }));
+    setComment("");
     setSendingComment(true);
+    toast.success("Comment added");
     try {
-      await ticketApi.addComment(id!, comment.trim());
-      setComment("");
-      toast.success("Comment added");
+      await ticketApi.addComment(id!, commentText);
       fetchTicket();
     } catch {
+      setTicket(prevTicket);
       toast.error("Failed to add comment");
     } finally {
       setSendingComment(false);
@@ -416,6 +439,28 @@ export default function TicketDetailPage() {
           </div>
         </div>
       )}
+
+      {/* SLA Progress */}
+      {ticket.dueDate && (
+        <div className="mb-4 rounded-lg bg-white px-4 py-3 ring-1 ring-gray-200">
+          <SlaBar
+            createdAt={ticket.createdAt}
+            dueDate={ticket.dueDate}
+            completedAt={ticket.completedAt}
+            status={ticket.status}
+          />
+        </div>
+      )}
+
+      {/* Status Timeline */}
+      <div className="mb-4">
+        <StatusTimeline
+          status={ticket.status}
+          activities={ticket.activities || []}
+          createdAt={ticket.createdAt}
+          completedAt={ticket.completedAt}
+        />
+      </div>
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
@@ -846,6 +891,9 @@ export default function TicketDetailPage() {
               </div>
             </div>
           )}
+
+          {/* Related Tickets */}
+          <RelatedTickets ticketId={ticket.id} />
         </div>
       </div>
 

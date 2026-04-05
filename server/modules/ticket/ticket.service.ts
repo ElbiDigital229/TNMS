@@ -494,6 +494,44 @@ export const ticketService = {
     notificationTrigger.onTicketUnblocked(ticketId, resolvedById, activeBlock.blockedById).catch(console.error);
   },
 
+  async findRelated(ticketId: string) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: {
+        id: true,
+        unitId: true,
+        assets: { select: { assetId: true } },
+      },
+    });
+    if (!ticket) return [];
+
+    const assetIds = ticket.assets.map((a) => a.assetId);
+
+    const where: any = {
+      id: { not: ticketId },
+      OR: [
+        { unitId: ticket.unitId },
+        ...(assetIds.length
+          ? [{ assets: { some: { assetId: { in: assetIds } } } }]
+          : []),
+      ],
+    };
+
+    return prisma.ticket.findMany({
+      where,
+      select: {
+        id: true,
+        ticketNumber: true,
+        name: true,
+        status: true,
+        priority: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    });
+  },
+
   async getAssignableUsers(ticketId: string, _assignerId: string) {
     const ticket = await prisma.ticket.findUnique({
       where: { id: ticketId },

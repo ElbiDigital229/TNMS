@@ -38,6 +38,9 @@ export const assetService = {
     limit?: number;
     search?: string;
     status?: string;
+    condition?: string;
+    categoryId?: string;
+    propertyId?: string;
     userId?: string;
     allProperties?: boolean;
   }) {
@@ -53,6 +56,9 @@ export const assetService = {
       ];
     }
     if (params.status) where.status = params.status;
+    if (params.condition) where.condition = params.condition;
+    if (params.categoryId) where.categoryId = params.categoryId;
+    if (params.propertyId) where.propertyId = params.propertyId;
 
     // Filter by user's assigned properties unless they have access to all
     if (params.userId && !params.allProperties) {
