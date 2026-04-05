@@ -174,7 +174,7 @@ export default function TicketListPage() {
         {hasPermission(PERMISSIONS.TICKETS.CREATE) && (
           <Link
             to="/tickets/new"
-            className="inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
+            className="hidden sm:inline-flex items-center gap-2 rounded-lg bg-primary-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-all duration-200 hover:bg-primary-700"
           >
             <Plus size={18} />
             Create Ticket
@@ -288,7 +288,7 @@ export default function TicketListPage() {
         </div>
 
         {/* Row 2: Status quick pills */}
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-none">
           {[["", "All"], ["OPEN", "Open"], ["IN_PROGRESS", "In Progress"], ["OVERDUE", "Overdue"], ["COMPLETED", "Completed"]].map(([val, label]) => (
             <button
               key={val}
@@ -315,201 +315,198 @@ export default function TicketListPage() {
         )}
       </div>
 
-      {/* Table */}
-      <div className="overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Ticket #
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Name
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Type
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Property
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Priority
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Status
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Block
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Assigned To
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Due Date
-                </th>
-                <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-5 py-16 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-3">
-                      <Loader2 size={48} className="animate-spin text-gray-300" />
-                      <p className="text-sm text-gray-500">Loading...</p>
-                    </div>
-                  </td>
-                </tr>
-              ) : tickets.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan={9}
-                    className="px-5 py-16 text-center"
-                  >
-                    <div className="flex flex-col items-center gap-3">
-                      <ClipboardList size={48} className="text-gray-300" />
-                      <div>
-                        <p className="text-sm font-medium text-gray-500">No tickets found</p>
-                        <p className="mt-1 text-[13px] text-gray-400">Create your first ticket to start tracking</p>
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              ) : (
-                tickets.map((ticket) => (
-                  <tr
-                    key={ticket.id}
-                    className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80"
-                  >
-                    <td className="px-5 py-3.5 font-mono text-xs font-semibold text-primary-600">
-                      {ticket.ticketNumber}
-                    </td>
-                    <td className="px-5 py-3.5 font-medium">{ticket.name}</td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {TASK_TYPE_LABELS[ticket.taskType]}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Link
-                        to={`/properties/${ticket.property.id}`}
-                        className="text-primary-600 hover:underline"
-                      >
-                        {ticket.property.name}
-                      </Link>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span
-                        className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityColor(ticket.priority)}`}
-                      >
-                        {PRIORITY_LABELS[ticket.priority]}
-                      </span>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColor(ticket.status)}`}>
-                          {TICKET_STATUS_LABELS[ticket.status]}
-                        </span>
-                        {ticket.status === "COMPLETED" && ticket.completedAt && ticket.dueDate && new Date(ticket.completedAt) > new Date(ticket.dueDate) && (
-                          <span className="inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-600">
-                            Late
-                          </span>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-5 py-3.5">
-                      {ticket.activeBlock ? (
-                        <div>
-                          <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">Blocked</span>
-                          <p className="mt-0.5 text-[11px] text-gray-500">
-                            {ticket.activeBlock.blockingUser
-                              ? `${ticket.activeBlock.blockingUser.fullName || ticket.activeBlock.blockingUser.username}`
-                              : ticket.activeBlock.department?.name}
-                          </p>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-gray-300">—</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5 text-gray-600">
-                      {ticket.assignedTo ? (
-                        <span className="text-sm">
-                          {ticket.assignedTo.fullName || ticket.assignedTo.username}
-                          {ticket.assignedTo.role && (
-                            <span className="ml-1 text-xs text-gray-400">({ticket.assignedTo.role.name})</span>
-                          )}
-                        </span>
-                      ) : (
-                        <span className="text-xs text-gray-400">Unassigned</span>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <span className="text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</span>
-                      {ticket.status === "OVERDUE" && (
-                        <p className="text-[11px] font-medium text-red-500">
-                          {Math.ceil((new Date().getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d overdue
-                        </p>
-                      )}
-                      {ticket.status === "COMPLETED" && ticket.completedAt && new Date(ticket.completedAt) > new Date(ticket.dueDate) && (
-                        <p className="text-[11px] font-medium text-orange-500">
-                          {Math.ceil((new Date(ticket.completedAt).getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d late
-                        </p>
-                      )}
-                    </td>
-                    <td className="px-5 py-3.5">
-                      <Link
-                        to={`/tickets/${ticket.id}`}
-                        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                        title="View"
-                      >
-                        <Eye size={16} />
-                      </Link>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
+      {/* Loading / Empty states */}
+      {loading ? (
+        <div className="flex flex-col items-center gap-3 py-16">
+          <Loader2 size={48} className="animate-spin text-gray-300" />
+          <p className="text-sm text-gray-500">Loading...</p>
         </div>
+      ) : tickets.length === 0 ? (
+        <div className="flex flex-col items-center gap-3 py-16">
+          <ClipboardList size={48} className="text-gray-300" />
+          <div className="text-center">
+            <p className="text-sm font-medium text-gray-500">No tickets found</p>
+            <p className="mt-1 text-[13px] text-gray-400">Create your first ticket to start tracking</p>
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* ── Mobile Card View (≤768px) ── */}
+          <div className="space-y-3 md:hidden">
+            {tickets.map((ticket) => (
+              <Link
+                key={ticket.id}
+                to={`/tickets/${ticket.id}`}
+                className="block rounded-xl border border-gray-200 bg-white p-4 shadow-sm active:bg-gray-50 transition-colors"
+              >
+                {/* Top row: ticket # + priority */}
+                <div className="flex items-center justify-between">
+                  <span className="font-mono text-xs font-semibold text-primary-600">
+                    {ticket.ticketNumber}
+                  </span>
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-semibold ${priorityColor(ticket.priority)}`}>
+                    {PRIORITY_LABELS[ticket.priority]}
+                  </span>
+                </div>
 
-        {pagination.totalPages > 1 && (
-          <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3">
-            <span className="text-sm text-gray-600">
-              Showing {(pagination.page - 1) * pagination.limit + 1} to{" "}
-              {Math.min(
-                pagination.page * pagination.limit,
-                pagination.total
-              )}{" "}
-              of {pagination.total}
-            </span>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setPage((p) => Math.max(1, p - 1))}
-                disabled={page === 1}
-                className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40"
-              >
-                <ChevronLeft size={16} />
-              </button>
-              <span className="text-sm font-medium">
-                {page} / {pagination.totalPages}
-              </span>
-              <button
-                onClick={() =>
-                  setPage((p) => Math.min(pagination.totalPages, p + 1))
-                }
-                disabled={page === pagination.totalPages}
-                className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40"
-              >
-                <ChevronRight size={16} />
-              </button>
+                {/* Title */}
+                <p className="mt-1.5 text-sm font-semibold text-gray-900 leading-snug">
+                  {ticket.name}
+                </p>
+
+                {/* Assignee */}
+                {ticket.assignedTo && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    {ticket.assignedTo.fullName || ticket.assignedTo.username}
+                  </p>
+                )}
+
+                {/* Bottom row: status + type + property + due */}
+                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                  <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${statusColor(ticket.status)}`}>
+                    {TICKET_STATUS_LABELS[ticket.status]}
+                  </span>
+                  {ticket.activeBlock && (
+                    <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-[11px] font-medium text-orange-700">
+                      Blocked
+                    </span>
+                  )}
+                  {ticket.status === "COMPLETED" && ticket.completedAt && ticket.dueDate && new Date(ticket.completedAt) > new Date(ticket.dueDate) && (
+                    <span className="inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-[11px] font-medium text-orange-600">Late</span>
+                  )}
+                  <span className="text-[11px] text-gray-400">·</span>
+                  <span className="text-[11px] text-gray-500">{TASK_TYPE_LABELS[ticket.taskType]}</span>
+                  <span className="text-[11px] text-gray-400">·</span>
+                  <span className="text-[11px] text-gray-500">{ticket.property.name}</span>
+                </div>
+
+                {/* Due date row */}
+                <div className="mt-2 flex items-center justify-between">
+                  <span className="text-[11px] text-gray-400">
+                    Due {new Date(ticket.dueDate).toLocaleDateString()}
+                  </span>
+                  {ticket.status === "OVERDUE" && (
+                    <span className="text-[11px] font-semibold text-red-500">
+                      {Math.ceil((new Date().getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d overdue
+                    </span>
+                  )}
+                </div>
+              </Link>
+            ))}
+          </div>
+
+          {/* ── Desktop Table View (>768px) ── */}
+          <div className="hidden md:block overflow-hidden rounded-xl bg-white shadow-sm ring-1 ring-gray-950/5">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-gray-200">
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Ticket #</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Name</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Type</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Property</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Priority</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Status</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Block</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Assigned To</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Due Date</th>
+                    <th className="px-5 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tickets.map((ticket) => (
+                    <tr key={ticket.id} className="border-b border-gray-100/80 transition-colors duration-150 hover:bg-gray-50/80">
+                      <td className="px-5 py-3.5 font-mono text-xs font-semibold text-primary-600">{ticket.ticketNumber}</td>
+                      <td className="px-5 py-3.5 font-medium">{ticket.name}</td>
+                      <td className="px-5 py-3.5 text-gray-600">{TASK_TYPE_LABELS[ticket.taskType]}</td>
+                      <td className="px-5 py-3.5">
+                        <Link to={`/properties/${ticket.property.id}`} className="text-primary-600 hover:underline">{ticket.property.name}</Link>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${priorityColor(ticket.priority)}`}>{PRIORITY_LABELS[ticket.priority]}</span>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${statusColor(ticket.status)}`}>{TICKET_STATUS_LABELS[ticket.status]}</span>
+                          {ticket.status === "COMPLETED" && ticket.completedAt && ticket.dueDate && new Date(ticket.completedAt) > new Date(ticket.dueDate) && (
+                            <span className="inline-flex rounded-full bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-600">Late</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-5 py-3.5">
+                        {ticket.activeBlock ? (
+                          <div>
+                            <span className="inline-flex rounded-full bg-orange-100 px-2 py-0.5 text-xs font-medium text-orange-700">Blocked</span>
+                            <p className="mt-0.5 text-[11px] text-gray-500">
+                              {ticket.activeBlock.blockingUser
+                                ? `${ticket.activeBlock.blockingUser.fullName || ticket.activeBlock.blockingUser.username}`
+                                : ticket.activeBlock.department?.name}
+                            </p>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-300">—</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5 text-gray-600">
+                        {ticket.assignedTo ? (
+                          <span className="text-sm">
+                            {ticket.assignedTo.fullName || ticket.assignedTo.username}
+                            {ticket.assignedTo.role && <span className="ml-1 text-xs text-gray-400">({ticket.assignedTo.role.name})</span>}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-gray-400">Unassigned</span>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <span className="text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</span>
+                        {ticket.status === "OVERDUE" && (
+                          <p className="text-[11px] font-medium text-red-500">{Math.ceil((new Date().getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d overdue</p>
+                        )}
+                        {ticket.status === "COMPLETED" && ticket.completedAt && new Date(ticket.completedAt) > new Date(ticket.dueDate) && (
+                          <p className="text-[11px] font-medium text-orange-500">{Math.ceil((new Date(ticket.completedAt).getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d late</p>
+                        )}
+                      </td>
+                      <td className="px-5 py-3.5">
+                        <Link to={`/tickets/${ticket.id}`} className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-700" title="View">
+                          <Eye size={16} />
+                        </Link>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
-        )}
-      </div>
+        </>
+      )}
+
+      {/* Pagination */}
+      {pagination.totalPages > 1 && (
+        <div className="mt-3 flex items-center justify-between rounded-xl bg-white px-4 py-3 shadow-sm ring-1 ring-gray-950/5 md:mt-0 md:rounded-none md:border-t md:border-gray-200 md:shadow-none md:ring-0">
+          <span className="text-sm text-gray-600">
+            {(pagination.page - 1) * pagination.limit + 1}–{Math.min(pagination.page * pagination.limit, pagination.total)} of {pagination.total}
+          </span>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40">
+              <ChevronLeft size={16} />
+            </button>
+            <span className="text-sm font-medium">{page} / {pagination.totalPages}</span>
+            <button onClick={() => setPage((p) => Math.min(pagination.totalPages, p + 1))} disabled={page === pagination.totalPages} className="rounded-lg border border-gray-200 p-1.5 shadow-sm hover:bg-gray-50 disabled:opacity-40">
+              <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile FAB — Create Ticket */}
+      {hasPermission(PERMISSIONS.TICKETS.CREATE) && (
+        <Link
+          to="/tickets/new"
+          className="fixed bottom-6 right-6 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-primary-600 text-white shadow-lg shadow-primary-600/30 active:bg-primary-700 transition-colors md:hidden"
+        >
+          <Plus size={24} />
+        </Link>
+      )}
     </div>
   );
 }
