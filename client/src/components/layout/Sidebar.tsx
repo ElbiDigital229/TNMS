@@ -13,7 +13,6 @@ import {
   CheckSquare,
   BarChart3,
   Users,
-  Network,
   Shield,
   ScrollText,
   LogOut,
@@ -224,16 +223,6 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       >
                         <Users size={16} />
                         Users
-                      </NavLink>
-                    )}
-                    {hasPermission(P.USERS.VIEW) && (
-                      <NavLink
-                        to="/settings/org-chart"
-                        className={linkClass}
-                        onClick={onClose}
-                      >
-                        <Network size={16} />
-                        Org Chart
                       </NavLink>
                     )}
                     {hasPermission(P.ROLES.VIEW) && (
