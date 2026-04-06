@@ -930,12 +930,12 @@ export default function UserManagementPage() {
         columns={[
           { key: "employeeCode", label: "Employee Code", required: false, example: "DK-EMP-00005" },
           { key: "fullName", label: "Full Name", required: true, example: "Aalia Maqsood" },
-          { key: "designation", label: "Designation", required: false, example: "Senior Manager" },
           { key: "email", label: "Email", required: true, example: "aalia@company.com" },
           { key: "department", label: "Department", required: false, example: "Key Accounts Management" },
-          { key: "role", label: "Role", required: true, example: "Head of Experience & Operations" },
+          { key: "designation", label: "Designation", required: false, example: "Head of Experience & Operations" },
+          { key: "role", label: "Role", required: true, example: "General" },
           { key: "group", label: "Group", required: false, example: "All" },
-          { key: "specific", label: "Specific", required: false, example: "Property A, Property B" },
+          { key: "specific", label: "Specific", required: false, example: "Alpha, Vanguard" },
         ]}
         onImport={async (items) => {
           const res = await userApi.bulkImport(items);

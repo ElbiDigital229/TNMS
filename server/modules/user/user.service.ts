@@ -572,10 +572,14 @@ export const userService = {
         let propertyIds: string[] = [];
 
         const group = item.group?.trim();
-        if (!group || group.toLowerCase() === "all") {
+        const groupLower = group?.toLowerCase();
+        if (!group || groupLower === "all") {
           isAllProperties = true;
+        } else if (groupLower === "n/a" || groupLower === "na" || groupLower === "-" || groupLower === "none") {
+          // No group — will use Specific column, or error if no specific either
+          isAllProperties = false;
         } else {
-          const areaGroupId = areaGroupMap.get(group.toLowerCase());
+          const areaGroupId = areaGroupMap.get(groupLower!);
           if (areaGroupId) {
             propertyIds = allProps
               .filter((p) => p.areaGroupId === areaGroupId)
@@ -585,26 +589,40 @@ export const userService = {
               continue;
             }
           } else {
-            results.push({ row: i + 1, status: "error", email: item.email, error: `Group "${group}" is not "All" or a valid area group name` });
-            continue;
+            // Try matching as a property name directly
+            const prop = propertyByName.get(groupLower!);
+            if (prop) {
+              propertyIds = [prop.id];
+            } else {
+              results.push({ row: i + 1, status: "error", email: item.email, error: `Group "${group}" is not "All", "N/A", a valid area group, or property name` });
+              continue;
+            }
           }
         }
 
         // Resolve Specific: comma-separated property names (overrides group if provided)
         if (item.specific?.trim()) {
           isAllProperties = false;
-          const specificNames = item.specific.split(",").map((s) => s.trim().toLowerCase());
+          const specificNames = item.specific.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
           propertyIds = [];
+          let specificError = false;
           for (const name of specificNames) {
-            if (!name) continue;
             const prop = propertyByName.get(name);
             if (prop) {
               propertyIds.push(prop.id);
             } else {
               results.push({ row: i + 1, status: "error", email: item.email, error: `Property "${name}" not found` });
-              continue;
+              specificError = true;
+              break;
             }
           }
+          if (specificError) continue;
+        }
+
+        // Must have at least one property if not allProperties
+        if (!isAllProperties && propertyIds.length === 0) {
+          results.push({ row: i + 1, status: "error", email: item.email, error: "No property access specified — set Group or Specific" });
+          continue;
         }
 
         const createData: Record<string, unknown> = {
