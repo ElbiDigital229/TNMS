@@ -503,12 +503,15 @@ export const userService = {
     const departmentMap = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
 
     const existingUsers = await prisma.user.findMany({
-      select: { id: true, username: true, email: true },
+      select: { id: true, username: true, email: true, employeeCode: true },
     });
     const userByEmailMap = new Map(
       existingUsers.filter((u) => u.email).map((u) => [u.email!.toLowerCase(), u.id])
     );
     const userMap = new Map(existingUsers.map((u) => [u.username.toLowerCase(), u.id]));
+    const employeeCodeSet = new Set(
+      existingUsers.filter((u) => u.employeeCode).map((u) => u.employeeCode!.toLowerCase())
+    );
 
     const allProps = await prisma.property.findMany({
       where: { status: "ACTIVE" },
@@ -537,6 +540,11 @@ export const userService = {
 
         if (userMap.has(item.email.toLowerCase()) || userByEmailMap.has(item.email.toLowerCase())) {
           results.push({ row: i + 1, status: "error", email: item.email, error: "Email already exists" });
+          continue;
+        }
+
+        if (item.employeeCode && employeeCodeSet.has(item.employeeCode.toLowerCase())) {
+          results.push({ row: i + 1, status: "error", email: item.email, error: `Employee Code "${item.employeeCode}" already exists` });
           continue;
         }
 
@@ -611,6 +619,7 @@ export const userService = {
         // Track new user so subsequent rows can reference them
         userMap.set(item.email.toLowerCase(), user.id);
         userByEmailMap.set(item.email.toLowerCase(), user.id);
+        if (item.employeeCode) employeeCodeSet.add(item.employeeCode.toLowerCase());
 
         if (!isAllProperties && propertyIds.length > 0) {
           await prisma.userPropertyAssignment.createMany({
