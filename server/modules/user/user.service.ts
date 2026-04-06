@@ -38,6 +38,7 @@ export const userService = {
           username: true,
           fullName: true,
           employeeCode: true,
+          designation: true,
           email: true,
           phone: true,
           status: true,
@@ -114,6 +115,7 @@ export const userService = {
     password: string;
     fullName?: string;
     employeeCode?: string;
+    designation?: string;
     email?: string;
     phone?: string;
     roleId: string;
@@ -187,6 +189,7 @@ export const userService = {
     data: {
       fullName?: string;
       employeeCode?: string;
+      designation?: string;
       email?: string;
       phone?: string;
       roleId?: string;
@@ -483,6 +486,7 @@ export const userService = {
     items: {
       fullName?: string;
       employeeCode?: string;
+      designation?: string;
       email: string;
       department?: string;
       role: string;
@@ -608,6 +612,7 @@ export const userService = {
           passwordHash: defaultPasswordHash,
           fullName: item.fullName || null,
           employeeCode: item.employeeCode || null,
+          designation: item.designation || null,
           email: item.email,
           roleId,
           allProperties: isAllProperties,

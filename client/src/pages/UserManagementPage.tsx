@@ -41,6 +41,7 @@ interface User {
   username: string;
   fullName: string;
   employeeCode: string;
+  designation: string;
   email: string;
   phone: string;
   role: Role;
@@ -62,6 +63,7 @@ const emptyForm = {
   password: "",
   fullName: "",
   employeeCode: "",
+  designation: "",
   email: "",
   phone: "",
   roleId: "",
@@ -188,6 +190,7 @@ export default function UserManagementPage() {
       password: "",
       fullName: user.fullName || "",
       employeeCode: user.employeeCode || "",
+      designation: user.designation || "",
       email: user.email || user.username || "",
       phone: user.phone || "",
       roleId: user.role?.id || user.roleId || "",
@@ -249,6 +252,7 @@ export default function UserManagementPage() {
       const payload: Record<string, unknown> = {
         fullName: form.fullName,
         employeeCode: form.employeeCode || null,
+        designation: form.designation || null,
         email: form.email,
         phone: form.phone,
         roleId: form.roleId || undefined,
@@ -585,6 +589,18 @@ export default function UserManagementPage() {
             />
           </div>
 
+          {/* Designation */}
+          <div>
+            <label className={cls.label}>Designation</label>
+            <input
+              type="text"
+              value={form.designation}
+              onChange={(e) => updateForm("designation", e.target.value)}
+              className={cls.input}
+              placeholder="e.g. Senior Manager"
+            />
+          </div>
+
           {/* Email (used as username) */}
           <div>
             <label className={cls.label}>
@@ -914,6 +930,7 @@ export default function UserManagementPage() {
         columns={[
           { key: "employeeCode", label: "Employee Code", required: false, example: "DK-EMP-00005" },
           { key: "fullName", label: "Full Name", required: true, example: "Aalia Maqsood" },
+          { key: "designation", label: "Designation", required: false, example: "Senior Manager" },
           { key: "email", label: "Email", required: true, example: "aalia@company.com" },
           { key: "department", label: "Department", required: false, example: "Key Accounts Management" },
           { key: "role", label: "Role", required: true, example: "Head of Experience & Operations" },

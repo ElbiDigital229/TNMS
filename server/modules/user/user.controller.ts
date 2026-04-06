@@ -37,7 +37,7 @@ export const userController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { fullName, employeeCode, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds, password } = req.body;
+      const { fullName, employeeCode, designation, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds, password } = req.body;
 
       if (!email || !roleId || !departmentId) {
         return sendError(res, "Email, roleId, and departmentId are required", 400);
@@ -48,6 +48,7 @@ export const userController = {
         password: password || "Welcome@123",
         fullName,
         employeeCode,
+        designation,
         email,
         phone,
         roleId,
@@ -65,11 +66,12 @@ export const userController = {
 
   async update(req: Request, res: Response) {
     try {
-      const { fullName, employeeCode, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds } = req.body;
+      const { fullName, employeeCode, designation, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds } = req.body;
 
       const user = await userService.update(req.params.id, {
         fullName,
         employeeCode,
+        designation,
         email,
         phone,
         roleId,

@@ -165,6 +165,7 @@ model User {
   passwordHash  String
   fullName      String?
   employeeCode  String?  @unique
+  designation   String?
   email         String?  @unique
   phone         String?
   isSuperAdmin  Boolean  @default(false)
