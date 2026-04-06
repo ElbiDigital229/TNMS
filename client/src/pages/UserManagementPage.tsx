@@ -40,6 +40,7 @@ interface User {
   id: string;
   username: string;
   fullName: string;
+  employeeCode: string;
   email: string;
   phone: string;
   role: Role;
@@ -61,6 +62,7 @@ const emptyForm = {
   username: "",
   password: "",
   fullName: "",
+  employeeCode: "",
   email: "",
   phone: "",
   roleId: "",
@@ -146,7 +148,8 @@ export default function UserManagementPage() {
       !q ||
       u.fullName?.toLowerCase().includes(q) ||
       u.username?.toLowerCase().includes(q) ||
-      u.email?.toLowerCase().includes(q);
+      u.email?.toLowerCase().includes(q) ||
+      u.employeeCode?.toLowerCase().includes(q);
     const matchesRole = !filterRole || u.role?.id === filterRole;
     const matchesStatus = !filterStatus || u.status === filterStatus;
     return matchesSearch && matchesRole && matchesStatus;
@@ -186,6 +189,7 @@ export default function UserManagementPage() {
       username: user.username,
       password: "",
       fullName: user.fullName || "",
+      employeeCode: user.employeeCode || "",
       email: user.email || user.username || "",
       phone: user.phone || "",
       roleId: user.role?.id || user.roleId || "",
@@ -247,6 +251,7 @@ export default function UserManagementPage() {
       const payload: Record<string, unknown> = {
         username: form.username,
         fullName: form.fullName,
+        employeeCode: form.employeeCode || null,
         email: form.email,
         phone: form.phone,
         roleId: form.roleId || undefined,
@@ -442,6 +447,7 @@ export default function UserManagementPage() {
               <thead>
                 <tr className="border-b border-gray-200">
                   <th className={cls.th}>Full Name</th>
+                  <th className={cls.th}>Emp Code</th>
                   <th className={cls.th}>Email</th>
                   <th className={cls.th}>Role</th>
                   <th className={cls.th}>Properties</th>
@@ -456,6 +462,9 @@ export default function UserManagementPage() {
                   <tr key={user.id} className={cls.tr}>
                     <td className={`${cls.td} font-medium`}>
                       {user.fullName || "-"}
+                    </td>
+                    <td className={`${cls.td} text-gray-500 font-mono text-[12px]`}>
+                      {user.employeeCode || "-"}
                     </td>
                     <td className={`${cls.td} text-gray-600`}>
                       {user.email || user.username}
@@ -564,6 +573,18 @@ export default function UserManagementPage() {
               onChange={(e) => updateForm("fullName", e.target.value)}
               className={cls.input}
               placeholder="Enter full name"
+            />
+          </div>
+
+          {/* Employee Code */}
+          <div>
+            <label className={cls.label}>Employee Code</label>
+            <input
+              type="text"
+              value={form.employeeCode}
+              onChange={(e) => updateForm("employeeCode", e.target.value)}
+              className={cls.input}
+              placeholder="e.g. EMP-001"
             />
           </div>
 
@@ -898,6 +919,7 @@ export default function UserManagementPage() {
         title="Bulk Import Users"
         columns={[
           { key: "fullName", label: "Full Name", required: true, example: "John Smith" },
+          { key: "employeeCode", label: "Employee Code", required: false, example: "EMP-001" },
           { key: "username", label: "Username", required: true, example: "john.smith" },
           { key: "password", label: "Password", required: true, example: "Welcome@123" },
           { key: "email", label: "Email", required: false, example: "john@company.com" },

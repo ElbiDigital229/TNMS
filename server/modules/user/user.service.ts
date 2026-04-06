@@ -24,6 +24,7 @@ export const userService = {
         { username: { contains: params.search, mode: "insensitive" } },
         { fullName: { contains: params.search, mode: "insensitive" } },
         { email: { contains: params.search, mode: "insensitive" } },
+        { employeeCode: { contains: params.search, mode: "insensitive" } },
       ];
     }
     if (params.roleId) where.roleId = params.roleId;
@@ -36,6 +37,7 @@ export const userService = {
           id: true,
           username: true,
           fullName: true,
+          employeeCode: true,
           email: true,
           phone: true,
           status: true,
@@ -111,6 +113,7 @@ export const userService = {
     username: string;
     password: string;
     fullName?: string;
+    employeeCode?: string;
     email?: string;
     phone?: string;
     roleId: string;
@@ -183,6 +186,7 @@ export const userService = {
     id: string,
     data: {
       fullName?: string;
+      employeeCode?: string;
       email?: string;
       phone?: string;
       roleId?: string;
@@ -480,6 +484,7 @@ export const userService = {
       username: string;
       password: string;
       fullName?: string;
+      employeeCode?: string;
       email?: string;
       phone?: string;
       role: string;
@@ -591,6 +596,7 @@ export const userService = {
           username: item.username,
           passwordHash,
           fullName: item.fullName || null,
+          employeeCode: item.employeeCode || null,
           email: item.email || null,
           phone: item.phone || null,
           roleId,
