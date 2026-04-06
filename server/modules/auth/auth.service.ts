@@ -5,8 +5,14 @@ import { env } from "../../config/env.js";
 
 export const authService = {
   async login(username: string, password: string) {
-    const user = await prisma.user.findUnique({
-      where: { username },
+    // Allow login by email or username
+    const user = await prisma.user.findFirst({
+      where: {
+        OR: [
+          { username },
+          { email: username },
+        ],
+      },
       include: {
         role: {
           include: {

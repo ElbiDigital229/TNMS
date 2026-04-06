@@ -59,7 +59,6 @@ interface User {
 type AccessMode = "all" | "specific" | string; // string for area group IDs
 
 const emptyForm = {
-  username: "",
   password: "",
   fullName: "",
   employeeCode: "",
@@ -186,7 +185,6 @@ export default function UserManagementPage() {
     setEditing(user);
     const mode = deriveAccessMode(user);
     setForm({
-      username: user.username,
       password: "",
       fullName: user.fullName || "",
       employeeCode: user.employeeCode || "",
@@ -249,7 +247,6 @@ export default function UserManagementPage() {
       }
 
       const payload: Record<string, unknown> = {
-        username: form.username,
         fullName: form.fullName,
         employeeCode: form.employeeCode || null,
         email: form.email,
@@ -401,7 +398,7 @@ export default function UserManagementPage() {
             type="text"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Search by name, username, or email..."
+            placeholder="Search by name, email, or employee code..."
             className={`${cls.input} pl-8`}
           />
         </div>
@@ -596,10 +593,7 @@ export default function UserManagementPage() {
             <input
               type="email"
               value={form.email}
-              onChange={(e) => {
-                const val = e.target.value;
-                setForm((prev) => ({ ...prev, email: val, username: val }));
-              }}
+              onChange={(e) => updateForm("email", e.target.value)}
               readOnly={!!editing}
               className={`${cls.input} ${editing ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
               placeholder="Enter email address"
@@ -918,16 +912,13 @@ export default function UserManagementPage() {
         onClose={() => setBulkOpen(false)}
         title="Bulk Import Users"
         columns={[
-          { key: "fullName", label: "Full Name", required: true, example: "John Smith" },
-          { key: "employeeCode", label: "Employee Code", required: false, example: "EMP-001" },
-          { key: "username", label: "Username", required: true, example: "john.smith" },
-          { key: "password", label: "Password", required: true, example: "Welcome@123" },
-          { key: "email", label: "Email", required: false, example: "john@company.com" },
-          { key: "phone", label: "Phone", required: false, example: "+923001234567" },
-          { key: "role", label: "Role", required: true, example: "Technician" },
-          { key: "department", label: "Department", required: false, example: "Civil" },
-          { key: "reportsTo", label: "Reports To", required: false, example: "ahmed@company.com" },
-          { key: "propertyAccess", label: "Property Access", required: false, example: "All" },
+          { key: "employeeCode", label: "Employee Code", required: false, example: "DK-EMP-00005" },
+          { key: "fullName", label: "Full Name", required: true, example: "Aalia Maqsood" },
+          { key: "email", label: "Email", required: true, example: "aalia@company.com" },
+          { key: "department", label: "Department", required: false, example: "Key Accounts Management" },
+          { key: "role", label: "Role", required: true, example: "Head of Experience & Operations" },
+          { key: "group", label: "Group", required: false, example: "All" },
+          { key: "specific", label: "Specific", required: false, example: "Property A, Property B" },
         ]}
         onImport={async (items) => {
           const res = await userApi.bulkImport(items);

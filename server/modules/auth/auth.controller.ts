@@ -8,7 +8,7 @@ export const authController = {
       const { username, password } = req.body;
 
       if (!username || !password) {
-        return sendError(res, "Username and password are required", 400);
+        return sendError(res, "Email and password are required", 400);
       }
 
       const result = await authService.login(username, password);

@@ -37,15 +37,15 @@ export const userController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { username, password, fullName, employeeCode, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds } = req.body;
+      const { fullName, employeeCode, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds, password } = req.body;
 
-      if (!username || !password || !roleId || !departmentId) {
-        return sendError(res, "Username, password, roleId, and departmentId are required", 400);
+      if (!email || !roleId || !departmentId) {
+        return sendError(res, "Email, roleId, and departmentId are required", 400);
       }
 
       const user = await userService.create({
-        username,
-        password,
+        username: email,
+        password: password || "Welcome@123",
         fullName,
         employeeCode,
         email,
