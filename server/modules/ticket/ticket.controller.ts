@@ -98,7 +98,7 @@ export const ticketController = {
         assetIds,
       } = req.body;
 
-      if (!name || !description || !propertyId || !unitId || !dueDate || !taskType || !subTaskType || !departmentId || !priority || !categoryId) {
+      if (!name || !description || !propertyId || !dueDate || !taskType || !subTaskType || !departmentId || !priority || !categoryId) {
         return sendError(res, "Missing required fields (including category)", 400);
       }
 
@@ -113,7 +113,7 @@ export const ticketController = {
         name,
         description,
         propertyId,
-        unitId,
+        unitId: unitId || undefined,
         dueDate: new Date(dueDate),
         taskType,
         subTaskType,

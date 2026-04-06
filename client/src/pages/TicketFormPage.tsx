@@ -183,7 +183,6 @@ export default function TicketFormPage() {
       !name ||
       !description ||
       !propertyId ||
-      !unitId ||
       !dueDate ||
       !taskType ||
       !subTaskType ||
@@ -199,7 +198,7 @@ export default function TicketFormPage() {
     formData.append("name", name);
     formData.append("description", description);
     formData.append("propertyId", propertyId);
-    formData.append("unitId", unitId);
+    if (unitId) formData.append("unitId", unitId);
     formData.append("dueDate", dueDate);
     formData.append("taskType", taskType);
     formData.append("subTaskType", subTaskType);
@@ -294,7 +293,7 @@ export default function TicketFormPage() {
           {/* Unit */}
           <div>
             <label className={cls.label}>
-              Unit <span className="text-red-500">*</span>
+              Unit
             </label>
             <select
               value={unitId}
