@@ -11,6 +11,7 @@ import LocationDisplay from "../components/map/LocationDisplay";
 import FloorsTab from "../components/property/FloorsTab";
 import UnitsTab from "../components/property/UnitsTab";
 import AssetsTab from "../components/property/AssetsTab";
+import TicketsTab from "../components/property/TicketsTab";
 import {
   ArrowLeft,
   Pencil,
@@ -37,7 +38,7 @@ interface Property {
   latitude: number | null;
   longitude: number | null;
   areaGroup: { groupName: string } | null;
-  _count: { floors: number; units: number; assets: number };
+  _count: { floors: number; units: number; assets: number; tickets: number };
 }
 
 export default function PropertyDetailPage() {
@@ -90,6 +91,7 @@ export default function PropertyDetailPage() {
     { key: "floors", label: "Floors", count: property._count.floors },
     { key: "units", label: "Units", count: property._count.units },
     { key: "assets", label: "Assets", count: property._count.assets },
+    { key: "tickets", label: "Tickets", count: property._count.tickets },
   ];
 
   return (
@@ -233,6 +235,9 @@ export default function PropertyDetailPage() {
           )}
           {activeTab === "assets" && (
             <AssetsTab propertyId={property.id} propertyName={property.name} onUpdate={fetchProperty} />
+          )}
+          {activeTab === "tickets" && (
+            <TicketsTab propertyId={property.id} />
           )}
         </div>
       </div>

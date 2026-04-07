@@ -64,7 +64,10 @@ export default function TicketListPage() {
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const [filters, setFilters] = useState({
-    priority: "", taskType: "", blocked: "", propertyId: "",
+    priority: searchParams.get("priority") || "",
+    taskType: searchParams.get("taskType") || "",
+    blocked: "",
+    propertyId: searchParams.get("propertyId") || "",
     assigneeId: "", createdById: "", createdFrom: "", createdTo: "",
     dueDateFrom: "", dueDateTo: "",
   });
@@ -117,6 +120,17 @@ export default function TicketListPage() {
   }, [page, search, statusFilter, filters, sortBy, sortOrder]);
 
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
+
+  // Sync filters from URL when query params change (e.g. clicking dashboard chart)
+  useEffect(() => {
+    const status = searchParams.get("status") || "";
+    const priority = searchParams.get("priority") || "";
+    const taskType = searchParams.get("taskType") || "";
+    const propertyId = searchParams.get("propertyId") || "";
+    setStatusFilter(status);
+    setFilters((f) => ({ ...f, priority, taskType, propertyId }));
+    setPage(1);
+  }, [searchParams]);
   useEffect(() => {
     const timeout = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
     return () => clearTimeout(timeout);
