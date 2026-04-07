@@ -64,6 +64,7 @@ export const ticketService = {
     dueDateFrom?: string;
     dueDateTo?: string;
     blocked?: string;
+    overdue?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
     viewMode?: "all" | "assigned";
@@ -105,6 +106,12 @@ export const ticketService = {
     }
     if (params.blocked === "yes") where.blocks = { some: { resolvedAt: null } };
     if (params.blocked === "no") where.blocks = { none: { resolvedAt: null } };
+    if (params.overdue === "1" || params.overdue === "true") {
+      const startOfToday = new Date();
+      startOfToday.setHours(0, 0, 0, 0);
+      where.status = { not: "COMPLETED" };
+      where.dueDate = { ...(where.dueDate || {}), lt: startOfToday };
+    }
     if (params.viewMode === "assigned" && params.userId) {
       where.assignedToId = params.userId;
     }

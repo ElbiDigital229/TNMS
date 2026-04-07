@@ -7,7 +7,7 @@ import { PERMISSIONS } from "../../../shared/permissions.js";
 export const ticketController = {
   async findAll(req: Request, res: Response) {
     try {
-      const { page, limit, search, status, priority, taskType, propertyId, assigneeId, createdById, createdFrom, createdTo, dueDateFrom, dueDateTo, blocked, sortBy, sortOrder } =
+      const { page, limit, search, status, priority, taskType, propertyId, assigneeId, createdById, createdFrom, createdTo, dueDateFrom, dueDateTo, blocked, overdue, sortBy, sortOrder } =
         req.query;
 
       // Determine view mode based on permissions
@@ -33,6 +33,7 @@ export const ticketController = {
         dueDateFrom: dueDateFrom as string,
         dueDateTo: dueDateTo as string,
         blocked: blocked as string,
+        overdue: overdue as string,
         sortBy: sortBy as string,
         sortOrder: sortOrder as "asc" | "desc",
         viewMode,

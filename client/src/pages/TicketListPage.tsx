@@ -70,6 +70,7 @@ export default function TicketListPage() {
     propertyId: searchParams.get("propertyId") || "",
     assigneeId: "", createdById: "", createdFrom: "", createdTo: "",
     dueDateFrom: "", dueDateTo: "",
+    overdue: searchParams.get("overdue") || "",
   });
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
   const [users, setUsers] = useState<{ id: string; fullName: string; username: string }[]>([]);
@@ -98,7 +99,7 @@ export default function TicketListPage() {
   };
   const clearFilter = (key: keyof typeof filters) => setFilter(key, "");
   const clearAll = () => {
-    setFilters({ priority: "", taskType: "", blocked: "", propertyId: "", assigneeId: "", createdById: "", createdFrom: "", createdTo: "", dueDateFrom: "", dueDateTo: "" });
+    setFilters({ priority: "", taskType: "", blocked: "", propertyId: "", assigneeId: "", createdById: "", createdFrom: "", createdTo: "", dueDateFrom: "", dueDateTo: "", overdue: "" });
     setPage(1);
   };
 
@@ -127,8 +128,9 @@ export default function TicketListPage() {
     const priority = searchParams.get("priority") || "";
     const taskType = searchParams.get("taskType") || "";
     const propertyId = searchParams.get("propertyId") || "";
+    const overdue = searchParams.get("overdue") || "";
     setStatusFilter(status);
-    setFilters((f) => ({ ...f, priority, taskType, propertyId }));
+    setFilters((f) => ({ ...f, priority, taskType, propertyId, overdue }));
     setPage(1);
   }, [searchParams]);
   useEffect(() => {
@@ -280,6 +282,7 @@ export default function TicketListPage() {
         {/* Active filter chips */}
         {activeFilterCount > 0 && (
           <div className="flex flex-wrap gap-1">
+            {filters.overdue && <span className={`${chip} bg-red-100 text-red-700`}>Overdue<button onClick={() => clearFilter("overdue")}><X size={10} /></button></span>}
             {filters.priority && <span className={chip}>Priority: {filters.priority}<button onClick={() => clearFilter("priority")}><X size={10} /></button></span>}
             {filters.taskType && <span className={chip}>Type: {filters.taskType}<button onClick={() => clearFilter("taskType")}><X size={10} /></button></span>}
             {filters.blocked && <span className={`${chip} bg-orange-100 text-orange-700`}>{filters.blocked === "yes" ? "Blocked" : "Not blocked"}<button onClick={() => clearFilter("blocked")}><X size={10} /></button></span>}
