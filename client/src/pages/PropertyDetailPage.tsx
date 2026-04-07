@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { propertyApi } from "../lib/api";
+import { propertyApi, assetUrl } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -174,7 +174,7 @@ export default function PropertyDetailPage() {
           </h3>
           {property.imagePath ? (
             <img
-              src={`/${property.imagePath}`}
+              src={assetUrl(property.imagePath)}
               alt={property.name}
               className="h-36 w-full rounded-md object-contain bg-gray-50"
             />

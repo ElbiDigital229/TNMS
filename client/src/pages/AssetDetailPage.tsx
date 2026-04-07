@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { assetApi, assetCategoryApi, ticketApi, departmentApi } from "../lib/api";
+import { assetApi, assetCategoryApi, ticketApi, departmentApi, assetUrl } from "../lib/api";
 import { useAuth } from "../contexts/AuthContext";
 import { useToast } from "../components/ui/Toast";
 import Modal from "../components/ui/Modal";
@@ -286,7 +286,7 @@ export default function AssetDetailPage() {
         {asset.imagePath && (
           <div className={`${cls.card} mb-3 p-4`}>
             <h2 className="mb-3 text-[13px] font-semibold text-gray-900">Image</h2>
-            <img src={`/${asset.imagePath}`} alt={asset.name} className="w-full rounded-md object-cover" />
+            <img src={assetUrl(asset.imagePath)} alt={asset.name} className="w-full rounded-md object-cover" />
           </div>
         )}
 
@@ -295,7 +295,7 @@ export default function AssetDetailPage() {
           <h2 className="mb-3 text-[13px] font-semibold text-gray-900">QR Code</h2>
           {asset.qrCode ? (
             <>
-              <img src={`/${asset.qrCode}`} alt="QR Code" className="mx-auto h-44 w-44" />
+              <img src={assetUrl(asset.qrCode)} alt="QR Code" className="mx-auto h-44 w-44" />
               <p className="mt-1.5 text-[11px] text-gray-500">Scan this QR code to view asset details</p>
               <a href={`/${asset.qrCode}`} download={`${asset.code}-qrcode.png`} className={`mt-2 ${cls.btnPrimary}`}>
                 <Download size={14} />

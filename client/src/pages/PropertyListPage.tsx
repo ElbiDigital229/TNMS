@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { propertyApi, areaGroupApi } from "../lib/api";
+import { propertyApi, areaGroupApi, assetUrl } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -225,7 +225,7 @@ export default function PropertyListPage() {
                   >
                     <td className="px-3 py-2">
                       {p.imagePath ? (
-                        <img src={`/${p.imagePath}`} alt={p.name} className="h-8 w-8 rounded-md object-cover" />
+                        <img src={assetUrl(p.imagePath)} alt={p.name} className="h-8 w-8 rounded-md object-cover" />
                       ) : (
                         <div className="flex h-8 w-8 items-center justify-center rounded-md bg-gray-50 text-gray-400">
                           <Eye size={14} />

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { assetApi, floorApi, assetCategoryApi } from "../../lib/api";
+import { assetApi, floorApi, assetCategoryApi, assetUrl } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
@@ -472,7 +472,7 @@ export default function AssetsTab({
             </div>
             {editingAsset && !image && editingAsset.imagePath && (
               <div className="mt-2">
-                <img src={`/${editingAsset.imagePath}`} alt="Current" className="h-28 w-28 rounded-md object-cover ring-1 ring-gray-100" />
+                <img src={assetUrl(editingAsset.imagePath)} alt="Current" className="h-28 w-28 rounded-md object-cover ring-1 ring-gray-100" />
                 <p className="mt-1 text-[11px] text-gray-400">Current image will be kept if no new image is selected.</p>
               </div>
             )}
@@ -576,14 +576,14 @@ export default function AssetsTab({
             )}
 
             {detailAsset.imagePath && (
-              <img src={`/${detailAsset.imagePath}`} alt={detailAsset.name} className="h-36 w-full rounded-md object-cover" />
+              <img src={assetUrl(detailAsset.imagePath)} alt={detailAsset.name} className="h-36 w-full rounded-md object-cover" />
             )}
 
             <div className="text-center">
               <p className="mb-1.5 text-[11px] text-gray-500">QR Code</p>
               {detailAsset.qrCode ? (
                 <>
-                  <img src={`/${detailAsset.qrCode}`} alt="QR Code" className="mx-auto h-36 w-36" />
+                  <img src={assetUrl(detailAsset.qrCode)} alt="QR Code" className="mx-auto h-36 w-36" />
                   <a
                     href={`/${detailAsset.qrCode}`}
                     download={`${detailAsset.code}-qrcode.png`}

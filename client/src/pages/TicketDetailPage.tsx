@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ticketApi, departmentApi } from "../lib/api";
+import { ticketApi, departmentApi, assetUrl } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -625,7 +625,7 @@ export default function TicketDetailPage() {
                         onClick={() => setLightboxIndex(i)}
                       >
                         <img
-                          src={`/${imgPath}`}
+                          src={assetUrl(imgPath)}
                           alt={`Photo ${i + 1}`}
                           className="h-24 w-24 rounded-lg object-cover ring-1 ring-gray-200 transition-shadow hover:ring-primary-300 md:h-32 md:w-full"
                         />
@@ -1399,7 +1399,7 @@ export default function TicketDetailPage() {
 
       {/* Lightbox */}
       {lightboxIndex !== null && (() => {
-        const images = parseImagePaths(ticket.imagePath).map((p: string) => `/${p}`);
+        const images = parseImagePaths(ticket.imagePath).map((p: string) => assetUrl(p));
         return (
           <Lightbox
             images={images}

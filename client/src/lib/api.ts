@@ -4,6 +4,14 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "/api",
 });
 
+/** Build a full URL for a server-stored asset path (e.g. "uploads/foo.jpg"). */
+export const assetUrl = (path: string | null | undefined): string => {
+  if (!path) return "";
+  const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  const clean = path.replace(/^\//, "");
+  return base ? `${base}/${clean}` : `/${clean}`;
+};
+
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {

@@ -1,6 +1,6 @@
 import { useState, useEffect, type FormEvent } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { propertyApi } from "../lib/api";
+import { propertyApi, assetUrl } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import LocationPicker from "../components/map/LocationPicker";
 import PageHeader from "../components/ui/PageHeader";
@@ -185,7 +185,7 @@ export default function PropertyFormPage() {
             {existingImage && !image && !removeImage && (
               <div className="relative mb-2 inline-block">
                 <img
-                  src={`/${existingImage}`}
+                  src={assetUrl(existingImage)}
                   alt="Current"
                   className="h-28 w-28 rounded-md object-cover ring-1 ring-gray-100"
                 />
