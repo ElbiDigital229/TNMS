@@ -11,8 +11,6 @@ userRoutes.use(authenticate);
 userRoutes.get("/", requirePermission(PERMISSIONS.USERS.VIEW), userController.findAll);
 userRoutes.post("/", requirePermission(PERMISSIONS.USERS.CREATE), userController.create);
 userRoutes.post("/bulk-import", requirePermission(PERMISSIONS.USERS.IMPORT), userController.bulkImport);
-userRoutes.get("/:id/subordinates", requirePermission(PERMISSIONS.USERS.VIEW), userController.getSubordinates);
-userRoutes.get("/:id/properties", requirePermission(PERMISSIONS.USERS.VIEW), userController.getManagerProperties);
 userRoutes.get("/:id", requirePermission(PERMISSIONS.USERS.VIEW), userController.findById);
 userRoutes.put("/:id/properties", requirePermission(PERMISSIONS.USERS.EDIT), userController.updateProperties);
 userRoutes.put("/:id", requirePermission(PERMISSIONS.USERS.EDIT), userController.update);

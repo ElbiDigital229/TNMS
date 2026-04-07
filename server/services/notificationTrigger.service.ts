@@ -289,8 +289,9 @@ export const notificationTrigger = {
         assignedToId: true,
         createdById: true,
         propertyId: true,
+        departmentId: true,
         property: { select: { name: true } },
-        assignedTo: { select: { reportsToId: true } },
+        department: { select: { headUserId: true } },
       },
     });
 
@@ -334,13 +335,14 @@ export const notificationTrigger = {
         }))
       );
 
-      // #10 Escalation: notify assignee's direct manager
-      if (ticket.assignedTo?.reportsToId) {
+      // #10 Escalation: notify the department head if not already a recipient
+      const headId = ticket.department?.headUserId;
+      if (headId && !recipients.has(headId)) {
         await notificationService.create({
-          userId: ticket.assignedTo.reportsToId,
+          userId: headId,
           type: "TICKET_OVERDUE_ESCALATION" as NotificationType,
-          title: "Subordinate Ticket Overdue",
-          message: `${ticket.ticketNumber} — "${ticket.name}" assigned to your team member is ${daysOverdue} day(s) overdue`,
+          title: "Department Ticket Overdue",
+          message: `${ticket.ticketNumber} — "${ticket.name}" in your department is ${daysOverdue} day(s) overdue`,
           linkUrl: `/tickets/${ticket.id}`,
           metadata: {
             ticketId: ticket.id,
@@ -589,26 +591,14 @@ export const notificationTrigger = {
     });
   },
 
-  /** #15 Account blocked/deactivated — notify their direct manager */
+  /** #15 Account blocked/deactivated — notify the user */
   async onUserStatusChanged(
     userId: string,
     newStatus: string,
-    changedByUserId: string
+    _changedByUserId: string
   ) {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: {
-        fullName: true,
-        username: true,
-        reportsToId: true,
-      },
-    });
-    if (!user) return;
-
-    const userName = user.fullName || user.username;
     const statusLabel = newStatus.toLowerCase();
 
-    // Notify the user themselves
     await notificationService.create({
       userId,
       type: "USER_STATUS_CHANGED" as NotificationType,
@@ -616,64 +606,5 @@ export const notificationTrigger = {
       message: `Your account has been ${statusLabel}`,
       metadata: { newStatus },
     });
-
-    // Notify their manager
-    if (user.reportsToId && user.reportsToId !== changedByUserId) {
-      await notificationService.create({
-        userId: user.reportsToId,
-        type: "USER_STATUS_CHANGED" as NotificationType,
-        title: "Team Member Status Changed",
-        message: `${userName}'s account has been ${statusLabel}`,
-        metadata: { affectedUserId: userId, userName, newStatus },
-      });
-    }
-  },
-
-  /** #16 New user created under you — notify the reporting manager */
-  async onNewUserCreated(
-    newUserId: string,
-    newUserName: string,
-    reportsToId: string | null | undefined
-  ) {
-    if (!reportsToId) return;
-
-    await notificationService.create({
-      userId: reportsToId,
-      type: "USER_CREATED_UNDER_YOU" as NotificationType,
-      title: "New Team Member",
-      message: `${newUserName} has been added to your team`,
-      linkUrl: `/settings/users`,
-      metadata: { newUserId, newUserName },
-    });
-  },
-
-  /** #11 New subordinate added (reportsTo changed) */
-  async onNewSubordinate(
-    subordinateUserId: string,
-    subordinateName: string,
-    newManagerId: string,
-    previousManagerId?: string | null
-  ) {
-    // Notify new manager
-    await notificationService.create({
-      userId: newManagerId,
-      type: "USER_NEW_SUBORDINATE" as NotificationType,
-      title: "New Subordinate Assigned",
-      message: `${subordinateName} now reports to you`,
-      linkUrl: `/settings/users`,
-      metadata: { subordinateUserId, subordinateName },
-    });
-
-    // Notify previous manager they lost a subordinate
-    if (previousManagerId && previousManagerId !== newManagerId) {
-      await notificationService.create({
-        userId: previousManagerId,
-        type: "USER_NEW_SUBORDINATE" as NotificationType,
-        title: "Subordinate Reassigned",
-        message: `${subordinateName} no longer reports to you`,
-        linkUrl: `/settings/users`,
-        metadata: { subordinateUserId, subordinateName },
-      });
-    }
   },
 };

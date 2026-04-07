@@ -240,7 +240,6 @@ async function main() {
         isSuperAdmin: u.isSuperAdmin || false,
         allProperties: u.allProperties || false,
         roleId: u.roleId,
-        reportsToId: u.reportsToId || undefined,
         status: u.status || "ACTIVE",
         propertyAssignments: {
           create: (u.propertyAssignments || []).map((pa: any) => ({

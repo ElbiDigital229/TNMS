@@ -172,15 +172,13 @@ model User {
   allProperties Boolean  @default(false)
   roleId        String
   role          Role     @relation(fields: [roleId], references: [id])
-  reportsToId   String?
-  reportsTo     User?    @relation("UserHierarchy", fields: [reportsToId], references: [id])
-  subordinates  User[]   @relation("UserHierarchy")
   status        Status   @default(ACTIVE)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
   departmentId        String?
   department          Department? @relation(fields: [departmentId], references: [id])
+  headOfDepartments   Department[] @relation("DepartmentHead")
 
   todos               Todo[]
   propertyAssignments  UserPropertyAssignment[]
@@ -369,11 +367,13 @@ model TicketCategory {
 }
 
 model Department {
-  id        String   @id @default(uuid())
-  name      String   @unique
-  status    Status   @default(ACTIVE)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id         String   @id @default(uuid())
+  name       String   @unique
+  status     Status   @default(ACTIVE)
+  headUserId String?
+  head       User?    @relation("DepartmentHead", fields: [headUserId], references: [id])
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
   users        User[]
   tickets      Ticket[]

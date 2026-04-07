@@ -46,14 +46,12 @@ interface User {
   phone: string;
   role: Role;
   roleId?: string;
-  reportsTo: { id: string; username: string; fullName?: string } | null;
-  reportsToId: string | null;
   allProperties: boolean;
   isSuperAdmin: boolean;
   properties?: Property[];
   department?: { id: string; name: string } | null;
   departmentId?: string | null;
-  _count?: { propertyAssignments: number; subordinates: number };
+  _count?: { propertyAssignments: number };
   status: string;
 }
 
@@ -67,7 +65,6 @@ const emptyForm = {
   email: "",
   phone: "",
   roleId: "",
-  reportsToId: "",
   departmentId: "",
   allProperties: true,
   propertyIds: [] as string[],
@@ -96,7 +93,6 @@ export default function UserManagementPage() {
   const [resetPwOpen, setResetPwOpen] = useState(false);
   const [resetPwUser, setResetPwUser] = useState<User | null>(null);
   const [newPassword, setNewPassword] = useState("");
-  const [managerPropertyIds, setManagerPropertyIds] = useState<string[] | "all" | null>(null);
   const [bulkOpen, setBulkOpen] = useState(false);
 
   const fetchUsers = () => {
@@ -194,18 +190,11 @@ export default function UserManagementPage() {
       email: user.email || user.username || "",
       phone: user.phone || "",
       roleId: user.role?.id || user.roleId || "",
-      reportsToId: user.reportsToId || user.reportsTo?.id || "",
       departmentId: user.department?.id || "",
       allProperties: user.allProperties ?? true,
       propertyIds: user.properties?.map((p) => p.id) || [],
       accessMode: mode,
     });
-    const managerId = user.reportsToId || user.reportsTo?.id;
-    if (managerId) {
-      fetchManagerProperties(managerId);
-    } else {
-      setManagerPropertyIds(null);
-    }
     setModalOpen(true);
   };
 
@@ -222,13 +211,6 @@ export default function UserManagementPage() {
     }
     if (!editing && !form.password.trim()) {
       toast.error("Password is required");
-      return;
-    }
-
-    const selectedRole = roles.find((r) => r.id === form.roleId);
-    const requiresManager = selectedRole && selectedRole.level >= 4;
-    if (requiresManager && !form.reportsToId) {
-      toast.error(`${selectedRole.name} must have a reporting manager`);
       return;
     }
 
@@ -256,7 +238,6 @@ export default function UserManagementPage() {
         email: form.email,
         phone: form.phone,
         roleId: form.roleId || undefined,
-        reportsToId: form.reportsToId || null,
         departmentId: form.departmentId || null,
         allProperties: derivedAllProperties,
         propertyIds: derivedAllProperties ? [] : derivedPropertyIds,
@@ -333,28 +314,8 @@ export default function UserManagementPage() {
     }
   };
 
-  const fetchManagerProperties = async (managerId: string) => {
-    if (!managerId) {
-      setManagerPropertyIds(null);
-      return;
-    }
-    try {
-      const res = await userApi.getManagerProperties(managerId);
-      setManagerPropertyIds(res.data.data);
-    } catch {
-      setManagerPropertyIds(null);
-    }
-  };
-
   const updateForm = (field: string, value: unknown) => {
-    setForm((prev) => {
-      const next = { ...prev, [field]: value };
-      // When reportsTo changes, reset property selections that exceed manager's access
-      if (field === "reportsToId") {
-        fetchManagerProperties(value as string);
-      }
-      return next;
-    });
+    setForm((prev) => ({ ...prev, [field]: value }));
   };
 
   const toggleProperty = (propId: string) => {
@@ -453,7 +414,6 @@ export default function UserManagementPage() {
                   <th className={cls.th}>Role</th>
                   <th className={cls.th}>Properties</th>
                   <th className={cls.th}>Department</th>
-                  <th className={cls.th}>Reports To</th>
                   <th className={cls.th}>Status</th>
                   <th className={cls.th}>Actions</th>
                 </tr>
@@ -489,11 +449,6 @@ export default function UserManagementPage() {
                     </td>
                     <td className={`${cls.td} text-gray-600`}>
                       {user.department?.name || "-"}
-                    </td>
-                    <td className={`${cls.td} text-gray-600`}>
-                      {user.reportsTo
-                        ? `${user.reportsTo.fullName || user.reportsTo.username}`
-                        : "-"}
                     </td>
                     <td className={cls.td}>
                       <Badge
@@ -532,7 +487,7 @@ export default function UserManagementPage() {
                             <button
                               onClick={() => handleDeactivate(user)}
                               className="rounded px-1.5 py-0.5 text-[11px] font-medium text-red-600 hover:bg-red-50"
-                              title="Fully deactivate (requires no subordinates or open tickets)"
+                              title="Fully deactivate (requires no open tickets)"
                             >
                               Deactivate
                             </button>
@@ -665,16 +620,7 @@ export default function UserManagementPage() {
             <label className={cls.label}>Role</label>
             <select
               value={form.roleId}
-              onChange={(e) => {
-                const newRoleId = e.target.value;
-                const newRole = roles.find((r) => r.id === newRoleId);
-                const needsManager = newRole && newRole.level >= 4;
-                setForm((prev) => ({
-                  ...prev,
-                  roleId: newRoleId,
-                  reportsToId: needsManager ? prev.reportsToId : "",
-                }));
-              }}
+              onChange={(e) => updateForm("roleId", e.target.value)}
               className={`${cls.select} w-full`}
             >
               <option value="">Select a role</option>
@@ -705,61 +651,10 @@ export default function UserManagementPage() {
           </div>
           )}
 
-          {/* Reports To — shown for roles at level 4+ (Manager, Supervisor, Technician, etc.) */}
-          {(() => {
-            const sel = roles.find((r) => r.id === form.roleId);
-            return sel && sel.level >= 4;
-          })() && (
-          <div>
-            <label className={cls.label}>
-              Reports To <span className="text-red-500">*</span>
-            </label>
-            <select
-              value={form.reportsToId}
-              onChange={(e) => updateForm("reportsToId", e.target.value)}
-              className={`${cls.select} w-full`}
-            >
-              <option value="">Select manager</option>
-              {users
-                .filter((u) => {
-                  if (editing && u.id === editing.id) return false;
-                  const selectedRole = roles.find((r) => r.id === form.roleId);
-                  if (!selectedRole) return false;
-                  const userRole = roles.find((r) => r.name === u.role?.name);
-                  if (!userRole) return false;
-                  // Show users with a higher role (lower level number) in the same department
-                  const userDeptId = u.departmentId || u.department?.id;
-                  return userDeptId === form.departmentId && userRole.level < selectedRole.level;
-                })
-                .map((u) => (
-                  <option key={u.id} value={u.id}>
-                    {u.fullName || u.username} ({u.role?.name})
-                  </option>
-                ))}
-            </select>
-          </div>
-          )}
-
-          {/* Property Access — inherited if reporting to someone or role requires manager */}
-          {(() => {
-            const sel = roles.find((r) => r.id === form.roleId);
-            const mustInherit = sel && sel.level >= 4;
-            return mustInherit || form.reportsToId;
-          })() ? (
-            <div className="rounded-md border border-blue-200 bg-blue-50 p-2.5">
-              <p className="text-[13px] text-blue-700 font-medium">Property access inherited from manager</p>
-              <p className="text-[11px] text-blue-600 mt-0.5">This user will automatically have access to the same properties as their reporting manager.</p>
-            </div>
-          ) : (<>
+          {/* Property Access */}
           <div>
             <label className={cls.label}>Property Access</label>
-            {managerPropertyIds !== null && managerPropertyIds !== "all" && (
-              <p className="mb-1.5 text-[11px] text-amber-600">
-                Manager has access to specific properties only — this user inherits that scope.
-              </p>
-            )}
             <div className="space-y-1.5 rounded-md border border-gray-300 p-2.5">
-              {/* All properties */}
               <label className="flex items-center gap-2 text-[13px] cursor-pointer">
                 <input
                   type="radio"
@@ -768,21 +663,14 @@ export default function UserManagementPage() {
                   onChange={() => {
                     setForm((prev) => ({ ...prev, accessMode: "all", allProperties: true, propertyIds: [] }));
                   }}
-                  disabled={managerPropertyIds !== null && managerPropertyIds !== "all"}
-                  className="h-3.5 w-3.5 border-gray-300 text-primary-600 focus:ring-primary-500 disabled:opacity-50"
+                  className="h-3.5 w-3.5 border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
                 <span className="font-medium text-gray-700">Access to all properties</span>
               </label>
 
-              {/* Area group options */}
               {areaGroups.map((ag) => {
                 const groupProps = properties.filter((p) => p.areaGroupId === ag.id);
                 if (groupProps.length === 0) return null;
-                // If manager has limited access, only show groups where manager has at least one property
-                if (managerPropertyIds && managerPropertyIds !== "all") {
-                  const hasAccess = groupProps.some((p) => managerPropertyIds.includes(p.id));
-                  if (!hasAccess) return null;
-                }
                 return (
                   <label key={ag.id} className="flex items-center gap-2 text-[13px] cursor-pointer">
                     <input
@@ -801,7 +689,6 @@ export default function UserManagementPage() {
                 );
               })}
 
-              {/* Specific properties */}
               <label className="flex items-center gap-2 text-[13px] cursor-pointer">
                 <input
                   type="radio"
@@ -817,46 +704,34 @@ export default function UserManagementPage() {
             </div>
           </div>
 
-          {/* Property Multi-select — only when "specific" is chosen */}
           {form.accessMode === "specific" && (
             <div>
               <label className={cls.label}>Select Properties</label>
               <div className="max-h-36 overflow-y-auto rounded-md border border-gray-300 p-2 space-y-0.5">
-                {(() => {
-                  const availableProperties =
-                    managerPropertyIds && managerPropertyIds !== "all"
-                      ? properties.filter((p) => managerPropertyIds.includes(p.id))
-                      : properties;
-                  return availableProperties.length === 0 ? (
-                    <p className="px-2 py-1 text-[12px] text-gray-400">
-                      {managerPropertyIds && managerPropertyIds !== "all"
-                        ? "Manager has no properties assigned"
-                        : "No properties available"}
-                    </p>
-                  ) : (
-                    availableProperties.map((p) => (
-                      <label
-                        key={p.id}
-                        className="flex items-center gap-2 rounded px-1.5 py-1 text-[13px] hover:bg-gray-50 cursor-pointer"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={form.propertyIds.includes(p.id)}
-                          onChange={() => toggleProperty(p.id)}
-                          className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-                        />
-                        <span>{p.name}</span>
-                        {p.areaGroup && (
-                          <span className="text-[11px] text-gray-400">({p.areaGroup.groupName})</span>
-                        )}
-                      </label>
-                    ))
-                  );
-                })()}
+                {properties.length === 0 ? (
+                  <p className="px-2 py-1 text-[12px] text-gray-400">No properties available</p>
+                ) : (
+                  properties.map((p) => (
+                    <label
+                      key={p.id}
+                      className="flex items-center gap-2 rounded px-1.5 py-1 text-[13px] hover:bg-gray-50 cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={form.propertyIds.includes(p.id)}
+                        onChange={() => toggleProperty(p.id)}
+                        className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                      />
+                      <span>{p.name}</span>
+                      {p.areaGroup && (
+                        <span className="text-[11px] text-gray-400">({p.areaGroup.groupName})</span>
+                      )}
+                    </label>
+                  ))
+                )}
               </div>
             </div>
           )}
-          </>)}
 
           {/* Actions */}
           <div className="flex justify-end gap-2 pt-1">

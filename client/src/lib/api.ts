@@ -181,8 +181,10 @@ export const ticketCategoryApi = {
 
 export const departmentApi = {
   list: () => api.get("/departments"),
-  create: (name: string) => api.post("/departments", { name }),
-  update: (id: string, name: string) => api.put(`/departments/${id}`, { name }),
+  create: (name: string, headUserId?: string | null) =>
+    api.post("/departments", { name, headUserId }),
+  update: (id: string, name: string, headUserId?: string | null) =>
+    api.put(`/departments/${id}`, { name, headUserId }),
   deactivate: (id: string) => api.patch(`/departments/${id}/deactivate`),
   activate: (id: string) => api.patch(`/departments/${id}/activate`),
   getUsers: (id: string) => api.get(`/departments/${id}/users`),
@@ -215,8 +217,6 @@ export const userApi = {
   deactivate: (id: string) => api.patch(`/users/${id}/deactivate`),
   block: (id: string) => api.patch(`/users/${id}/block`),
   activate: (id: string) => api.patch(`/users/${id}/activate`),
-  getSubordinates: (id: string) => api.get(`/users/${id}/subordinates`),
-  getManagerProperties: (id: string) => api.get(`/users/${id}/properties`),
   bulkImport: (items: Record<string, string>[]) =>
     api.post("/users/bulk-import", { items }),
 };

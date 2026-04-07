@@ -386,16 +386,10 @@ export async function seed() {
     roleName: string;
     allProperties: boolean;
     propertyCodeAssignments?: string[];
-    reportsToUsername?: string;
+    reportsToUsername?: string; // ignored — kept for backward seed compat
   }) => {
     const roleId = roleMap[data.roleName];
     if (!roleId) { console.log(`Role ${data.roleName} not found, skipping ${data.username}`); return; }
-
-    let reportsToId: string | undefined;
-    if (data.reportsToUsername) {
-      const manager = await prisma.user.findUnique({ where: { username: data.reportsToUsername } });
-      if (manager) reportsToId = manager.id;
-    }
 
     let user = await prisma.user.findUnique({ where: { username: data.username } });
     if (!user) {
@@ -408,14 +402,13 @@ export async function seed() {
           phone: data.phone,
           roleId,
           allProperties: data.allProperties,
-          reportsToId,
         },
       });
       console.log(`Seeded user: ${data.fullName} (${data.roleName})`);
     } else {
       await prisma.user.update({
         where: { id: user.id },
-        data: { roleId, allProperties: data.allProperties, reportsToId, fullName: data.fullName, email: data.email },
+        data: { roleId, allProperties: data.allProperties, fullName: data.fullName, email: data.email },
       });
       console.log(`Updated user: ${data.fullName}`);
     }

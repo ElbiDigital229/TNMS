@@ -14,9 +14,9 @@ export const departmentController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { name } = req.body;
+      const { name, headUserId } = req.body;
       if (!name) return sendError(res, "Name is required", 400);
-      const department = await departmentService.create(name);
+      const department = await departmentService.create(name, headUserId);
       sendSuccess(res, department, "Department created", 201);
     } catch (error: any) {
       sendError(res, error.message);
@@ -25,9 +25,9 @@ export const departmentController = {
 
   async update(req: Request, res: Response) {
     try {
-      const { name } = req.body;
+      const { name, headUserId } = req.body;
       if (!name) return sendError(res, "Name is required", 400);
-      const department = await departmentService.update(req.params.id, name);
+      const department = await departmentService.update(req.params.id, name, headUserId);
       sendSuccess(res, department, "Department updated");
     } catch (error: any) {
       sendError(res, error.message);

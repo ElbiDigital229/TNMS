@@ -25,16 +25,11 @@ export const rbacService = {
   async getUserPropertyIds(userId: string): Promise<string[] | "all"> {
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { isSuperAdmin: true, allProperties: true, reportsToId: true },
+      select: { isSuperAdmin: true, allProperties: true },
     });
 
     if (!user) return [];
     if (user.isSuperAdmin || user.allProperties) return "all";
-
-    // If user reports to someone, inherit manager's properties
-    if (user.reportsToId) {
-      return this.getUserPropertyIds(user.reportsToId);
-    }
 
     const assignments = await prisma.userPropertyAssignment.findMany({
       where: { userId },
@@ -42,26 +37,6 @@ export const rbacService = {
     });
 
     return assignments.map((a) => a.propertyId);
-  },
-
-  async getUserSubordinateIds(userId: string): Promise<string[]> {
-    const result: string[] = [];
-    const queue = [userId];
-
-    while (queue.length > 0) {
-      const currentId = queue.shift()!;
-      const directReports = await prisma.user.findMany({
-        where: { reportsToId: currentId, status: "ACTIVE" },
-        select: { id: true },
-      });
-
-      for (const report of directReports) {
-        result.push(report.id);
-        queue.push(report.id);
-      }
-    }
-
-    return result;
   },
 
   /** Check if a user has access to a specific property (respects inheritance) */

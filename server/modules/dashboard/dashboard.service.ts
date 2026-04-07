@@ -12,19 +12,10 @@ export const dashboardService = {
       }
     }
 
-    // Build ticket-specific scope (for technicians/supervisors)
+    // Build ticket-specific scope: levels 5 and 6 (Supervisor/Technician) see only their own assigned tickets
     let ticketScopeFilter: any = { ...scopeFilter };
-    if (roleLevel === 6) {
-      // Technician: only see assigned tickets
+    if (roleLevel >= 5) {
       ticketScopeFilter.assignedToId = userId;
-    } else if (roleLevel === 5) {
-      // Supervisor: see own + direct subordinates' tickets
-      const subordinates = await prisma.user.findMany({
-        where: { reportsToId: userId },
-        select: { id: true },
-      });
-      const teamIds = [userId, ...subordinates.map(s => s.id)];
-      ticketScopeFilter.assignedToId = { in: teamIds };
     }
 
     // Build where clauses for property/unit/asset counts

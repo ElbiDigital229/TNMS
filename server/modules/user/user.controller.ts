@@ -37,7 +37,7 @@ export const userController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { fullName, employeeCode, designation, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds, password } = req.body;
+      const { fullName, employeeCode, designation, email, phone, roleId, departmentId, allProperties, propertyIds, password } = req.body;
 
       if (!email || !roleId || !departmentId) {
         return sendError(res, "Email, roleId, and departmentId are required", 400);
@@ -52,7 +52,6 @@ export const userController = {
         email,
         phone,
         roleId,
-        reportsToId,
         departmentId,
         allProperties,
         propertyIds,
@@ -66,7 +65,7 @@ export const userController = {
 
   async update(req: Request, res: Response) {
     try {
-      const { fullName, employeeCode, designation, email, phone, roleId, reportsToId, departmentId, allProperties, propertyIds } = req.body;
+      const { fullName, employeeCode, designation, email, phone, roleId, departmentId, allProperties, propertyIds } = req.body;
 
       const user = await userService.update(req.params.id, {
         fullName,
@@ -75,7 +74,6 @@ export const userController = {
         email,
         phone,
         roleId,
-        reportsToId,
         departmentId: departmentId || null,
         allProperties,
         propertyIds,
@@ -144,15 +142,6 @@ export const userController = {
     }
   },
 
-  async getSubordinates(req: Request, res: Response) {
-    try {
-      const subordinates = await userService.getSubordinates(req.params.id);
-      sendSuccess(res, subordinates);
-    } catch (error: any) {
-      sendError(res, error.message || "Failed to fetch subordinates");
-    }
-  },
-
   async bulkImport(req: Request, res: Response) {
     try {
       const { items } = req.body;
@@ -174,12 +163,4 @@ export const userController = {
     }
   },
 
-  async getManagerProperties(req: Request, res: Response) {
-    try {
-      const result = await userService.getManagerPropertyIds(req.params.id);
-      sendSuccess(res, result);
-    } catch (error: any) {
-      sendError(res, error.message || "Failed to fetch manager properties");
-    }
-  },
 };

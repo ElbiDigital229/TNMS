@@ -211,21 +211,24 @@ export const ticketService = {
     const ticketNumber = await this.generateTicketNumber();
     const { assetIds, ...ticketData } = data;
 
-    // Auto-assign: if department is set but no assignee, find department manager
+    // Auto-assign: if department is set but no assignee, use the department head
     let effectiveAssigneeId = data.assignedToId;
     let autoAssigned = false;
     if (!effectiveAssigneeId && data.departmentId) {
-      const deptManager = await prisma.user.findFirst({
-        where: {
-          departmentId: data.departmentId,
-          status: "ACTIVE",
-          role: { name: "Manager" },
-        },
-        select: { id: true },
+      const dept = await prisma.department.findUnique({
+        where: { id: data.departmentId },
+        select: { headUserId: true },
       });
-      if (deptManager) {
-        effectiveAssigneeId = deptManager.id;
-        autoAssigned = true;
+      if (dept?.headUserId) {
+        // Verify head is still active
+        const head = await prisma.user.findUnique({
+          where: { id: dept.headUserId },
+          select: { id: true, status: true },
+        });
+        if (head?.status === "ACTIVE") {
+          effectiveAssigneeId = head.id;
+          autoAssigned = true;
+        }
       }
     }
 
@@ -271,7 +274,7 @@ export const ticketService = {
         data: {
           ticketId: ticket.id,
           action: "ASSIGNED",
-          details: `Auto-assigned to department manager ${mgr?.fullName || mgr?.username}`,
+          details: `Auto-assigned to department head ${mgr?.fullName || mgr?.username}`,
           performedById: data.createdById || null,
         },
       });
@@ -674,7 +677,6 @@ export const ticketService = {
       where: {
         departmentId: ticket.departmentId,
         status: "ACTIVE",
-        role: { name: { in: ["Manager", "Supervisor", "Technician"] } },
       },
       select: {
         id: true,
