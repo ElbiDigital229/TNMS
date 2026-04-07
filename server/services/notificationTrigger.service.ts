@@ -316,7 +316,7 @@ export const notificationTrigger = {
       if (recipients.size === 0) continue;
 
       const daysOverdue = Math.ceil(
-        (now.getTime() - ticket.dueDate.getTime()) / 86400000
+        (now.getTime() - ticket.dueDate!.getTime()) / 86400000
       );
 
       await notificationService.createMany(
@@ -394,7 +394,7 @@ export const notificationTrigger = {
       if (existing) continue;
 
       const hoursLeft = Math.round(
-        (ticket.dueDate.getTime() - now.getTime()) / 3600000
+        (ticket.dueDate!.getTime() - now.getTime()) / 3600000
       );
 
       await notificationService.create({

@@ -450,7 +450,7 @@ async function queryTrend(entity: Entity, where: any, granularity: Granularity, 
         total: pt.length,
         completed: pt.filter((t) => t.status === "COMPLETED").length,
         open: pt.filter((t) => t.status !== "COMPLETED").length,
-        overdue: pt.filter((t) => t.status !== "COMPLETED" && t.dueDate < tomorrow).length,
+        overdue: pt.filter((t) => t.status !== "COMPLETED" && t.dueDate && t.dueDate < tomorrow).length,
       };
     });
   }
@@ -725,7 +725,7 @@ export const dashboardReportService = {
       let totalHours = 0;
       for (const t of completedTickets) {
         totalHours += (t.completedAt!.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
-        if (t.completedAt! <= t.dueDate) slaCompliant++;
+        if (t.dueDate && t.completedAt! <= t.dueDate) slaCompliant++;
       }
       avgResolutionHours = Math.round((totalHours / completedTickets.length) * 10) / 10;
     }
@@ -832,7 +832,7 @@ export const dashboardReportService = {
       if (t.status === "COMPLETED" && t.completedAt) {
         entry.completed++;
         entry.totalHours += (t.completedAt.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
-        if (t.completedAt <= t.dueDate) entry.slaOk++;
+        if (t.dueDate && t.completedAt <= t.dueDate) entry.slaOk++;
       }
     }
 

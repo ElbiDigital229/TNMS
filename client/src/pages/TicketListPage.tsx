@@ -23,7 +23,7 @@ interface Ticket {
   subTaskType: string;
   priority: string;
   status: string;
-  dueDate: string;
+  dueDate: string | null;
   property: { id: string; name: string; code: string };
   unit: { id: string; name: string; code: string };
   category: { id: string; name: string };
@@ -36,11 +36,11 @@ interface Ticket {
 const isLate = (t: Ticket) =>
   t.status === "COMPLETED" && t.completedAt && t.dueDate && new Date(t.completedAt) > new Date(t.dueDate);
 
-const overdueDays = (dueDate: string) =>
-  Math.ceil((Date.now() - new Date(dueDate).getTime()) / 86400000);
+const overdueDays = (dueDate: string | null) =>
+  dueDate ? Math.ceil((Date.now() - new Date(dueDate).getTime()) / 86400000) : 0;
 
-const lateDays = (completedAt: string, dueDate: string) =>
-  Math.ceil((new Date(completedAt).getTime() - new Date(dueDate).getTime()) / 86400000);
+const lateDays = (completedAt: string, dueDate: string | null) =>
+  dueDate ? Math.ceil((new Date(completedAt).getTime() - new Date(dueDate).getTime()) / 86400000) : 0;
 
 const filterLabel = "mb-1 block text-[11px] font-medium uppercase tracking-wide text-gray-500";
 const chip = "inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700";
@@ -305,8 +305,8 @@ export default function TicketListPage() {
                   <span className="text-[11px] text-gray-500">{ticket.property.name}</span>
                 </div>
                 <div className="mt-1.5 flex items-center justify-between">
-                  <span className="text-[11px] text-gray-400">Due {new Date(ticket.dueDate).toLocaleDateString()}</span>
-                  {computeUrgency(ticket.dueDate, ticket.status) === "OVERDUE" && <span className="text-[11px] font-semibold text-red-500">{overdueDays(ticket.dueDate)}d overdue</span>}
+                  <span className="text-[11px] text-gray-400">{ticket.dueDate ? `Due ${new Date(ticket.dueDate).toLocaleDateString()}` : "No due date"}</span>
+                  {ticket.dueDate && computeUrgency(ticket.dueDate, ticket.status) === "OVERDUE" && <span className="text-[11px] font-semibold text-red-500">{overdueDays(ticket.dueDate)}d overdue</span>}
                 </div>
               </Link>
             ))}
@@ -368,9 +368,13 @@ export default function TicketListPage() {
                         ) : <span className="text-[11px] text-gray-400">Unassigned</span>}
                       </td>
                       <td className={cls.td}>
-                        <span className="text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</span>
-                        {computeUrgency(ticket.dueDate, ticket.status) === "OVERDUE" && <p className="text-[11px] font-medium text-red-500">{overdueDays(ticket.dueDate)}d overdue</p>}
-                        {isLate(ticket) && ticket.completedAt && <p className="text-[11px] font-medium text-orange-500">{lateDays(ticket.completedAt, ticket.dueDate)}d late</p>}
+                        {ticket.dueDate ? (
+                          <>
+                            <span className="text-gray-600">{new Date(ticket.dueDate).toLocaleDateString()}</span>
+                            {computeUrgency(ticket.dueDate, ticket.status) === "OVERDUE" && <p className="text-[11px] font-medium text-red-500">{overdueDays(ticket.dueDate)}d overdue</p>}
+                            {isLate(ticket) && ticket.completedAt && <p className="text-[11px] font-medium text-orange-500">{lateDays(ticket.completedAt, ticket.dueDate)}d late</p>}
+                          </>
+                        ) : <span className="text-gray-300">—</span>}
                       </td>
                       <td className={cls.td}>
                         <span className={cls.btnIcon} title="View"><Eye size={15} /></span>
@@ -406,15 +410,15 @@ export default function TicketListPage() {
         title="Import Tickets"
         columns={[
           { key: "title", label: "Title", required: true, example: "Replace AC filter" },
-          { key: "description", label: "Description", example: "Filter clogged in conf room" },
+          { key: "description", label: "Description", required: true, example: "Filter clogged in conf room" },
           { key: "property", label: "Property", required: true, example: "Vogue", aliases: ["propertyName", "propertyCode"] },
-          { key: "unit", label: "Unit", required: true, example: "101", aliases: ["unitName"] },
-          { key: "department", label: "Department", required: true, example: "Facility Management" },
-          { key: "category", label: "Category", required: true, example: "HVAC" },
-          { key: "taskType", label: "Task Type", required: true, example: "Maintenance" },
+          { key: "unit", label: "Unit", example: "101", aliases: ["unitName"] },
+          { key: "department", label: "Department", example: "Facility Management" },
+          { key: "category", label: "Category", example: "HVAC" },
+          { key: "taskType", label: "Task Type", example: "Maintenance" },
           { key: "subTaskType", label: "Sub Task Type", example: "Reactive" },
-          { key: "priority", label: "Priority", required: true, example: "Medium" },
-          { key: "dueDate", label: "Due Date", required: true, example: "2026-04-15" },
+          { key: "priority", label: "Priority", example: "Medium" },
+          { key: "dueDate", label: "Due Date", example: "2026-04-15" },
           { key: "assigneeEmail", label: "Assignee Email", example: "tech@example.com", aliases: ["assignee"] },
         ]}
         onImport={async (items) => {

@@ -26,7 +26,7 @@ interface ReportTicketRow {
   unit: { id: string; name: string } | null;
   category: { id: string; name: string } | null;
   assignedTo: { id: string; fullName: string | null; username: string } | null;
-  dueDate: string;
+  dueDate: string | null;
   completedAt: string | null;
   createdAt: string;
 }
@@ -338,7 +338,7 @@ export default function EntityReportPage() {
   // ── Summary ────────────────────────────────────────────────────────────────
   const summary = useMemo(() => {
     const completed = filteredTickets.filter((t) => t.status === "COMPLETED");
-    const onTime = completed.filter((t) => t.completedAt && new Date(t.completedAt) <= new Date(t.dueDate));
+    const onTime = completed.filter((t) => t.completedAt && t.dueDate && new Date(t.completedAt) <= new Date(t.dueDate));
     let totalMs = 0;
     for (const t of completed) {
       if (t.completedAt) totalMs += new Date(t.completedAt).getTime() - new Date(t.createdAt).getTime();
@@ -349,7 +349,7 @@ export default function EntityReportPage() {
       total: filteredTickets.length,
       completed: completed.length,
       inProgress: filteredTickets.filter((t) => t.status === "IN_PROGRESS").length,
-      overdue: filteredTickets.filter((t) => t.status !== "COMPLETED" && new Date(t.dueDate) < new Date()).length,
+      overdue: filteredTickets.filter((t) => t.status !== "COMPLETED" && t.dueDate && new Date(t.dueDate) < new Date()).length,
       blocked: filteredTickets.filter((t) => t.isBlocked).length,
       avgHours,
       onTimePct,

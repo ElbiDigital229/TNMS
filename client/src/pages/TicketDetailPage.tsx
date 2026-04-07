@@ -964,11 +964,17 @@ export default function TicketDetailPage() {
               <div className="flex items-center justify-between">
                 <dt className="text-gray-500">Due Date</dt>
                 <dd className={`font-medium ${isOverdue ? "text-red-600" : "text-gray-900"}`}>
-                  {new Date(ticket.dueDate).toLocaleDateString()}
-                  {isOverdue && (
-                    <span className="ml-1 text-xs">
-                      ({Math.ceil((new Date().getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d overdue)
-                    </span>
+                  {ticket.dueDate ? (
+                    <>
+                      {new Date(ticket.dueDate).toLocaleDateString()}
+                      {isOverdue && (
+                        <span className="ml-1 text-xs">
+                          ({Math.ceil((new Date().getTime() - new Date(ticket.dueDate).getTime()) / 86400000)}d overdue)
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <span className="text-gray-300">—</span>
                   )}
                 </dd>
               </div>

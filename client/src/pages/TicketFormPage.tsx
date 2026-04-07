@@ -179,17 +179,8 @@ export default function TicketFormPage() {
   };
 
   const handleSubmit = async () => {
-    if (
-      !name ||
-      !description ||
-      !propertyId ||
-      !dueDate ||
-      !taskType ||
-      !subTaskType ||
-      !departmentId ||
-      !priority
-    ) {
-      toast.error("Please fill all required fields");
+    if (!name || !description || !propertyId) {
+      toast.error("Title, description, and property are required");
       return;
     }
 
@@ -199,13 +190,13 @@ export default function TicketFormPage() {
     formData.append("description", description);
     formData.append("propertyId", propertyId);
     if (unitId) formData.append("unitId", unitId);
-    formData.append("dueDate", dueDate);
-    formData.append("taskType", taskType);
-    formData.append("subTaskType", subTaskType);
+    if (dueDate) formData.append("dueDate", dueDate);
+    if (taskType) formData.append("taskType", taskType);
+    if (subTaskType) formData.append("subTaskType", subTaskType);
     if (categoryId) formData.append("categoryId", categoryId);
-    formData.append("departmentId", departmentId);
+    if (departmentId) formData.append("departmentId", departmentId);
     if (assignedToId) formData.append("assignedToId", assignedToId);
-    formData.append("priority", priority);
+    if (priority) formData.append("priority", priority);
     formData.append("isRecurring", String(isRecurring));
     if (isRecurring && recurringType) {
       formData.append("recurringType", recurringType);
@@ -392,7 +383,7 @@ export default function TicketFormPage() {
           {/* Due Date */}
           <div>
             <label className={cls.label}>
-              Due Date <span className="text-red-500">*</span>
+              Due Date
             </label>
             <input
               type="date"
@@ -406,7 +397,7 @@ export default function TicketFormPage() {
           <div className="grid grid-cols-2 gap-3">
             <div>
               <label className={cls.label}>
-                Task Type <span className="text-red-500">*</span>
+                Task Type
               </label>
               <select
                 value={taskType}
@@ -422,7 +413,7 @@ export default function TicketFormPage() {
             </div>
             <div>
               <label className={cls.label}>
-                Sub Task Type <span className="text-red-500">*</span>
+                Sub Task Type
               </label>
               <select
                 value={subTaskType}
@@ -439,7 +430,7 @@ export default function TicketFormPage() {
           {/* Department */}
           <div>
             <label className={cls.label}>
-              Department <span className="text-red-500">*</span>
+              Department
             </label>
             <select
               value={departmentId}
@@ -496,7 +487,7 @@ export default function TicketFormPage() {
             </div>
             <div>
               <label className={cls.label}>
-                Priority <span className="text-red-500">*</span>
+                Priority
               </label>
               <select
                 value={priority}

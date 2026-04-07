@@ -44,7 +44,7 @@ interface DashboardStats {
     name: string;
     status: string;
     priority: string;
-    dueDate: string;
+    dueDate: string | null;
     property: { name: string };
     category: { name: string };
   }>;
@@ -176,7 +176,7 @@ export default function DashboardPage() {
                     <span className="text-[11px] text-gray-400">·</span>
                     <span className="text-[11px] text-gray-500">{ticket.property.name}</span>
                     <span className="text-[11px] text-gray-400">·</span>
-                    <span className="text-[11px] text-gray-400">Due {new Date(ticket.dueDate).toLocaleDateString()}</span>
+                    <span className="text-[11px] text-gray-400">{ticket.dueDate ? `Due ${new Date(ticket.dueDate).toLocaleDateString()}` : "No due date"}</span>
                   </div>
                 </Link>
               ))}
@@ -203,7 +203,7 @@ export default function DashboardPage() {
                       <td className={`${cls.td} text-gray-600`}>{ticket.property.name}</td>
                       <td className={cls.td}><PriorityBadge priority={ticket.priority} /></td>
                       <td className={cls.td}><StatusBadge status={ticket.status} /></td>
-                      <td className={`${cls.td} text-gray-600`}>{new Date(ticket.dueDate).toLocaleDateString()}</td>
+                      <td className={`${cls.td} text-gray-600`}>{ticket.dueDate ? new Date(ticket.dueDate).toLocaleDateString() : "—"}</td>
                     </tr>
                   ))}
                 </tbody>

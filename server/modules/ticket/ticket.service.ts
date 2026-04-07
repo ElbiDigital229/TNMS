@@ -192,14 +192,14 @@ export const ticketService = {
     name: string;
     description: string;
     propertyId: string;
-    unitId: string;
-    dueDate: Date;
-    taskType: TaskType;
-    subTaskType: SubTaskType;
-    categoryId: string;
-    departmentId: string;
+    unitId?: string;
+    dueDate?: Date;
+    taskType?: TaskType;
+    subTaskType?: SubTaskType;
+    categoryId?: string;
+    departmentId?: string;
     assignedToId?: string;
-    priority: Priority;
+    priority?: Priority;
     isRecurring?: boolean;
     recurringType?: RecurringType;
     recurringDay?: number;
@@ -803,79 +803,97 @@ export const ticketService = {
           continue;
         }
 
-        // Unit (within that property)
+        // Description (required)
+        const description = (item.description || "").trim();
+        if (!description) {
+          results.push({ row: rowNum, status: "error", title, error: "Description is required" });
+          continue;
+        }
+
+        // Unit (optional — must belong to the property if provided)
+        let unitId: string | null = null;
         const unitKey = (item.unit || "").trim().toLowerCase();
-        if (!unitKey) {
-          results.push({ row: rowNum, status: "error", title, error: "Unit is required" });
-          continue;
-        }
-        const unit = unitByPropAndName.get(`${prop.id}::${unitKey}`);
-        if (!unit) {
-          results.push({ row: rowNum, status: "error", title, error: `Unit "${item.unit}" not found in property "${prop.name}"` });
-          continue;
+        if (unitKey) {
+          const unit = unitByPropAndName.get(`${prop.id}::${unitKey}`);
+          if (!unit) {
+            results.push({ row: rowNum, status: "error", title, error: `Unit "${item.unit}" not found in property "${prop.name}"` });
+            continue;
+          }
+          unitId = unit.id;
         }
 
-        // Department
+        // Department (optional)
+        let dept: { id: string; headUserId: string | null } | undefined;
         const deptKey = (item.department || "").trim().toLowerCase();
-        if (!deptKey) {
-          results.push({ row: rowNum, status: "error", title, error: "Department is required" });
-          continue;
-        }
-        const dept = deptByName.get(deptKey);
-        if (!dept) {
-          results.push({ row: rowNum, status: "error", title, error: `Department "${item.department}" not found` });
-          continue;
+        if (deptKey) {
+          dept = deptByName.get(deptKey);
+          if (!dept) {
+            results.push({ row: rowNum, status: "error", title, error: `Department "${item.department}" not found` });
+            continue;
+          }
         }
 
-        // Category
+        // Category (optional)
+        let categoryId: string | null = null;
         const catKey = (item.category || "").trim().toLowerCase();
-        if (!catKey) {
-          results.push({ row: rowNum, status: "error", title, error: "Category is required" });
-          continue;
-        }
-        const cat = catByName.get(catKey);
-        if (!cat) {
-          results.push({ row: rowNum, status: "error", title, error: `Category "${item.category}" not found` });
-          continue;
+        if (catKey) {
+          const cat = catByName.get(catKey);
+          if (!cat) {
+            results.push({ row: rowNum, status: "error", title, error: `Category "${item.category}" not found` });
+            continue;
+          }
+          categoryId = cat.id;
         }
 
-        // Task type
+        // Task type — defaults to TASK
         const ttKey = (item.taskType || "").trim().toLowerCase();
-        const taskType = taskTypeMap[ttKey];
-        if (!taskType) {
-          results.push({ row: rowNum, status: "error", title, error: `Task Type "${item.taskType}" invalid (use Maintenance/Inspection/Complaint/Task)` });
-          continue;
+        let taskType: TaskType = "TASK";
+        if (ttKey) {
+          const mapped = taskTypeMap[ttKey];
+          if (!mapped) {
+            results.push({ row: rowNum, status: "error", title, error: `Task Type "${item.taskType}" invalid (use Maintenance/Inspection/Complaint/Task)` });
+            continue;
+          }
+          taskType = mapped;
         }
 
-        // Sub task type — defaults to REACTIVE if blank
+        // Sub task type — defaults to REACTIVE
         const stKey = (item.subTaskType || "").trim().toLowerCase();
-        const subTaskType: SubTaskType = stKey ? subTaskMap[stKey] : "REACTIVE";
-        if (!subTaskType) {
-          results.push({ row: rowNum, status: "error", title, error: `Sub Task Type "${item.subTaskType}" invalid (use Reactive/Preventive)` });
-          continue;
+        let subTaskType: SubTaskType = "REACTIVE";
+        if (stKey) {
+          const mapped = subTaskMap[stKey];
+          if (!mapped) {
+            results.push({ row: rowNum, status: "error", title, error: `Sub Task Type "${item.subTaskType}" invalid (use Reactive/Preventive)` });
+            continue;
+          }
+          subTaskType = mapped;
         }
 
-        // Priority
+        // Priority — defaults to MEDIUM
         const prKey = (item.priority || "").trim().toLowerCase();
-        const priority = priorityMap[prKey];
-        if (!priority) {
-          results.push({ row: rowNum, status: "error", title, error: `Priority "${item.priority}" invalid (use Low/Medium/High/Critical)` });
-          continue;
+        let priority: Priority = "MEDIUM";
+        if (prKey) {
+          const mapped = priorityMap[prKey];
+          if (!mapped) {
+            results.push({ row: rowNum, status: "error", title, error: `Priority "${item.priority}" invalid (use Low/Medium/High/Critical)` });
+            continue;
+          }
+          priority = mapped;
         }
 
-        // Due date
+        // Due date (optional)
+        let dueDate: Date | null = null;
         const dueRaw = (item.dueDate || "").trim();
-        if (!dueRaw) {
-          results.push({ row: rowNum, status: "error", title, error: "Due Date is required (YYYY-MM-DD)" });
-          continue;
-        }
-        const dueDate = new Date(dueRaw);
-        if (Number.isNaN(dueDate.getTime())) {
-          results.push({ row: rowNum, status: "error", title, error: `Due Date "${item.dueDate}" is not a valid date` });
-          continue;
+        if (dueRaw) {
+          const parsed = new Date(dueRaw);
+          if (Number.isNaN(parsed.getTime())) {
+            results.push({ row: rowNum, status: "error", title, error: `Due Date "${item.dueDate}" is not a valid date` });
+            continue;
+          }
+          dueDate = parsed;
         }
 
-        // Optional assignee
+        // Optional assignee — falls back to dept head if dept set
         let assignedToId: string | null = null;
         let autoAssigned = false;
         const assigneeKey = (item.assigneeEmail || "").trim().toLowerCase();
@@ -886,9 +904,9 @@ export const ticketService = {
             continue;
           }
           assignedToId = u.id;
-        } else if (dept.headUserId) {
+        } else if (dept?.headUserId) {
           // Verify head is still active (we filtered users to ACTIVE above)
-          if (users.some((u) => u.id === dept.headUserId)) {
+          if (users.some((u) => u.id === dept!.headUserId)) {
             assignedToId = dept.headUserId;
             autoAssigned = true;
           }
@@ -901,11 +919,11 @@ export const ticketService = {
           data: {
             ticketNumber,
             name: title,
-            description: (item.description || "").trim() || title,
+            description,
             propertyId: prop.id,
-            unitId: unit.id,
-            departmentId: dept.id,
-            categoryId: cat.id,
+            unitId,
+            departmentId: dept?.id ?? null,
+            categoryId,
             taskType,
             subTaskType,
             priority,

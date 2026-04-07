@@ -293,21 +293,21 @@ model Ticket {
   description     String
   propertyId      String
   property        Property      @relation(fields: [propertyId], references: [id])
-  unitId          String
-  unit            Unit          @relation(fields: [unitId], references: [id])
-  dueDate         DateTime
-  taskType        TaskType
-  subTaskType     SubTaskType
-  categoryId      String
-  category        TicketCategory @relation(fields: [categoryId], references: [id])
-  priority        Priority
+  unitId          String?
+  unit            Unit?         @relation(fields: [unitId], references: [id])
+  dueDate         DateTime?
+  taskType        TaskType      @default(TASK)
+  subTaskType     SubTaskType   @default(REACTIVE)
+  categoryId      String?
+  category        TicketCategory? @relation(fields: [categoryId], references: [id])
+  priority        Priority      @default(MEDIUM)
   status          TicketStatus  @default(UNASSIGNED)
   createdById     String?
   createdBy       User?         @relation("TicketCreator", fields: [createdById], references: [id])
   assignedToId    String?
   assignedTo      User?         @relation("TicketAssignee", fields: [assignedToId], references: [id])
-  departmentId    String
-  department      Department    @relation(fields: [departmentId], references: [id])
+  departmentId    String?
+  department      Department?   @relation(fields: [departmentId], references: [id])
   isRecurring     Boolean       @default(false)
   recurringType   RecurringType?
   recurringDay    Int?

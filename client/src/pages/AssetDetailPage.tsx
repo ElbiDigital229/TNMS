@@ -119,8 +119,8 @@ export default function AssetDetailPage() {
   };
 
   const handleCreateTicket = async () => {
-    if (!ticketForm.name.trim() || !ticketForm.description.trim() || !ticketForm.unitId || !ticketForm.dueDate || !ticketForm.departmentId) {
-      toast.error("Please fill all required fields");
+    if (!ticketForm.name.trim() || !ticketForm.description.trim()) {
+      toast.error("Title and description are required");
       return;
     }
     setTicketSaving(true);
@@ -129,11 +129,11 @@ export default function AssetDetailPage() {
       formData.append("name", ticketForm.name);
       formData.append("description", ticketForm.description);
       formData.append("propertyId", asset.propertyId);
-      formData.append("unitId", ticketForm.unitId);
-      formData.append("dueDate", ticketForm.dueDate);
+      if (ticketForm.unitId) formData.append("unitId", ticketForm.unitId);
+      if (ticketForm.dueDate) formData.append("dueDate", ticketForm.dueDate);
       formData.append("taskType", ticketForm.taskType);
       formData.append("subTaskType", ticketForm.subTaskType);
-      formData.append("departmentId", ticketForm.departmentId);
+      if (ticketForm.departmentId) formData.append("departmentId", ticketForm.departmentId);
       formData.append("priority", ticketForm.priority);
       if (ticketForm.categoryId) formData.append("categoryId", ticketForm.categoryId);
       formData.append("assetIds", JSON.stringify([asset.id]));
@@ -270,7 +270,7 @@ export default function AssetDetailPage() {
                     </div>
                     <p className="mt-0.5 text-[13px] font-medium text-gray-800 truncate">{ticket.name}</p>
                     <p className="text-[11px] text-gray-400 mt-0.5">
-                      {ticket.property?.name} · {ticket.assignedTo ? (ticket.assignedTo.fullName || ticket.assignedTo.username) : "Unassigned"} · Due {new Date(ticket.dueDate).toLocaleDateString()}
+                      {ticket.property?.name} · {ticket.assignedTo ? (ticket.assignedTo.fullName || ticket.assignedTo.username) : "Unassigned"}{ticket.dueDate ? ` · Due ${new Date(ticket.dueDate).toLocaleDateString()}` : ""}
                     </p>
                   </div>
                   <Link to={`/tickets/${ticket.id}`} className={cls.btnIcon}>
@@ -378,21 +378,21 @@ export default function AssetDetailPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={cls.label}>Unit <span className="text-red-500">*</span></label>
+              <label className={cls.label}>Unit</label>
               <select value={ticketForm.unitId} onChange={(e) => setTicketForm((f) => ({ ...f, unitId: e.target.value }))} className={`w-full ${cls.select}`}>
                 <option value="">Select unit...</option>
                 {units.map((u) => <option key={u.id} value={u.id}>{u.name}</option>)}
               </select>
             </div>
             <div>
-              <label className={cls.label}>Due Date <span className="text-red-500">*</span></label>
+              <label className={cls.label}>Due Date</label>
               <input type="date" value={ticketForm.dueDate} onChange={(e) => setTicketForm((f) => ({ ...f, dueDate: e.target.value }))} className={cls.input} />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={cls.label}>Task Type <span className="text-red-500">*</span></label>
+              <label className={cls.label}>Task Type</label>
               <select value={ticketForm.taskType} onChange={(e) => setTicketForm((f) => ({ ...f, taskType: e.target.value }))} className={`w-full ${cls.select}`}>
                 <option value="COMPLAIN">Complain</option>
                 <option value="MAINTENANCE">Maintenance</option>
@@ -401,7 +401,7 @@ export default function AssetDetailPage() {
               </select>
             </div>
             <div>
-              <label className={cls.label}>Sub Type <span className="text-red-500">*</span></label>
+              <label className={cls.label}>Sub Type</label>
               <select value={ticketForm.subTaskType} onChange={(e) => setTicketForm((f) => ({ ...f, subTaskType: e.target.value }))} className={`w-full ${cls.select}`}>
                 <option value="REACTIVE">Reactive</option>
                 <option value="PREVENTIVE">Preventive</option>
@@ -411,14 +411,14 @@ export default function AssetDetailPage() {
 
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <label className={cls.label}>Department <span className="text-red-500">*</span></label>
+              <label className={cls.label}>Department</label>
               <select value={ticketForm.departmentId} onChange={(e) => setTicketForm((f) => ({ ...f, departmentId: e.target.value }))} className={`w-full ${cls.select}`}>
                 <option value="">Select dept...</option>
                 {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
               </select>
             </div>
             <div>
-              <label className={cls.label}>Priority <span className="text-red-500">*</span></label>
+              <label className={cls.label}>Priority</label>
               <select value={ticketForm.priority} onChange={(e) => setTicketForm((f) => ({ ...f, priority: e.target.value }))} className={`w-full ${cls.select}`}>
                 <option value="CRITICAL">Critical</option>
                 <option value="HIGH">High</option>

@@ -55,8 +55,9 @@ export const URGENCY_LABELS: Record<string, string> = {
 };
 
 /** Compute urgency from due date (client-side, never stored) */
-export function computeUrgency(dueDate: string | Date, status: string): "OVERDUE" | "DUE_TODAY" | "UPCOMING" | null {
+export function computeUrgency(dueDate: string | Date | null | undefined, status: string): "OVERDUE" | "DUE_TODAY" | "UPCOMING" | null {
   if (status === "COMPLETED") return null;
+  if (!dueDate) return null;
   const due = new Date(dueDate);
   const now = new Date();
   const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());

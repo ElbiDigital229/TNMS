@@ -98,8 +98,8 @@ export const ticketController = {
         assetIds,
       } = req.body;
 
-      if (!name || !description || !propertyId || !dueDate || !taskType || !subTaskType || !departmentId || !priority || !categoryId) {
-        return sendError(res, "Missing required fields (including category)", 400);
+      if (!name || !description || !propertyId) {
+        return sendError(res, "Title, description, and property are required", 400);
       }
 
       const files = req.files as Express.Multer.File[] | undefined;
@@ -114,13 +114,13 @@ export const ticketController = {
         description,
         propertyId,
         unitId: unitId || undefined,
-        dueDate: new Date(dueDate),
-        taskType,
-        subTaskType,
-        categoryId,
-        departmentId,
+        dueDate: dueDate ? new Date(dueDate) : undefined,
+        taskType: taskType || "TASK",
+        subTaskType: subTaskType || "REACTIVE",
+        categoryId: categoryId || undefined,
+        departmentId: departmentId || undefined,
         assignedToId: assignedToId || undefined,
-        priority,
+        priority: priority || "MEDIUM",
         isRecurring: isRecurring === "true" || isRecurring === true,
         recurringType: recurringType || undefined,
         recurringDay: recurringDay ? parseInt(recurringDay) : undefined,
