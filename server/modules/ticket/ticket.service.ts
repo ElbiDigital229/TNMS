@@ -687,4 +687,261 @@ export const ticketService = {
       orderBy: { fullName: "asc" },
     });
   },
+
+  /**
+   * Bulk-create tickets from CSV-like rows. Resolves names to IDs row-by-row,
+   * returns per-row success/error so the caller can show a report.
+   * Mirrors the create() flow: auto-assigns to dept head if assignee blank.
+   */
+  async bulkCreate(
+    items: {
+      title?: string;
+      description?: string;
+      property?: string;       // property code OR name
+      unit?: string;           // unit name (within the resolved property)
+      department?: string;     // department name
+      category?: string;       // ticket category name
+      taskType?: string;       // MAINTENANCE | INSPECT | COMPLAIN | TASK (case-insensitive, accepts inspection/complaint aliases)
+      subTaskType?: string;    // REACTIVE | PREVENTIVE
+      priority?: string;       // LOW | MEDIUM | HIGH | CRITICAL
+      dueDate?: string;        // YYYY-MM-DD
+      assigneeEmail?: string;  // optional
+    }[],
+    importerId: string
+  ) {
+    // ── Build lookup maps once ──
+    const properties = await prisma.property.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, code: true },
+    });
+    const propByCode = new Map(properties.map((p) => [p.code.toLowerCase(), p]));
+    const propByName = new Map(properties.map((p) => [p.name.trim().toLowerCase(), p]));
+
+    const units = await prisma.unit.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, code: true, propertyId: true },
+    });
+    const unitByPropAndName = new Map<string, { id: string }>();
+    for (const u of units) {
+      unitByPropAndName.set(`${u.propertyId}::${u.name.trim().toLowerCase()}`, { id: u.id });
+      if (u.code) unitByPropAndName.set(`${u.propertyId}::${u.code.trim().toLowerCase()}`, { id: u.id });
+    }
+
+    const departments = await prisma.department.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true, headUserId: true },
+    });
+    const deptByName = new Map(departments.map((d) => [d.name.trim().toLowerCase(), d]));
+
+    const categories = await prisma.ticketCategory.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    const catByName = new Map(categories.map((c) => [c.name.trim().toLowerCase(), c]));
+
+    const users = await prisma.user.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, email: true, username: true, departmentId: true, status: true },
+    });
+    const userByEmail = new Map<string, { id: string; departmentId: string | null }>();
+    for (const u of users) {
+      if (u.email) userByEmail.set(u.email.trim().toLowerCase(), { id: u.id, departmentId: u.departmentId });
+      userByEmail.set(u.username.trim().toLowerCase(), { id: u.id, departmentId: u.departmentId });
+    }
+
+    // ── Normalisers ──
+    const taskTypeMap: Record<string, TaskType> = {
+      maintenance: "MAINTENANCE",
+      inspect: "INSPECT",
+      inspection: "INSPECT",
+      complain: "COMPLAIN",
+      complaint: "COMPLAIN",
+      task: "TASK",
+    };
+    const subTaskMap: Record<string, SubTaskType> = {
+      reactive: "REACTIVE",
+      preventive: "PREVENTIVE",
+    };
+    const priorityMap: Record<string, Priority> = {
+      low: "LOW",
+      medium: "MEDIUM",
+      high: "HIGH",
+      critical: "CRITICAL",
+    };
+
+    const results: { row: number; status: "success" | "error"; title: string; ticketNumber?: string; error?: string }[] = [];
+
+    // Pre-fetch the highest existing ticket number once, then increment locally
+    // (avoids 5000 round-trips to generateTicketNumber)
+    const last = await prisma.ticket.findFirst({
+      orderBy: { ticketNumber: "desc" },
+      select: { ticketNumber: true },
+    });
+    let nextNum = last ? parseInt(last.ticketNumber.slice(3), 10) + 1 : 1;
+
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
+      const rowNum = i + 1;
+      const title = (item.title || "").trim();
+
+      try {
+        // Required text fields
+        if (!title) {
+          results.push({ row: rowNum, status: "error", title: "", error: "Title is required" });
+          continue;
+        }
+
+        // Property
+        const propKey = (item.property || "").trim().toLowerCase();
+        if (!propKey) {
+          results.push({ row: rowNum, status: "error", title, error: "Property is required" });
+          continue;
+        }
+        const prop = propByCode.get(propKey) || propByName.get(propKey);
+        if (!prop) {
+          results.push({ row: rowNum, status: "error", title, error: `Property "${item.property}" not found` });
+          continue;
+        }
+
+        // Unit (within that property)
+        const unitKey = (item.unit || "").trim().toLowerCase();
+        if (!unitKey) {
+          results.push({ row: rowNum, status: "error", title, error: "Unit is required" });
+          continue;
+        }
+        const unit = unitByPropAndName.get(`${prop.id}::${unitKey}`);
+        if (!unit) {
+          results.push({ row: rowNum, status: "error", title, error: `Unit "${item.unit}" not found in property "${prop.name}"` });
+          continue;
+        }
+
+        // Department
+        const deptKey = (item.department || "").trim().toLowerCase();
+        if (!deptKey) {
+          results.push({ row: rowNum, status: "error", title, error: "Department is required" });
+          continue;
+        }
+        const dept = deptByName.get(deptKey);
+        if (!dept) {
+          results.push({ row: rowNum, status: "error", title, error: `Department "${item.department}" not found` });
+          continue;
+        }
+
+        // Category
+        const catKey = (item.category || "").trim().toLowerCase();
+        if (!catKey) {
+          results.push({ row: rowNum, status: "error", title, error: "Category is required" });
+          continue;
+        }
+        const cat = catByName.get(catKey);
+        if (!cat) {
+          results.push({ row: rowNum, status: "error", title, error: `Category "${item.category}" not found` });
+          continue;
+        }
+
+        // Task type
+        const ttKey = (item.taskType || "").trim().toLowerCase();
+        const taskType = taskTypeMap[ttKey];
+        if (!taskType) {
+          results.push({ row: rowNum, status: "error", title, error: `Task Type "${item.taskType}" invalid (use Maintenance/Inspection/Complaint/Task)` });
+          continue;
+        }
+
+        // Sub task type — defaults to REACTIVE if blank
+        const stKey = (item.subTaskType || "").trim().toLowerCase();
+        const subTaskType: SubTaskType = stKey ? subTaskMap[stKey] : "REACTIVE";
+        if (!subTaskType) {
+          results.push({ row: rowNum, status: "error", title, error: `Sub Task Type "${item.subTaskType}" invalid (use Reactive/Preventive)` });
+          continue;
+        }
+
+        // Priority
+        const prKey = (item.priority || "").trim().toLowerCase();
+        const priority = priorityMap[prKey];
+        if (!priority) {
+          results.push({ row: rowNum, status: "error", title, error: `Priority "${item.priority}" invalid (use Low/Medium/High/Critical)` });
+          continue;
+        }
+
+        // Due date
+        const dueRaw = (item.dueDate || "").trim();
+        if (!dueRaw) {
+          results.push({ row: rowNum, status: "error", title, error: "Due Date is required (YYYY-MM-DD)" });
+          continue;
+        }
+        const dueDate = new Date(dueRaw);
+        if (Number.isNaN(dueDate.getTime())) {
+          results.push({ row: rowNum, status: "error", title, error: `Due Date "${item.dueDate}" is not a valid date` });
+          continue;
+        }
+
+        // Optional assignee
+        let assignedToId: string | null = null;
+        let autoAssigned = false;
+        const assigneeKey = (item.assigneeEmail || "").trim().toLowerCase();
+        if (assigneeKey) {
+          const u = userByEmail.get(assigneeKey);
+          if (!u) {
+            results.push({ row: rowNum, status: "error", title, error: `Assignee "${item.assigneeEmail}" not found` });
+            continue;
+          }
+          assignedToId = u.id;
+        } else if (dept.headUserId) {
+          // Verify head is still active (we filtered users to ACTIVE above)
+          if (users.some((u) => u.id === dept.headUserId)) {
+            assignedToId = dept.headUserId;
+            autoAssigned = true;
+          }
+        }
+
+        const ticketNumber = `TKT${String(nextNum).padStart(4, "0")}`;
+        nextNum++;
+
+        const ticket = await prisma.ticket.create({
+          data: {
+            ticketNumber,
+            name: title,
+            description: (item.description || "").trim() || title,
+            propertyId: prop.id,
+            unitId: unit.id,
+            departmentId: dept.id,
+            categoryId: cat.id,
+            taskType,
+            subTaskType,
+            priority,
+            dueDate,
+            assignedToId,
+            status: assignedToId ? "ASSIGNED" : "UNASSIGNED",
+            createdById: importerId,
+          },
+        });
+
+        await prisma.ticketActivity.create({
+          data: {
+            ticketId: ticket.id,
+            action: "CREATED",
+            details: `Ticket ${ticketNumber} created via bulk import`,
+            performedById: importerId,
+          },
+        });
+
+        if (autoAssigned && assignedToId) {
+          await prisma.ticketActivity.create({
+            data: {
+              ticketId: ticket.id,
+              action: "ASSIGNED",
+              details: `Auto-assigned to department head`,
+              performedById: importerId,
+            },
+          });
+        }
+
+        results.push({ row: rowNum, status: "success", title, ticketNumber });
+      } catch (err: any) {
+        results.push({ row: rowNum, status: "error", title, error: err.message || "Unknown error" });
+      }
+    }
+
+    return results;
+  },
 };

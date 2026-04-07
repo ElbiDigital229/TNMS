@@ -356,6 +356,31 @@ export const ticketController = {
     }
   },
 
+  async bulkImport(req: Request, res: Response) {
+    try {
+      const { items } = req.body;
+      if (!Array.isArray(items) || items.length === 0) {
+        return sendError(res, "items array is required", 400);
+      }
+      if (items.length > 5000) {
+        return sendError(res, "Maximum 5000 tickets per import", 400);
+      }
+
+      const results = await ticketService.bulkCreate(items, req.user!.id);
+      const successCount = results.filter((r) => r.status === "success").length;
+      const errorCount = results.filter((r) => r.status === "error").length;
+
+      sendSuccess(
+        res,
+        { results, summary: { total: items.length, success: successCount, errors: errorCount } },
+        `Imported ${successCount} tickets, ${errorCount} errors`,
+        201
+      );
+    } catch (error: any) {
+      sendError(res, error.message || "Failed to bulk import tickets");
+    }
+  },
+
   async unblockTicket(req: Request, res: Response) {
     try {
       const { resolvedNote } = req.body;

@@ -11,6 +11,7 @@ ticketRoutes.use(authenticate);
 ticketRoutes.get("/", requireAnyPermission(PERMISSIONS.TICKETS.VIEW_ALL, PERMISSIONS.TICKETS.VIEW_ASSIGNED), ticketController.findAll);
 ticketRoutes.get("/:id", ticketController.findById); // access checked inside controller (assignee, creator, blocker)
 ticketRoutes.post("/", requirePermission(PERMISSIONS.TICKETS.CREATE), uploadMultiple, ticketController.create);
+ticketRoutes.post("/bulk-import", requirePermission(PERMISSIONS.TICKETS.CREATE), ticketController.bulkImport);
 ticketRoutes.put("/:id", requirePermission(PERMISSIONS.TICKETS.EDIT), uploadMultiple, ticketController.update);
 ticketRoutes.delete("/:id/images", requirePermission(PERMISSIONS.TICKETS.EDIT), ticketController.deleteImage);
 ticketRoutes.patch("/:id/status", requirePermission(PERMISSIONS.TICKETS.UPDATE_STATUS), ticketController.updateStatus);

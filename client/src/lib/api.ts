@@ -167,6 +167,8 @@ export const ticketApi = {
   unblock: (id: string, resolvedNote?: string) =>
     api.post(`/tickets/${id}/unblock`, { resolvedNote }),
   getRelated: (id: string) => api.get(`/tickets/${id}/related`),
+  bulkImport: (items: Record<string, string>[]) =>
+    api.post("/tickets/bulk-import", { items }),
 };
 
 // Ticket Category API

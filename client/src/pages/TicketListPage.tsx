@@ -9,9 +9,10 @@ import { cls } from "../lib/styles";
 import { StatusBadge, PriorityBadge, UrgencyBadge, Badge } from "../components/ui/Badge";
 import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable";
 import PageHeader from "../components/ui/PageHeader";
+import BulkImportModal from "../components/ui/BulkImportModal";
 import {
   Plus, Search, Eye, ChevronUp, ChevronDown,
-  ClipboardList, SlidersHorizontal, X, ArrowUpDown,
+  ClipboardList, SlidersHorizontal, X, ArrowUpDown, Upload,
 } from "lucide-react";
 
 interface Ticket {
@@ -59,6 +60,7 @@ export default function TicketListPage() {
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
+  const [importOpen, setImportOpen] = useState(false);
   const [filterOpen, setFilterOpen] = useState(false);
   const filterRef = useRef<HTMLDivElement>(null);
   const [filters, setFilters] = useState({
@@ -151,9 +153,14 @@ export default function TicketListPage() {
         subtitle={`${pagination.total} ${pagination.total === 1 ? "ticket" : "tickets"} total`}
         actions={
           hasPermission(PERMISSIONS.TICKETS.CREATE) ? (
-            <Link to="/tickets/new" className={`hidden sm:inline-flex ${cls.btnPrimary}`}>
-              <Plus size={16} /> Create Ticket
-            </Link>
+            <div className="hidden sm:inline-flex gap-2">
+              <button onClick={() => setImportOpen(true)} className={cls.btnSecondary}>
+                <Upload size={16} /> Import
+              </button>
+              <Link to="/tickets/new" className={cls.btnPrimary}>
+                <Plus size={16} /> Create Ticket
+              </Link>
+            </div>
           ) : undefined
         }
       />
@@ -392,6 +399,30 @@ export default function TicketListPage() {
           <Plus size={24} />
         </Link>
       )}
+
+      <BulkImportModal
+        isOpen={importOpen}
+        onClose={() => setImportOpen(false)}
+        title="Import Tickets"
+        columns={[
+          { key: "title", label: "Title", required: true, example: "Replace AC filter" },
+          { key: "description", label: "Description", example: "Filter clogged in conf room" },
+          { key: "property", label: "Property", required: true, example: "Vogue", aliases: ["propertyName", "propertyCode"] },
+          { key: "unit", label: "Unit", required: true, example: "101", aliases: ["unitName"] },
+          { key: "department", label: "Department", required: true, example: "Facility Management" },
+          { key: "category", label: "Category", required: true, example: "HVAC" },
+          { key: "taskType", label: "Task Type", required: true, example: "Maintenance" },
+          { key: "subTaskType", label: "Sub Task Type", example: "Reactive" },
+          { key: "priority", label: "Priority", required: true, example: "Medium" },
+          { key: "dueDate", label: "Due Date", required: true, example: "2026-04-15" },
+          { key: "assigneeEmail", label: "Assignee Email", example: "tech@example.com", aliases: ["assignee"] },
+        ]}
+        onImport={async (items) => {
+          const res = await ticketApi.bulkImport(items);
+          return res.data.data;
+        }}
+        onComplete={() => fetchTickets()}
+      />
     </div>
   );
 }
