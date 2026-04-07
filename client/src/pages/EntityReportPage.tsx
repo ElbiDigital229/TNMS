@@ -10,6 +10,7 @@ import {
   ArrowLeft, Download, Users, Building2, LayoutGrid, Package,
   Clock, CheckCircle2, AlertCircle, Loader2, TrendingUp, ShieldAlert, X
 } from "lucide-react";
+import { computeUrgency } from "../../../shared/types";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -349,7 +350,7 @@ export default function EntityReportPage() {
       total: filteredTickets.length,
       completed: completed.length,
       inProgress: filteredTickets.filter((t) => t.status === "IN_PROGRESS").length,
-      overdue: filteredTickets.filter((t) => t.status !== "COMPLETED" && t.dueDate && new Date(t.dueDate) < new Date()).length,
+      overdue: filteredTickets.filter((t) => t.status !== "COMPLETED" && computeUrgency(t.dueDate, t.status) === "OVERDUE").length,
       blocked: filteredTickets.filter((t) => t.isBlocked).length,
       avgHours,
       onTimePct,

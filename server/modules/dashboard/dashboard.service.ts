@@ -61,10 +61,10 @@ export const dashboardService = {
       }),
     ]);
 
-    // Calculate completion rate
+    // Calculate completion rate (one decimal so small ratios are still visible)
     const completionRate =
       totalTickets > 0
-        ? Math.round((completedTickets.length / totalTickets) * 100)
+        ? Math.round((completedTickets.length / totalTickets) * 1000) / 10
         : 0;
 
     // Calculate average completion time (in hours)

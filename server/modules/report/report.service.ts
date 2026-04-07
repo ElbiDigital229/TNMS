@@ -48,10 +48,9 @@ const MAX_LIMIT = 100;
 
 // ─── Helpers ─────────────────────────────────────────────
 
-function getTomorrow(): Date {
+function getStartOfToday(): Date {
   const t = new Date();
   t.setHours(0, 0, 0, 0);
-  t.setDate(t.getDate() + 1);
   return t;
 }
 
@@ -215,7 +214,7 @@ async function resolveLabels(
 // ─── Breakdown query (tickets only) ──────────────────────
 
 async function queryBreakdown(prismaGroupByField: string, groupBy: string, where: any, sortOrder: SortOrder, limit: number) {
-  const tomorrow = getTomorrow();
+  const startOfToday = getStartOfToday();
 
   const tickets = await prisma.ticket.findMany({
     where,
@@ -240,8 +239,8 @@ async function queryBreakdown(prismaGroupByField: string, groupBy: string, where
       if (ticket.status === "ASSIGNED") g.assigned++;
       if (ticket.status === "IN_PROGRESS") g.inProgress++;
       if (ticket.status === "BLOCKED") g.blocked++;
-      // Overdue is computed live from dueDate
-      if (ticket.dueDate < tomorrow) g.overdue++;
+      // Overdue is computed live from dueDate (strictly before today)
+      if (ticket.dueDate && ticket.dueDate < startOfToday) g.overdue++;
     }
   }
 
@@ -262,8 +261,8 @@ async function queryBreakdown(prismaGroupByField: string, groupBy: string, where
 // ─── Overdue count query (tickets only) ──────────────────
 
 async function queryOverdueCount(prismaGroupByField: string, groupBy: string, where: any, sortOrder: SortOrder, limit: number) {
-  const tomorrow = getTomorrow();
-  const overdueWhere = { ...where, status: { not: "COMPLETED" as const }, dueDate: { lt: tomorrow } };
+  const startOfToday = getStartOfToday();
+  const overdueWhere = { ...where, status: { not: "COMPLETED" as const }, dueDate: { lt: startOfToday } };
 
   const grouped = await prisma.ticket.groupBy({
     by: [prismaGroupByField as any],
@@ -434,7 +433,7 @@ function generatePeriods(start: Date, end: Date, granularity: Granularity) {
 
 async function queryTrend(entity: Entity, where: any, granularity: Granularity, start: Date, end: Date) {
   const periods = generatePeriods(start, end, granularity);
-  const tomorrow = getTomorrow();
+  const startOfToday = getStartOfToday();
 
   if (entity === "tickets") {
     const tickets = await prisma.ticket.findMany({
@@ -450,7 +449,7 @@ async function queryTrend(entity: Entity, where: any, granularity: Granularity, 
         total: pt.length,
         completed: pt.filter((t) => t.status === "COMPLETED").length,
         open: pt.filter((t) => t.status !== "COMPLETED").length,
-        overdue: pt.filter((t) => t.status !== "COMPLETED" && t.dueDate && t.dueDate < tomorrow).length,
+        overdue: pt.filter((t) => t.status !== "COMPLETED" && t.dueDate && t.dueDate < startOfToday).length,
       };
     });
   }
@@ -698,7 +697,7 @@ async function getPropertyScope(userId: string, isSuperAdmin: boolean, allProper
 export const dashboardReportService = {
   async getDashboard(userId: string, isSuperAdmin: boolean, allProperties: boolean) {
     const scopeFilter = await getPropertyScope(userId, isSuperAdmin, allProperties);
-    const tomorrow = getTomorrow();
+    const startOfToday = getStartOfToday();
 
     // ── Ticket counts by status ──
     const statusGroups = await prisma.ticket.groupBy({
@@ -736,7 +735,7 @@ export const dashboardReportService = {
 
     // Overdue is computed live: non-completed tickets past due date
     const overdueCount = await prisma.ticket.count({
-      where: { ...scopeFilter, status: { not: "COMPLETED" }, dueDate: { lt: tomorrow } },
+      where: { ...scopeFilter, status: { not: "COMPLETED" }, dueDate: { lt: startOfToday } },
     });
     const overdueRate = totalTickets > 0
       ? Math.round((overdueCount / totalTickets) * 1000) / 10

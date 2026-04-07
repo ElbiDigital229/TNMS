@@ -54,16 +54,19 @@ export const URGENCY_LABELS: Record<string, string> = {
   UPCOMING: "Upcoming",
 };
 
-/** Compute urgency from due date (client-side, never stored) */
+/** Compute urgency from due date (client-side, never stored).
+ *  Uses YYYY-MM-DD string comparison so the result is timezone-stable:
+ *  the dueDate's UTC date (the date the user picked when storing) is
+ *  compared against today's local date. */
 export function computeUrgency(dueDate: string | Date | null | undefined, status: string): "OVERDUE" | "DUE_TODAY" | "UPCOMING" | null {
   if (status === "COMPLETED") return null;
   if (!dueDate) return null;
-  const due = new Date(dueDate);
+  const dueIso = typeof dueDate === "string" ? dueDate : dueDate.toISOString();
+  const dueStr = dueIso.slice(0, 10); // YYYY-MM-DD (UTC date the user picked)
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const endOfToday = new Date(startOfToday.getTime() + 86400000);
-  if (due < startOfToday) return "OVERDUE";
-  if (due < endOfToday) return "DUE_TODAY";
+  const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  if (dueStr < todayStr) return "OVERDUE";
+  if (dueStr === todayStr) return "DUE_TODAY";
   return "UPCOMING";
 }
 
