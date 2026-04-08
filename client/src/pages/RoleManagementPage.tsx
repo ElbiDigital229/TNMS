@@ -34,8 +34,6 @@ interface Permission {
 interface Role {
   id: string;
   name: string;
-  level: number;
-  canAssignToMaxLevel: number | null;
   isSystemRole: boolean;
   status: string;
   updatedAt?: string;
@@ -55,8 +53,6 @@ export default function RoleManagementPage() {
   const [saving, setSaving] = useState(false);
 
   const [formName, setFormName] = useState("");
-  const [formLevel, setFormLevel] = useState<number>(0);
-  const [formMaxLevel, setFormMaxLevel] = useState<string>("");
   const [selectedPermissionIds, setSelectedPermissionIds] = useState<
     Set<string>
   >(new Set());
@@ -105,8 +101,6 @@ export default function RoleManagementPage() {
   const openAdd = () => {
     setEditing(null);
     setFormName("");
-    setFormLevel(0);
-    setFormMaxLevel("");
     setSelectedPermissionIds(new Set());
     setModalOpen(true);
   };
@@ -117,12 +111,6 @@ export default function RoleManagementPage() {
       const fullRole: Role = res.data.data;
       setEditing(fullRole);
       setFormName(fullRole.name);
-      setFormLevel(fullRole.level);
-      setFormMaxLevel(
-        fullRole.canAssignToMaxLevel != null
-          ? String(fullRole.canAssignToMaxLevel)
-          : ""
-      );
       const permIds = new Set(
         (fullRole.permissions || []).map((p: any) => p.permission?.id || p.id)
       );
@@ -175,8 +163,6 @@ export default function RoleManagementPage() {
       ? { permissionIds: Array.from(selectedPermissionIds) }
       : {
           name: formName.trim(),
-          level: formLevel,
-          canAssignToMaxLevel: formMaxLevel ? Number(formMaxLevel) : null,
           permissionIds: Array.from(selectedPermissionIds),
         };
 
@@ -248,7 +234,6 @@ export default function RoleManagementPage() {
             <thead>
               <tr className="border-b border-gray-200">
                 <th className={cls.th}>Role Name</th>
-                <th className={cls.th}>Level</th>
                 <th className={cls.th}>Users</th>
                 <th className={cls.th}>Permissions</th>
                 <th className={cls.th}>System Role</th>
@@ -260,7 +245,6 @@ export default function RoleManagementPage() {
               {roles.map((role) => (
                 <tr key={role.id} className={cls.tr}>
                   <td className={`${cls.td} font-medium`}>{role.name}</td>
-                  <td className={cls.td}>{role.level}</td>
                   <td className={cls.td}>{role._count?.users ?? 0}</td>
                   <td className={cls.td}>{getPermissionCount(role)}</td>
                   <td className={cls.td}>
@@ -332,32 +316,6 @@ export default function RoleManagementPage() {
               className={`${cls.input} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500`}
               placeholder="e.g. Property Manager, Technician"
               autoFocus
-            />
-          </div>
-
-          <div>
-            <label className={cls.label}>
-              Level <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="number"
-              value={formLevel}
-              onChange={(e) => setFormLevel(Number(e.target.value))}
-              disabled={!!editing?.isSystemRole}
-              className={`${cls.input} disabled:cursor-not-allowed disabled:bg-gray-100 disabled:text-gray-500`}
-              min={0}
-            />
-          </div>
-
-          <div>
-            <label className={cls.label}>Max assignment depth</label>
-            <input
-              type="number"
-              value={formMaxLevel}
-              onChange={(e) => setFormMaxLevel(e.target.value)}
-              className={cls.input}
-              placeholder="Leave empty for no limit"
-              min={0}
             />
           </div>
 

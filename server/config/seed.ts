@@ -26,40 +26,29 @@ export async function seed() {
     keys.map((k) => permByKey.get(k)!).filter(Boolean);
 
   // ─── 2. Seed Roles ──────────────────────────────────────
-  // Three-tier role model: Super Admin / Manager / Staff.
-  // Legacy roles (CEO, OPS Lead, Community Executive, Supervisor, Technician)
-  // were removed in 2026-04. They are auto-deactivated below if still in DB.
+  // Three system roles: Super Admin / Manager / Staff.
+  // Role hierarchy (level / canAssignToMaxLevel) was removed in 2026-04.
+  // Authorization is now permissions-only.
   //
   // ⚠️  PRODUCTION SNAPSHOT — 2026-04-08
-  // The permission lists below were snapshotted FROM the live production
-  // database after operator edits via the Role Management UI. The seed
-  // runner now SKIPS existing roles, so this block only runs on a fresh
-  // install, but we keep it in sync with live so fresh installs match
-  // what operators expect.
+  // Permission lists below were snapshotted from the live production DB
+  // after operator edits via the Role Management UI. The seed runner
+  // SKIPS existing roles, so this block only runs on a fresh install;
+  // we keep it in sync with live so fresh installs match what operators
+  // have configured.
   //
-  // If you need to change a live role, do BOTH:
+  // If you change a live role, do BOTH:
   //   1. Edit via Role Management UI in the app (takes effect immediately)
   //   2. Update the arrays below so fresh installs match
   //
   // A machine-readable copy lives in prisma/live-role-snapshot.json.
-  //
-  // Note on canAssignToMaxLevel: the live DB currently has 0 for all three
-  // system roles. That looks wrong (Manager should be 2 so it can assign
-  // Staff) but it is what's live, so we preserve it. Flag to re-visit.
   console.log("Seeding roles...");
 
   const P = PERMISSIONS;
 
-  const roleDefs: {
-    name: string;
-    level: number;
-    canAssignToMaxLevel: number | null;
-    permissions: string[];
-  }[] = [
+  const roleDefs: { name: string; permissions: string[] }[] = [
     {
       name: "Super Admin",
-      level: 0,
-      canAssignToMaxLevel: null,
       permissions: [], // isSuperAdmin bypasses all permission checks
     },
     {
@@ -67,8 +56,6 @@ export async function seed() {
       // View-only on properties/floors/units. Full ticket lifecycle.
       // Read access to assets, audit, users. No settings, no todos.
       name: "Manager",
-      level: 1,
-      canAssignToMaxLevel: 2,
       permissions: [
         P.PROPERTIES.VIEW, P.PROPERTIES.EXPORT,
         P.FLOORS.VIEW, P.FLOORS.IMPORT,
@@ -86,11 +73,8 @@ export async function seed() {
     },
     {
       // Staff — live snapshot 2026-04-08.
-      // Read-only on hierarchy. Broader ticket access than original seed:
-      // can see ALL tickets and edit them, not just assigned queue.
+      // Read-only on hierarchy. Can see/edit all tickets, plus todos.
       name: "Staff",
-      level: 2,
-      canAssignToMaxLevel: null,
       permissions: [
         P.PROPERTIES.VIEW,
         P.FLOORS.VIEW,
@@ -116,24 +100,11 @@ export async function seed() {
       // Role already exists — don't overwrite permissions (preserves manual changes)
       console.log(`  Skipped role: ${roleDef.name} (already exists)`);
       continue;
-      /* OLD CODE — was wiping manual permission changes on every restart:
-      await prisma.role.update({
-        where: { id: existingRole.id },
-        data: {
-          level: roleDef.level,
-          canAssignToMaxLevel: roleDef.canAssignToMaxLevel,
-          isSystemRole: true,
-        },
-      });
-
-      */
     } else {
       const permIds = getPermIds(roleDef.permissions);
       await prisma.role.create({
         data: {
           name: roleDef.name,
-          level: roleDef.level,
-          canAssignToMaxLevel: roleDef.canAssignToMaxLevel,
           isSystemRole: true,
           permissions: {
             create: permIds.map((permId) => ({ permissionId: permId })),

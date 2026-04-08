@@ -40,7 +40,7 @@ interface IdentifyUser {
   fullName?: string;
   email?: string;
   isSuperAdmin: boolean;
-  role: { id: string; name: string; level: number };
+  role: { id: string; name: string };
 }
 
 export function identifyUser(user: IdentifyUser) {
@@ -52,7 +52,6 @@ export function identifyUser(user: IdentifyUser) {
     is_super_admin: user.isSuperAdmin,
     role_id: user.role.id,
     role_name: user.role.name,
-    role_level: user.role.level,
   });
 }
 

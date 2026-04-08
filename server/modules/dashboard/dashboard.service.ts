@@ -2,7 +2,7 @@ import { prisma } from "../../config/db.js";
 import { rbacService } from "../../services/rbac.service.js";
 
 export const dashboardService = {
-  async getStats(userId: string, isSuperAdmin: boolean, allProperties: boolean, roleLevel: number) {
+  async getStats(userId: string, isSuperAdmin: boolean, allProperties: boolean) {
     // Build property scope filter
     let scopeFilter: any = {};
     if (!isSuperAdmin && !allProperties) {
@@ -12,11 +12,9 @@ export const dashboardService = {
       }
     }
 
-    // Build ticket-specific scope: levels 5 and 6 (Supervisor/Technician) see only their own assigned tickets
+    // Ticket scope is the same as property scope — role hierarchy was removed,
+    // so we no longer narrow to "own assigned" based on role level.
     let ticketScopeFilter: any = { ...scopeFilter };
-    if (roleLevel >= 5) {
-      ticketScopeFilter.assignedToId = userId;
-    }
 
     // Build where clauses for property/unit/asset counts
     const propertyWhere = !isSuperAdmin && !allProperties && scopeFilter.propertyId

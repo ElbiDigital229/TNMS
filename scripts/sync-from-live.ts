@@ -160,8 +160,6 @@ async function main() {
       data: {
         id: role.id,
         name: role.name,
-        level: role.level,
-        canAssignToMaxLevel: role.canAssignToMaxLevel,
         isSystemRole: role.isSystemRole,
         status: role.status || "ACTIVE",
         permissions: {

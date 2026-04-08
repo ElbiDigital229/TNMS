@@ -11,7 +11,6 @@ export interface AuthPayload {
   isSuperAdmin: boolean;
   roleId: string;
   roleName: string;
-  roleLevel: number;
   permissions: string[];
   allProperties: boolean;
 }
@@ -78,7 +77,6 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
           isSuperAdmin: user.isSuperAdmin,
           roleId: user.role.id,
           roleName: user.role.name,
-          roleLevel: user.role.level,
           permissions,
           allProperties: user.allProperties,
         };

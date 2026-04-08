@@ -13,7 +13,6 @@ import { identifyUser, resetPostHog, capture } from "../lib/posthog";
 interface UserRole {
   id: string;
   name: string;
-  level: number;
 }
 
 interface User {

@@ -14,7 +14,6 @@ import { Users, Plus, Edit2, Power, Search, Shield, KeyRound, Upload } from "luc
 interface Role {
   id: string;
   name: string;
-  level: number;
 }
 
 interface Department {

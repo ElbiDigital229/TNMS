@@ -27,21 +27,12 @@ export const roleController = {
 
   async create(req: Request, res: Response) {
     try {
-      const { name, level, canAssignToMaxLevel, permissionIds } = req.body;
-      if (!name || level === undefined || !permissionIds) {
-        return sendError(
-          res,
-          "Name, level, and permissionIds are required",
-          400
-        );
+      const { name, permissionIds } = req.body;
+      if (!name || !permissionIds) {
+        return sendError(res, "Name and permissionIds are required", 400);
       }
 
-      const role = await roleService.create({
-        name,
-        level,
-        canAssignToMaxLevel,
-        permissionIds,
-      });
+      const role = await roleService.create({ name, permissionIds });
 
       sendSuccess(res, role, "Role created", 201);
     } catch (error: any) {
@@ -51,11 +42,9 @@ export const roleController = {
 
   async update(req: Request, res: Response) {
     try {
-      const { name, level, canAssignToMaxLevel, permissionIds, expectedUpdatedAt } = req.body;
+      const { name, permissionIds, expectedUpdatedAt } = req.body;
       const role = await roleService.update(req.params.id, {
         name,
-        level,
-        canAssignToMaxLevel,
         permissionIds,
         expectedUpdatedAt,
       });

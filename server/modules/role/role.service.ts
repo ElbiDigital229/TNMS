@@ -4,7 +4,7 @@ export const roleService = {
   async findAll(activeOnly = false) {
     return prisma.role.findMany({
       where: activeOnly ? { status: "ACTIVE" } : undefined,
-      orderBy: { level: "asc" },
+      orderBy: { name: "asc" },
       include: {
         _count: {
           select: { users: true, permissions: true },
@@ -27,12 +27,7 @@ export const roleService = {
     });
   },
 
-  async create(data: {
-    name: string;
-    level: number;
-    canAssignToMaxLevel?: number;
-    permissionIds: string[];
-  }) {
+  async create(data: { name: string; permissionIds: string[] }) {
     const existing = await prisma.role.findFirst({
       where: { name: data.name },
     });
@@ -45,8 +40,6 @@ export const roleService = {
     return prisma.role.create({
       data: {
         name: data.name,
-        level: data.level,
-        canAssignToMaxLevel: data.canAssignToMaxLevel,
         permissions: {
           create: uniquePermissionIds.map((permissionId) => ({
             permissionId,
@@ -68,11 +61,9 @@ export const roleService = {
     id: string,
     data: {
       name?: string;
-      level?: number;
-      canAssignToMaxLevel?: number;
       permissionIds?: string[];
       expectedUpdatedAt?: string;
-    }
+    },
   ) {
     const role = await prisma.role.findUnique({ where: { id } });
     if (!role) {
@@ -90,8 +81,8 @@ export const roleService = {
 
     // System roles can only have permissions changed
     if (role.isSystemRole) {
-      if (data.name || data.level !== undefined) {
-        throw new Error("Cannot change the name or level of a system role");
+      if (data.name) {
+        throw new Error("Cannot rename a system role");
       }
     }
 
@@ -121,9 +112,6 @@ export const roleService = {
       // Build update payload (exclude permissionIds)
       const updateData: Record<string, unknown> = {};
       if (data.name !== undefined) updateData.name = data.name;
-      if (data.level !== undefined) updateData.level = data.level;
-      if (data.canAssignToMaxLevel !== undefined)
-        updateData.canAssignToMaxLevel = data.canAssignToMaxLevel;
 
       return tx.role.update({
         where: { id },

@@ -2,14 +2,12 @@
   "_comment": "Snapshot of system role permissions pulled from live production DB. Source of truth is the DB itself — this file exists so we can diff against it and so fresh installs/seeds produce the same config operators expect. Update when live roles change.",
   "snapshotAt": "2026-04-08",
   "snapshotSource": "production (apitnms.duckdns.org)",
-  "knownIssues": [
-    "canAssignToMaxLevel is 0 for all three system roles in the DB. Manager should probably be 2 (assign Staff). Re-visit."
+  "notes": [
+    "Role hierarchy (level / canAssignToMaxLevel) was removed in 2026-04. Authorization is now permissions-only."
   ],
   "roles": [
     {
       "name": "Super Admin",
-      "level": 0,
-      "canAssignToMaxLevel": 0,
       "isSystemRole": true,
       "note": "isSuperAdmin flag bypasses all permission checks — permission list is explicit for completeness only",
       "permissions": [
@@ -37,8 +35,6 @@
     },
     {
       "name": "Manager",
-      "level": 1,
-      "canAssignToMaxLevel": 0,
       "isSystemRole": true,
       "permissions": [
         "assets.export", "assets.qr_download", "assets.view",
@@ -57,8 +53,6 @@
     },
     {
       "name": "Staff",
-      "level": 2,
-      "canAssignToMaxLevel": 0,
       "isSystemRole": true,
       "permissions": [
         "assets.qr_download", "assets.view",

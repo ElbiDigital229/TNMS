@@ -45,16 +45,22 @@ export const rbacService = {
     return propIds === "all" || propIds.includes(propertyId);
   },
 
+  /**
+   * Permissions-only assignment model (no role hierarchy):
+   *   - Assigner must have tickets.assign
+   *   - Assignee must be active and have tickets.assignee_eligible
+   *   - Assignee must have property access
+   * Super admins bypass everything.
+   */
   async canAssignTo(
     assignerId: string,
     assigneeId: string,
-    propertyId: string
+    propertyId: string,
   ): Promise<{ allowed: boolean; reason?: string }> {
-    // 1. Check assigner has tickets.assign permission
     const assignerPerms = await this.getUserPermissions(assignerId);
     const assigner = await prisma.user.findUnique({
       where: { id: assignerId },
-      include: { role: true },
+      select: { id: true, isSuperAdmin: true },
     });
 
     if (!assigner) return { allowed: false, reason: "Assigner not found" };
@@ -66,7 +72,6 @@ export const rbacService = {
       return { allowed: false, reason: "You do not have ticket assignment permission" };
     }
 
-    // 2. Check assignee exists and is active
     const assignee = await prisma.user.findUnique({
       where: { id: assigneeId },
       include: { role: { include: { permissions: { include: { permission: true } } } } },
@@ -77,18 +82,16 @@ export const rbacService = {
       return { allowed: false, reason: "Assignee is deactivated" };
     }
 
-    // 3. Check assignee has tickets.assignee_eligible
     const assigneePerms = assignee.role.permissions.map((rp) => rp.permission.key);
     if (!assigneePerms.includes(PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE)) {
       return { allowed: false, reason: "This user cannot be assigned tickets" };
     }
 
-    // Super admin bypasses hierarchy and level checks
     if (assigner.isSuperAdmin) {
       return { allowed: true };
     }
 
-    // 4. Self-assignment: allowed if you are assignee-eligible yourself
+    // Self-assignment: allowed as long as you are assignee-eligible yourself.
     if (assignerId === assigneeId) {
       if (assignerPerms.includes(PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE)) {
         return { allowed: true };
@@ -96,12 +99,7 @@ export const rbacService = {
       return { allowed: false, reason: "Your role is not eligible for ticket assignment" };
     }
 
-    // 5. Check assignee role level is at or below assigner's level
-    if (assignee.role.level < assigner.role.level) {
-      return { allowed: false, reason: "You cannot assign to someone above your role level" };
-    }
-
-    // 6. Check assignee has access to the property
+    // Property access check (respects inheritance / allProperties).
     const assigneePropertyIds = await this.getUserPropertyIds(assigneeId);
     if (assigneePropertyIds !== "all" && !assigneePropertyIds.includes(propertyId)) {
       return { allowed: false, reason: "Assignee does not have access to this property" };
@@ -113,53 +111,29 @@ export const rbacService = {
   async getAssignableUsers(assignerId: string, propertyId: string) {
     const assigner = await prisma.user.findUnique({
       where: { id: assignerId },
-      include: { role: true },
+      select: { id: true, isSuperAdmin: true },
     });
 
     if (!assigner) return [];
 
-    // Build candidate list
-    let candidateIds: string[];
-
-    if (assigner.isSuperAdmin) {
-      // Super admin: all active eligible users
-      const allUsers = await prisma.user.findMany({
-        where: {
-          status: "ACTIVE",
-          role: {
-            permissions: {
-              some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
-            },
+    // Everyone active with tickets.assignee_eligible is a candidate; scope by
+    // property access below. No role-hierarchy filtering.
+    const allEligible = await prisma.user.findMany({
+      where: {
+        status: "ACTIVE",
+        role: {
+          permissions: {
+            some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
           },
         },
-        select: { id: true },
-      });
-      candidateIds = allUsers.map((u) => u.id);
-    } else {
-      // Get all eligible users at same or lower level (FM, Supervisor, Technician etc.)
-      const allEligible = await prisma.user.findMany({
-        where: {
-          status: "ACTIVE",
-          role: {
-            level: { gte: assigner.role.level },
-            permissions: {
-              some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
-            },
-          },
-        },
-        select: { id: true },
-      });
-      candidateIds = allEligible.map((u) => u.id);
-      // Also include self if eligible
-      const assignerPerms = await this.getUserPermissions(assignerId);
-      if (assignerPerms.includes(PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE) && !candidateIds.includes(assignerId)) {
-        candidateIds.push(assignerId);
-      }
-    }
+      },
+      select: { id: true },
+    });
+    const candidateIds = allEligible.map((u) => u.id);
 
     if (candidateIds.length === 0) return [];
 
-    // Filter candidates by property access (respects inheritance)
+    // Filter candidates by property access (respects inheritance).
     const withAccess: string[] = [];
     for (const cid of candidateIds) {
       if (await this.userHasPropertyAccess(cid, propertyId)) {
@@ -170,20 +144,9 @@ export const rbacService = {
     if (withAccess.length === 0) return [];
 
     const users = await prisma.user.findMany({
-      where: {
-        id: { in: withAccess },
-        status: "ACTIVE",
-        role: {
-          level: !assigner.isSuperAdmin && assigner.role.canAssignToMaxLevel !== null
-            ? { lte: assigner.role.canAssignToMaxLevel }
-            : undefined,
-          permissions: {
-            some: { permission: { key: PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE } },
-          },
-        },
-      },
-      include: { role: { select: { id: true, name: true, level: true } } },
-      orderBy: [{ role: { level: "asc" } }, { fullName: "asc" }],
+      where: { id: { in: withAccess }, status: "ACTIVE" },
+      include: { role: { select: { id: true, name: true } } },
+      orderBy: [{ fullName: "asc" }],
     });
 
     return users.map((u) => ({

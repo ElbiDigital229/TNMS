@@ -102,14 +102,12 @@ enum NotificationType {
 // ─── RBAC Models ───────────────────────────────────────────
 
 model Role {
-  id                  String   @id @default(uuid())
-  name                String   @unique
-  level               Int
-  canAssignToMaxLevel Int?
-  isSystemRole        Boolean  @default(false)
-  status              Status   @default(ACTIVE)
-  createdAt           DateTime @default(now())
-  updatedAt           DateTime @updatedAt
+  id           String   @id @default(uuid())
+  name         String   @unique
+  isSystemRole Boolean  @default(false)
+  status       Status   @default(ACTIVE)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   permissions RolePermission[]
   users       User[]

@@ -9,7 +9,6 @@ export const dashboardController = {
         req.user!.id,
         req.user!.isSuperAdmin,
         req.user!.allProperties,
-        req.user!.roleLevel,
       );
       sendSuccess(res, stats);
     } catch (error: any) {

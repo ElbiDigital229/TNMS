@@ -43,7 +43,7 @@ export const userService = {
           status: true,
           allProperties: true,
           isSuperAdmin: true,
-          role: { select: { id: true, name: true, level: true } },
+          role: { select: { id: true, name: true } },
           department: { select: { id: true, name: true } },
           propertyAssignments: {
             select: { property: { select: { id: true, name: true } } },

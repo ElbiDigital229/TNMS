@@ -64,7 +64,6 @@ export const authService = {
         role: {
           id: user.role.id,
           name: user.role.name,
-          level: user.role.level,
         },
         permissions,
       },
@@ -216,7 +215,6 @@ export const authService = {
       role: {
         id: user.role.id,
         name: user.role.name,
-        level: user.role.level,
       },
       permissions,
     };

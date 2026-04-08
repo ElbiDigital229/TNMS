@@ -103,15 +103,15 @@ async function main() {
   const allPermissions = await prisma.permission.findMany();
   const permByKey = new Map(allPermissions.map((p) => [p.key, p.id]));
 
-  async function upsertRole(name: string, level: number, permKeys: string[]) {
+  async function upsertRole(name: string, permKeys: string[]) {
     const existing = await prisma.role.findFirst({ where: { name } });
     const role = existing
       ? await prisma.role.update({
           where: { id: existing.id },
-          data: { level, status: "ACTIVE", isSystemRole: true, canAssignToMaxLevel: 0 },
+          data: { status: "ACTIVE", isSystemRole: true },
         })
       : await prisma.role.create({
-          data: { name, level, status: "ACTIVE", isSystemRole: true, canAssignToMaxLevel: 0 },
+          data: { name, status: "ACTIVE", isSystemRole: true },
         });
 
     // Reset its permission set
@@ -128,9 +128,9 @@ async function main() {
     return role;
   }
 
-  const superAdmin = await upsertRole("Super Admin", 0, allPermissions.map((p) => p.key));
-  const manager = await upsertRole("Manager", 1, MANAGER_PERMISSIONS);
-  const staff = await upsertRole("Staff", 2, STAFF_PERMISSIONS);
+  const superAdmin = await upsertRole("Super Admin", allPermissions.map((p) => p.key));
+  const manager = await upsertRole("Manager", MANAGER_PERMISSIONS);
+  const staff = await upsertRole("Staff", STAFF_PERMISSIONS);
 
   // Make sure admin is on Super Admin
   await prisma.user.update({
@@ -160,12 +160,12 @@ async function main() {
   const userCount = await prisma.user.count();
   const roles = await prisma.role.findMany({
     include: { _count: { select: { users: true, permissions: true } } },
-    orderBy: { level: "asc" },
+    orderBy: { name: "asc" },
   });
   console.log(`  users: ${userCount}`);
   console.log("  roles:");
   for (const r of roles) {
-    console.log(`    - ${r.name} (level ${r.level}): ${r._count.permissions} perms, ${r._count.users} user(s)`);
+    console.log(`    - ${r.name}: ${r._count.permissions} perms, ${r._count.users} user(s)`);
   }
 
   console.log("\n=== Done ===\n");
