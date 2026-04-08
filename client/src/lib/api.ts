@@ -7,9 +7,14 @@ const api = axios.create({
 /** Build a full URL for a server-stored asset path (e.g. "uploads/foo.jpg"). */
 export const assetUrl = (path: string | null | undefined): string => {
   if (!path) return "";
-  const base = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
   const clean = path.replace(/^\//, "");
-  return base ? `${base}/${clean}` : `/${clean}`;
+  const envBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  if (envBase) return `${envBase}/${clean}`;
+  // Fallback: when not running on localhost (e.g. Vercel preview), use the backend host directly.
+  if (typeof window !== "undefined" && !/^(localhost|127\.0\.0\.1)/.test(window.location.hostname)) {
+    return `https://apitnms.duckdns.org/${clean}`;
+  }
+  return `/${clean}`;
 };
 
 api.interceptors.request.use((config) => {
