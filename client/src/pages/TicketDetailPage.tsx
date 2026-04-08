@@ -12,6 +12,7 @@ import SlaBar from "../components/ticket/SlaBar";
 import StatusTimeline from "../components/ticket/StatusTimeline";
 import RelatedTickets from "../components/ticket/RelatedTickets";
 import MentionInput from "../components/ticket/MentionInput";
+import { capture } from "../lib/posthog";
 import {
   TASK_TYPE_LABELS,
   SUB_TASK_TYPE_LABELS,
@@ -182,6 +183,7 @@ export default function TicketDetailPage() {
     toast.success(`Ticket marked as ${TICKET_STATUS_LABELS[newStatus]}`);
     try {
       await ticketApi.updateStatus(id!, newStatus);
+      capture("ticket_status_changed", { ticket_id: id, new_status: newStatus });
       fetchTicket();
     } catch {
       setTicket(prevTicket);
@@ -339,6 +341,7 @@ export default function TicketDetailPage() {
     setBlockingSubmitting(true);
     try {
       await ticketApi.block(id!, { blockingUserId: blockingUserId || undefined, departmentId: blockDeptId, reason: blockReason.trim() });
+      capture("ticket_blocked", { ticket_id: id, department_id: blockDeptId, blocking_user_id: blockingUserId || null });
       toast.success("Ticket blocked — notification sent");
       setBlockModalOpen(false);
       fetchTicket();
@@ -353,6 +356,7 @@ export default function TicketDetailPage() {
     setUnblockSubmitting(true);
     try {
       await ticketApi.unblock(id!, unblockNote.trim() || undefined);
+      capture("ticket_unblocked", { ticket_id: id });
       toast.success("Ticket unblocked");
       setUnblockModalOpen(false);
       setUnblockNote("");

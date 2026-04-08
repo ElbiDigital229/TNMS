@@ -8,6 +8,7 @@ import {
 } from "react";
 import { useNavigate } from "react-router-dom";
 import { authApi } from "../lib/api";
+import { identifyUser, resetPostHog, capture } from "../lib/posthog";
 
 interface UserRole {
   id: string;
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         .me()
         .then((res) => {
           setUser(res.data.data);
+          identifyUser(res.data.data);
         })
         .catch(() => {
           localStorage.removeItem("token");
@@ -65,12 +67,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const { token, user: userData } = res.data.data;
     localStorage.setItem("token", token);
     setUser(userData);
+    identifyUser(userData);
+    capture("login_success", {
+      username: userData.username,
+      role_name: userData.role.name,
+      is_super_admin: userData.isSuperAdmin,
+    });
     navigate("/");
   };
 
   const logout = () => {
+    capture("logout");
     localStorage.removeItem("token");
     setUser(null);
+    resetPostHog();
     navigate("/login");
   };
 

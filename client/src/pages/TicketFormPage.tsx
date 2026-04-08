@@ -14,6 +14,7 @@ import { PERMISSIONS } from "../../../shared/permissions";
 import PageHeader from "../components/ui/PageHeader";
 import { ArrowLeft } from "lucide-react";
 import { cls } from "../lib/styles";
+import { capture } from "../lib/posthog";
 
 interface Property {
   id: string;
@@ -212,9 +213,16 @@ export default function TicketFormPage() {
     try {
       if (isEdit) {
         await ticketApi.update(id!, formData);
+        capture("ticket_updated", { ticket_id: id });
         toast.success("Ticket updated");
       } else {
-        await ticketApi.create(formData);
+        const res = await ticketApi.create(formData);
+        capture("ticket_created", {
+          ticket_id: res?.data?.data?.id,
+          priority: formData.get("priority"),
+          task_type: formData.get("taskType"),
+          property_id: formData.get("propertyId"),
+        });
         toast.success("Ticket created");
       }
       navigate("/tickets");
