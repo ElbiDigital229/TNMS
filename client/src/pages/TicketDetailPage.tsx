@@ -157,6 +157,8 @@ export default function TicketDetailPage() {
   const [blockingSubmitting, setBlockingSubmitting] = useState(false);
   const [unblockNote, setUnblockNote] = useState("");
   const [unblockSubmitting, setUnblockSubmitting] = useState(false);
+  const [confirmArchiveOpen, setConfirmArchiveOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
 
   const fetchTicket = () => {
     ticketApi
@@ -270,6 +272,30 @@ export default function TicketDetailPage() {
       toast.error("Failed to upload image");
     } finally {
       setUploadingImage(false);
+    }
+  };
+
+  const handleArchive = async () => {
+    setArchiving(true);
+    try {
+      await ticketApi.softDelete(id!);
+      toast.success("Ticket archived");
+      navigate("/tickets");
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Failed to archive");
+    } finally {
+      setArchiving(false);
+      setConfirmArchiveOpen(false);
+    }
+  };
+
+  const handleRestore = async () => {
+    try {
+      await ticketApi.restore(id!);
+      toast.success("Ticket restored");
+      fetchTicket();
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || "Failed to restore");
     }
   };
 
@@ -524,8 +550,34 @@ export default function TicketDetailPage() {
               Unblock
             </button>
           )}
+          {hasPermission(PERMISSIONS.TICKETS.DELETE) && !ticket.deletedAt && (
+            <button
+              onClick={() => setConfirmArchiveOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg bg-red-50 px-3 py-1.5 text-[13px] font-medium text-red-700 hover:bg-red-100 shadow-sm transition-all duration-200 ring-1 ring-red-200"
+            >
+              <Trash2 size={16} />
+              Archive
+            </button>
+          )}
+          {hasPermission(PERMISSIONS.TICKETS.DELETE) && ticket.deletedAt && (
+            <button
+              onClick={handleRestore}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-50 px-3 py-1.5 text-[13px] font-medium text-emerald-700 hover:bg-emerald-100 shadow-sm transition-all duration-200 ring-1 ring-emerald-200"
+            >
+              <RotateCcw size={16} />
+              Restore
+            </button>
+          )}
         </div>
       </div>
+
+      {/* Legacy / Archived banner */}
+      {(ticket.legacy || ticket.deletedAt) && (
+        <div className={`mb-3 rounded-lg border px-3 py-2 text-[12px] ${ticket.deletedAt ? "border-red-200 bg-red-50 text-red-700" : "border-gray-200 bg-gray-50 text-gray-600"}`}>
+          {ticket.deletedAt && <><strong>Archived</strong> — this ticket is hidden from active views and reports. </>}
+          {ticket.legacy && !ticket.deletedAt && <><strong>Legacy</strong> — this is a historical ticket excluded from active workflows and reports.</>}
+        </div>
+      )}
 
       {/* Blocked Banner */}
       {ticket.blocks?.some((b: any) => !b.resolvedAt) && ticket.blocks?.[0] && (
@@ -1408,6 +1460,18 @@ export default function TicketDetailPage() {
           />
         );
       })()}
+
+      <Modal isOpen={confirmArchiveOpen} onClose={() => setConfirmArchiveOpen(false)} title="Archive ticket">
+        <p className="text-[13px] text-gray-600">
+          Archive <span className="font-semibold">{ticket.ticketNumber}</span>? It will be hidden from active views and reports but can be restored later.
+        </p>
+        <div className="mt-4 flex justify-end gap-2">
+          <button onClick={() => setConfirmArchiveOpen(false)} className={cls.btnSecondary} disabled={archiving}>Cancel</button>
+          <button onClick={handleArchive} className={`${cls.btnPrimary} bg-red-600 hover:bg-red-700`} disabled={archiving}>
+            {archiving ? "Archiving..." : "Archive"}
+          </button>
+        </div>
+      </Modal>
     </div>
   );
 }

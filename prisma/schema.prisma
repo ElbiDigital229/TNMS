@@ -317,10 +317,20 @@ model Ticket {
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
+  // Soft hide flags. `legacy` = pre-existing imported tickets that should be
+  // excluded from active workflows (reports, dashboards, assignee dropdowns).
+  // `deletedAt` = soft-delete (archive); rows are hidden by default but kept
+  // in the DB so they can be restored.
+  legacy          Boolean       @default(false)
+  deletedAt       DateTime?
+
   assets          TicketAsset[]
   comments        TicketComment[]
   activities      TicketActivity[]
   blocks          TicketBlock[]
+
+  @@index([legacy])
+  @@index([deletedAt])
 }
 
 model TicketAsset {

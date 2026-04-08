@@ -182,6 +182,8 @@ export const ticketApi = {
   getRelated: (id: string) => api.get(`/tickets/${id}/related`),
   bulkImport: (items: Record<string, string>[]) =>
     api.post("/tickets/bulk-import", { items }),
+  softDelete: (id: string) => api.delete(`/tickets/${id}`),
+  restore: (id: string) => api.post(`/tickets/${id}/restore`),
 };
 
 // Ticket Category API

@@ -23,3 +23,5 @@ ticketRoutes.get("/:id/assignable-users", requirePermission(PERMISSIONS.TICKETS.
 ticketRoutes.get("/:id/related", ticketController.findRelated);
 ticketRoutes.post("/:id/block", requireAnyPermission(PERMISSIONS.TICKETS.UPDATE_STATUS, PERMISSIONS.TICKETS.VIEW_ASSIGNED), ticketController.blockTicket);
 ticketRoutes.post("/:id/unblock", requireAnyPermission(PERMISSIONS.TICKETS.UPDATE_STATUS, PERMISSIONS.TICKETS.VIEW_ASSIGNED), ticketController.unblockTicket);
+ticketRoutes.delete("/:id", requirePermission(PERMISSIONS.TICKETS.DELETE), ticketController.softDelete);
+ticketRoutes.post("/:id/restore", requirePermission(PERMISSIONS.TICKETS.DELETE), ticketController.restore);

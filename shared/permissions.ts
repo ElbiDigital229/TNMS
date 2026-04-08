@@ -42,6 +42,7 @@ export const PERMISSIONS = {
     COMMENT: "tickets.comment",
     EXPORT: "tickets.export",
     REOPEN: "tickets.reopen",
+    DELETE: "tickets.delete",
   },
   TODOS: {
     ACCESS: "todos.access",
@@ -125,6 +126,7 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.TICKETS.COMMENT, module: "tickets", description: "Add comments to tickets" },
   { key: PERMISSIONS.TICKETS.EXPORT, module: "tickets", description: "Export ticket data" },
   { key: PERMISSIONS.TICKETS.REOPEN, module: "tickets", description: "Reopen completed tickets" },
+  { key: PERMISSIONS.TICKETS.DELETE, module: "tickets", description: "Archive (soft-delete) and restore tickets" },
   // Todos
   { key: PERMISSIONS.TODOS.ACCESS, module: "todos", description: "Access to-do list feature" },
   // Dashboard

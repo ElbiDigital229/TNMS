@@ -34,7 +34,10 @@ export const ticketService = {
   },
 
   async generateTicketNumber(): Promise<string> {
+    // Must include hidden (legacy + soft-deleted) tickets so the next number
+    // never collides with an existing ticket number.
     const last = await prisma.ticket.findFirst({
+      where: { __includeHidden: true } as any,
       orderBy: { ticketNumber: "desc" },
       select: { ticketNumber: true },
     });
@@ -65,6 +68,10 @@ export const ticketService = {
     dueDateTo?: string;
     blocked?: string;
     overdue?: string;
+    /** "1"/"true" → only legacy tickets. Anything else → only non-legacy (default). */
+    legacy?: string;
+    /** "1"/"true" → only soft-deleted tickets. Anything else → only non-deleted (default). */
+    deleted?: string;
     sortBy?: string;
     sortOrder?: "asc" | "desc";
     viewMode?: "all" | "assigned";
@@ -114,6 +121,14 @@ export const ticketService = {
     }
     if (params.viewMode === "assigned" && params.userId) {
       where.assignedToId = params.userId;
+    }
+    // Hidden-ticket views (opt-in). The Prisma extension excludes legacy +
+    // soft-deleted by default; setting these explicitly overrides that.
+    if (params.legacy === "1" || params.legacy === "true") {
+      where.legacy = true;
+    }
+    if (params.deleted === "1" || params.deleted === "true") {
+      where.deletedAt = { not: null };
     }
 
     const [data, total] = await Promise.all([
@@ -603,6 +618,41 @@ export const ticketService = {
     }
   },
 
+  /** Soft-delete (archive). Sets deletedAt = now() so the row is hidden from
+   *  default queries but kept in the DB and can be restored. */
+  async softDelete(ticketId: string, userId?: string) {
+    const ticket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { deletedAt: new Date() },
+    });
+    await prisma.ticketActivity.create({
+      data: {
+        ticketId,
+        action: "DELETED",
+        details: "Ticket archived (soft-deleted)",
+        performedById: userId || null,
+      },
+    });
+    return ticket;
+  },
+
+  /** Restore a soft-deleted ticket. */
+  async restore(ticketId: string, userId?: string) {
+    const ticket = await prisma.ticket.update({
+      where: { id: ticketId },
+      data: { deletedAt: null },
+    });
+    await prisma.ticketActivity.create({
+      data: {
+        ticketId,
+        action: "RESTORED",
+        details: "Ticket restored from archive",
+        performedById: userId || null,
+      },
+    });
+    return ticket;
+  },
+
   async unblock(ticketId: string, resolvedNote: string | undefined, resolvedById: string) {
     const activeBlock = await prisma.ticketBlock.findFirst({
       where: { ticketId, resolvedAt: null },
@@ -781,6 +831,7 @@ export const ticketService = {
     // Pre-fetch the highest existing ticket number once, then increment locally
     // (avoids 5000 round-trips to generateTicketNumber)
     const last = await prisma.ticket.findFirst({
+      where: { __includeHidden: true } as any,
       orderBy: { ticketNumber: "desc" },
       select: { ticketNumber: true },
     });

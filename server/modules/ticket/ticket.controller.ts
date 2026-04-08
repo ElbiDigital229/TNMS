@@ -7,7 +7,7 @@ import { PERMISSIONS } from "../../../shared/permissions.js";
 export const ticketController = {
   async findAll(req: Request, res: Response) {
     try {
-      const { page, limit, search, status, priority, taskType, propertyId, assigneeId, createdById, createdFrom, createdTo, dueDateFrom, dueDateTo, blocked, overdue, sortBy, sortOrder } =
+      const { page, limit, search, status, priority, taskType, propertyId, assigneeId, createdById, createdFrom, createdTo, dueDateFrom, dueDateTo, blocked, overdue, legacy, deleted, sortBy, sortOrder } =
         req.query;
 
       // Determine view mode based on permissions
@@ -34,6 +34,8 @@ export const ticketController = {
         dueDateTo: dueDateTo as string,
         blocked: blocked as string,
         overdue: overdue as string,
+        legacy: legacy as string,
+        deleted: deleted as string,
         sortBy: sortBy as string,
         sortOrder: sortOrder as "asc" | "desc",
         viewMode,
@@ -379,6 +381,30 @@ export const ticketController = {
       );
     } catch (error: any) {
       sendError(res, error.message || "Failed to bulk import tickets");
+    }
+  },
+
+  async softDelete(req: Request, res: Response) {
+    try {
+      const u = req.user!;
+      const hasDelete = u.isSuperAdmin || u.permissions.includes(PERMISSIONS.TICKETS.DELETE);
+      if (!hasDelete) return sendError(res, "Access denied", 403);
+      const ticket = await ticketService.softDelete(req.params.id, u.id);
+      sendSuccess(res, ticket, "Ticket archived");
+    } catch (error: any) {
+      sendError(res, error.message, 400);
+    }
+  },
+
+  async restore(req: Request, res: Response) {
+    try {
+      const u = req.user!;
+      const hasDelete = u.isSuperAdmin || u.permissions.includes(PERMISSIONS.TICKETS.DELETE);
+      if (!hasDelete) return sendError(res, "Access denied", 403);
+      const ticket = await ticketService.restore(req.params.id, u.id);
+      sendSuccess(res, ticket, "Ticket restored");
+    } catch (error: any) {
+      sendError(res, error.message, 400);
     }
   },
 
