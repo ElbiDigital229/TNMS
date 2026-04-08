@@ -26,17 +26,12 @@ export async function seed() {
     keys.map((k) => permByKey.get(k)!).filter(Boolean);
 
   // ─── 2. Seed Roles ──────────────────────────────────────
+  // Three-tier role model: Super Admin / Manager / Staff.
+  // Legacy roles (CEO, OPS Lead, Community Executive, Supervisor, Technician)
+  // were removed in 2026-04. They are auto-deactivated below if still in DB.
   console.log("Seeding roles...");
 
   const P = PERMISSIONS;
-
-  // Tickets-only permissions (for Line Manager, Supervisor, Technician)
-  const TICKETS_ONLY_BASE = [
-    P.TICKETS.COMMENT,
-    P.TICKETS.UPDATE_STATUS,
-    P.TICKETS.ASSIGNEE_ELIGIBLE,
-    P.TODOS.ACCESS,
-  ];
 
   const roleDefs: {
     name: string;
@@ -51,93 +46,46 @@ export async function seed() {
       permissions: [], // isSuperAdmin bypasses all permission checks
     },
     {
-      // CEO — all access except role creation (roles.manage)
-      name: "CEO",
-      level: 1,
-      canAssignToMaxLevel: 6,
-      permissions: [
-        P.PROPERTIES.VIEW, P.PROPERTIES.CREATE, P.PROPERTIES.EDIT, P.PROPERTIES.DEACTIVATE, P.PROPERTIES.EXPORT,
-        P.FLOORS.VIEW, P.FLOORS.CREATE, P.FLOORS.EDIT, P.FLOORS.DEACTIVATE,
-        P.UNITS.VIEW, P.UNITS.CREATE, P.UNITS.EDIT, P.UNITS.DEACTIVATE, P.UNITS.EXPORT,
-        P.ASSETS.VIEW, P.ASSETS.CREATE, P.ASSETS.EDIT, P.ASSETS.DEACTIVATE, P.ASSETS.EXPORT, P.ASSETS.IMPORT, P.ASSETS.QR_DOWNLOAD,
-        P.TICKETS.VIEW_ALL, P.TICKETS.CREATE, P.TICKETS.EDIT, P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.COMMENT, P.TICKETS.EXPORT,
-        P.TODOS.ACCESS,
-        P.DASHBOARD.VIEW,
-        P.SETTINGS.AREA_GROUPS_MANAGE, P.SETTINGS.ASSET_CATEGORIES_MANAGE, P.SETTINGS.TICKET_CATEGORIES_MANAGE,
-        P.USERS.VIEW, P.USERS.CREATE, P.USERS.EDIT, P.USERS.DEACTIVATE,
-        P.ROLES.VIEW, // can view roles but NOT manage
-        P.AUDIT.VIEW, P.AUDIT.EXPORT,
-        P.REPORTS.VIEW,
-      ],
-    },
-    {
-      // OPS Lead — all access except role creation
-      name: "OPS Lead",
-      level: 2,
-      canAssignToMaxLevel: 6,
-      permissions: [
-        P.PROPERTIES.VIEW, P.PROPERTIES.CREATE, P.PROPERTIES.EDIT, P.PROPERTIES.DEACTIVATE, P.PROPERTIES.EXPORT,
-        P.FLOORS.VIEW, P.FLOORS.CREATE, P.FLOORS.EDIT, P.FLOORS.DEACTIVATE,
-        P.UNITS.VIEW, P.UNITS.CREATE, P.UNITS.EDIT, P.UNITS.DEACTIVATE, P.UNITS.EXPORT,
-        P.ASSETS.VIEW, P.ASSETS.CREATE, P.ASSETS.EDIT, P.ASSETS.DEACTIVATE, P.ASSETS.EXPORT, P.ASSETS.IMPORT, P.ASSETS.QR_DOWNLOAD,
-        P.TICKETS.VIEW_ALL, P.TICKETS.CREATE, P.TICKETS.EDIT, P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.COMMENT, P.TICKETS.EXPORT,
-        P.TODOS.ACCESS,
-        P.DASHBOARD.VIEW,
-        P.SETTINGS.AREA_GROUPS_MANAGE, P.SETTINGS.ASSET_CATEGORIES_MANAGE, P.SETTINGS.TICKET_CATEGORIES_MANAGE,
-        P.USERS.VIEW, P.USERS.CREATE, P.USERS.EDIT, P.USERS.DEACTIVATE,
-        P.ROLES.VIEW,
-        P.AUDIT.VIEW, P.AUDIT.EXPORT,
-        P.REPORTS.VIEW,
-      ],
-    },
-    {
-      // Community Executive — assigned to properties, can create/assign tickets, view properties/assets
-      name: "Community Executive",
-      level: 3,
-      canAssignToMaxLevel: 6,
-      permissions: [
-        P.PROPERTIES.VIEW, P.PROPERTIES.EXPORT,
-        P.FLOORS.VIEW,
-        P.UNITS.VIEW, P.UNITS.EXPORT,
-        P.ASSETS.VIEW, P.ASSETS.EXPORT,
-        P.TICKETS.VIEW_ALL, P.TICKETS.CREATE, P.TICKETS.EDIT, P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.COMMENT, P.TICKETS.EXPORT,
-        P.TODOS.ACCESS,
-        P.DASHBOARD.VIEW,
-      ],
-    },
-    {
-      // Manager — department manager, manages supervisors and technicians
+      // Manager — full management of properties, assets, tickets, settings
       name: "Manager",
-      level: 4,
-      canAssignToMaxLevel: 6,
+      level: 1,
+      canAssignToMaxLevel: 2,
       permissions: [
-        P.PROPERTIES.VIEW, P.PROPERTIES.EXPORT,
-        P.FLOORS.VIEW,
-        P.UNITS.VIEW, P.UNITS.EXPORT,
-        P.ASSETS.VIEW, P.ASSETS.EXPORT,
-        P.TICKETS.VIEW_ALL, P.TICKETS.CREATE, P.TICKETS.EDIT, P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.COMMENT, P.TICKETS.EXPORT,
+        P.PROPERTIES.VIEW, P.PROPERTIES.CREATE, P.PROPERTIES.EDIT, P.PROPERTIES.DEACTIVATE, P.PROPERTIES.EXPORT,
+        P.FLOORS.VIEW, P.FLOORS.CREATE, P.FLOORS.EDIT, P.FLOORS.DEACTIVATE, P.FLOORS.IMPORT, P.FLOORS.DELETE,
+        P.UNITS.VIEW, P.UNITS.CREATE, P.UNITS.EDIT, P.UNITS.DEACTIVATE, P.UNITS.EXPORT, P.UNITS.IMPORT,
+        P.ASSETS.VIEW, P.ASSETS.CREATE, P.ASSETS.EDIT, P.ASSETS.DEACTIVATE, P.ASSETS.EXPORT, P.ASSETS.IMPORT, P.ASSETS.QR_DOWNLOAD,
+        P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED, P.TICKETS.CREATE, P.TICKETS.EDIT,
+        P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.ASSIGNEE_ELIGIBLE,
+        P.TICKETS.COMMENT, P.TICKETS.EXPORT, P.TICKETS.REOPEN,
         P.TODOS.ACCESS,
         P.DASHBOARD.VIEW,
+        P.REPORTS.VIEW,
+        P.AUDIT.VIEW,
+        P.SETTINGS.AREA_GROUPS_MANAGE,
+        P.SETTINGS.ASSET_CATEGORIES_MANAGE,
+        P.SETTINGS.TICKET_CATEGORIES_MANAGE,
+        P.SETTINGS.DEPARTMENTS_MANAGE,
       ],
     },
     {
-      // Supervisor — tickets only: see line manager's tickets, assign to technicians
-      name: "Supervisor",
-      level: 5,
-      canAssignToMaxLevel: 6,
-      permissions: [
-        P.TICKETS.VIEW_ALL, P.TICKETS.ASSIGN,
-        ...TICKETS_ONLY_BASE,
-      ],
-    },
-    {
-      // Technician — tickets only: see only tickets assigned to them
-      name: "Technician",
-      level: 6,
+      // Staff — read-only inventory, work their own ticket queue
+      name: "Staff",
+      level: 2,
       canAssignToMaxLevel: null,
       permissions: [
+        P.PROPERTIES.VIEW,
+        P.FLOORS.VIEW,
+        P.UNITS.VIEW,
+        P.ASSETS.VIEW,
         P.TICKETS.VIEW_ASSIGNED,
-        ...TICKETS_ONLY_BASE,
+        P.TICKETS.CREATE,
+        P.TICKETS.UPDATE_STATUS,
+        P.TICKETS.ASSIGNEE_ELIGIBLE,
+        P.TICKETS.COMMENT,
+        P.TICKETS.REOPEN,
+        P.TODOS.ACCESS,
+        P.DASHBOARD.VIEW,
       ],
     },
   ];
@@ -179,19 +127,30 @@ export async function seed() {
     console.log(`Seeded role: ${roleDef.name}`);
   }
 
-  // Deactivate old roles that are no longer in the hierarchy
-  const oldRoleNames = ["General Manager", "Operations Manager", "Office Manager", "Viewer"];
+  // Deactivate (or delete if empty) old roles that are no longer in the hierarchy
+  const oldRoleNames = [
+    "General Manager", "Operations Manager", "Office Manager", "Viewer",
+    "CEO", "OPS Lead", "Community Executive", "Supervisor", "Technician",
+  ];
   for (const name of oldRoleNames) {
-    const oldRole = await prisma.role.findUnique({ where: { name } });
-    if (oldRole) {
+    const oldRole = await prisma.role.findUnique({
+      where: { name },
+      include: { _count: { select: { users: true } } },
+    });
+    if (!oldRole) continue;
+    if (oldRole._count.users === 0) {
+      await prisma.rolePermission.deleteMany({ where: { roleId: oldRole.id } });
+      await prisma.role.delete({ where: { id: oldRole.id } });
+      console.log(`Removed legacy role: ${name}`);
+    } else {
       await prisma.role.update({ where: { id: oldRole.id }, data: { status: "INACTIVE" } });
-      console.log(`Deactivated old role: ${name}`);
+      console.log(`Deactivated legacy role (still has users): ${name}`);
     }
   }
 
   // ─── 3. Fetch roles for user assignment ─────────────────
   const roleMap: Record<string, string> = {};
-  for (const name of ["Super Admin", "CEO", "OPS Lead", "Community Executive", "Manager", "Supervisor", "Technician"]) {
+  for (const name of ["Super Admin", "Manager", "Staff"]) {
     const role = await prisma.role.findUnique({ where: { name } });
     if (role) roleMap[name] = role.id;
   }
