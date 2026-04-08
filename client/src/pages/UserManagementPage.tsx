@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { userApi, roleApi, propertyApi, areaGroupApi, departmentApi } from "../lib/api";
+import { userApi, roleApi, propertyApi, areaGroupApi, departmentApi, designationApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
 import { PERMISSIONS } from "../../../shared/permissions";
@@ -23,6 +23,12 @@ interface Department {
   status: string;
 }
 
+interface Designation {
+  id: string;
+  name: string;
+  status: string;
+}
+
 interface AreaGroup {
   id: string;
   city: string;
@@ -41,7 +47,8 @@ interface User {
   username: string;
   fullName: string;
   employeeCode: string;
-  designation: string;
+  designation?: { id: string; name: string } | null;
+  designationId?: string | null;
   email: string;
   phone: string;
   role: Role;
@@ -61,7 +68,7 @@ const emptyForm = {
   password: "",
   fullName: "",
   employeeCode: "",
-  designation: "",
+  designationId: "",
   email: "",
   phone: "",
   roleId: "",
@@ -79,6 +86,7 @@ export default function UserManagementPage() {
   const [properties, setProperties] = useState<Property[]>([]);
   const [areaGroups, setAreaGroups] = useState<AreaGroup[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const [designations, setDesignations] = useState<Designation[]>([]);
   const [loading, setLoading] = useState(true);
 
   const [search, setSearch] = useState("");
@@ -131,12 +139,20 @@ export default function UserManagementPage() {
       .catch(() => {});
   };
 
+  const fetchDesignations = () => {
+    designationApi
+      .list()
+      .then((res) => setDesignations(res.data.data.filter((d: Designation) => d.status === "ACTIVE")))
+      .catch(() => {});
+  };
+
   useEffect(() => {
     fetchUsers();
     fetchRoles();
     fetchProperties();
     fetchAreaGroups();
     fetchDepartments();
+    fetchDesignations();
   }, []);
 
   const filteredUsers = users.filter((u) => {
@@ -185,7 +201,7 @@ export default function UserManagementPage() {
       password: "",
       fullName: user.fullName || "",
       employeeCode: user.employeeCode || "",
-      designation: user.designation || "",
+      designationId: user.designation?.id || user.designationId || "",
       email: user.email || user.username || "",
       phone: user.phone || "",
       roleId: user.role?.id || user.roleId || "",
@@ -233,7 +249,7 @@ export default function UserManagementPage() {
       const payload: Record<string, unknown> = {
         fullName: form.fullName,
         employeeCode: form.employeeCode || null,
-        designation: form.designation || null,
+        designationId: form.designationId || null,
         email: form.email,
         phone: form.phone,
         roleId: form.roleId || undefined,
@@ -546,13 +562,18 @@ export default function UserManagementPage() {
           {/* Designation */}
           <div>
             <label className={cls.label}>Designation</label>
-            <input
-              type="text"
-              value={form.designation}
-              onChange={(e) => updateForm("designation", e.target.value)}
-              className={cls.input}
-              placeholder="e.g. Senior Manager"
-            />
+            <select
+              value={form.designationId}
+              onChange={(e) => updateForm("designationId", e.target.value)}
+              className={`${cls.select} w-full`}
+            >
+              <option value="">No designation</option>
+              {designations.map((d) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Email (used as username) */}

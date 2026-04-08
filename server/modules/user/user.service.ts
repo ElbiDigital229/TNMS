@@ -37,7 +37,7 @@ export const userService = {
           username: true,
           fullName: true,
           employeeCode: true,
-          designation: true,
+          designation: { select: { id: true, name: true } },
           email: true,
           phone: true,
           status: true,
@@ -85,7 +85,7 @@ export const userService = {
     password: string;
     fullName?: string;
     employeeCode?: string;
-    designation?: string;
+    designationId?: string | null;
     email?: string;
     phone?: string;
     roleId: string;
@@ -133,7 +133,7 @@ export const userService = {
     data: {
       fullName?: string;
       employeeCode?: string;
-      designation?: string;
+      designationId?: string | null;
       email?: string;
       phone?: string;
       roleId?: string;
@@ -314,6 +314,12 @@ export const userService = {
     });
     const departmentMap = new Map(departments.map((d) => [d.name.toLowerCase(), d.id]));
 
+    const designations = await prisma.designation.findMany({
+      where: { status: "ACTIVE" },
+      select: { id: true, name: true },
+    });
+    const designationMap = new Map(designations.map((d) => [d.name.toLowerCase(), d.id]));
+
     const existingUsers = await prisma.user.findMany({
       select: { id: true, username: true, email: true, employeeCode: true },
     });
@@ -336,7 +342,8 @@ export const userService = {
     });
     const areaGroupMap = new Map(areaGroups.map((ag) => [ag.groupName.toLowerCase(), ag.id]));
 
-    const propertyByName = new Map(allProps.map((p) => [p.name.toLowerCase(), p]));
+    // Trim trailing/leading whitespace on names so e.g. "Vanguard " in DB matches "Vanguard" in CSV
+    const propertyByName = new Map(allProps.map((p) => [p.name.trim().toLowerCase(), p]));
 
     const results: { row: number; status: string; email: string; error?: string }[] = [];
 
@@ -375,42 +382,57 @@ export const userService = {
           }
         }
 
-        // Resolve Group: "All" | area group name
+        let designationId: string | undefined;
+        if (item.designation) {
+          designationId = designationMap.get(item.designation.toLowerCase());
+          if (!designationId) {
+            results.push({ row: i + 1, status: "error", email: item.email, error: `Designation "${item.designation}" not found` });
+            continue;
+          }
+        }
+
+        // Resolve property access. Group takes precedence — if Group is set
+        // (and not N/A), Specific is ignored. Specific is only consulted when
+        // Group is empty or N/A.
         let isAllProperties = false;
         let propertyIds: string[] = [];
+        let resolvedFromGroup = false;
 
         const group = item.group?.trim();
         const groupLower = group?.toLowerCase();
-        if (!group || groupLower === "all") {
-          isAllProperties = true;
-        } else if (groupLower === "n/a" || groupLower === "na" || groupLower === "-" || groupLower === "none") {
-          // No group — will use Specific column, or error if no specific either
-          isAllProperties = false;
-        } else {
-          const areaGroupId = areaGroupMap.get(groupLower!);
-          if (areaGroupId) {
-            propertyIds = allProps
-              .filter((p) => p.areaGroupId === areaGroupId)
-              .map((p) => p.id);
-            if (propertyIds.length === 0) {
-              results.push({ row: i + 1, status: "error", email: item.email, error: `No active properties found in group "${group}"` });
-              continue;
-            }
+        const isNoGroup = !group || groupLower === "n/a" || groupLower === "na" || groupLower === "-" || groupLower === "none";
+
+        if (!isNoGroup) {
+          if (groupLower === "all") {
+            isAllProperties = true;
+            resolvedFromGroup = true;
           } else {
-            // Try matching as a property name directly
-            const prop = propertyByName.get(groupLower!);
-            if (prop) {
-              propertyIds = [prop.id];
+            const areaGroupId = areaGroupMap.get(groupLower!);
+            if (areaGroupId) {
+              propertyIds = allProps
+                .filter((p) => p.areaGroupId === areaGroupId)
+                .map((p) => p.id);
+              if (propertyIds.length === 0) {
+                results.push({ row: i + 1, status: "error", email: item.email, error: `No active properties found in group "${group}"` });
+                continue;
+              }
+              resolvedFromGroup = true;
             } else {
-              results.push({ row: i + 1, status: "error", email: item.email, error: `Group "${group}" is not "All", "N/A", a valid area group, or property name` });
-              continue;
+              // Treat as a property name
+              const prop = propertyByName.get(groupLower!.trim());
+              if (prop) {
+                propertyIds = [prop.id];
+                resolvedFromGroup = true;
+              } else {
+                results.push({ row: i + 1, status: "error", email: item.email, error: `Group "${group}" is not "All", "N/A", a valid area group, or property name` });
+                continue;
+              }
             }
           }
         }
 
-        // Resolve Specific: comma-separated property names (overrides group if provided)
-        if (item.specific?.trim()) {
-          isAllProperties = false;
+        // Specific is consulted only if Group did not resolve anything
+        if (!resolvedFromGroup && item.specific?.trim()) {
           const specificNames = item.specific.split(",").map((s) => s.trim().toLowerCase()).filter(Boolean);
           propertyIds = [];
           let specificError = false;
@@ -438,7 +460,7 @@ export const userService = {
           passwordHash: defaultPasswordHash,
           fullName: item.fullName || null,
           employeeCode: item.employeeCode || null,
-          designation: item.designation || null,
+          designationId: designationId || null,
           email: item.email,
           roleId,
           allProperties: isAllProperties,

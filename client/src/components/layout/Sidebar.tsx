@@ -9,6 +9,7 @@ import {
   Settings,
   Layers,
   Tag,
+  BadgeCheck,
   TicketCheck,
   CheckSquare,
   BarChart3,
@@ -213,6 +214,16 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
                       >
                         <Building2 size={16} />
                         Departments
+                      </NavLink>
+                    )}
+                    {hasPermission(P.SETTINGS.DESIGNATIONS_MANAGE) && (
+                      <NavLink
+                        to="/settings/designations"
+                        className={linkClass}
+                        onClick={onClose}
+                      >
+                        <BadgeCheck size={16} />
+                        Designations
                       </NavLink>
                     )}
                     {hasPermission(P.USERS.VIEW) && (

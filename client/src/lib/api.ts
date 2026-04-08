@@ -207,6 +207,15 @@ export const departmentApi = {
   getUsers: (id: string) => api.get(`/departments/${id}/users`),
 };
 
+export const designationApi = {
+  list: () => api.get("/designations"),
+  create: (name: string) => api.post("/designations", { name }),
+  update: (id: string, name: string) =>
+    api.put(`/designations/${id}`, { name }),
+  deactivate: (id: string) => api.patch(`/designations/${id}/deactivate`),
+  activate: (id: string) => api.patch(`/designations/${id}/activate`),
+};
+
 // Todo API
 export const todoApi = {
   list: (params?: Record<string, string | number>) =>

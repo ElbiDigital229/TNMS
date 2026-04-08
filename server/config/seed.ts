@@ -66,6 +66,7 @@ export async function seed() {
         P.SETTINGS.ASSET_CATEGORIES_MANAGE,
         P.SETTINGS.TICKET_CATEGORIES_MANAGE,
         P.SETTINGS.DEPARTMENTS_MANAGE,
+        P.SETTINGS.DESIGNATIONS_MANAGE,
       ],
     },
     {
