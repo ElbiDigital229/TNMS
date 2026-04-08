@@ -8,7 +8,11 @@ const api = axios.create({
 export const assetUrl = (path: string | null | undefined): string => {
   if (!path) return "";
   const clean = path.replace(/^\//, "");
-  const envBase = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
+  // Uploads are served from the host root (nginx `location /uploads/`),
+  // not under `/api/`, so strip a trailing `/api` from the env base.
+  const envBase = (import.meta.env.VITE_API_URL || "")
+    .replace(/\/$/, "")
+    .replace(/\/api$/, "");
   if (envBase) return `${envBase}/${clean}`;
   // Fallback: when not running on localhost (e.g. Vercel preview), use the backend host directly.
   if (typeof window !== "undefined" && !/^(localhost|127\.0\.0\.1)/.test(window.location.hostname)) {
