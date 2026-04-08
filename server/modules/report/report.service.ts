@@ -930,18 +930,27 @@ export const entityReportService = {
     const scopeFilter = await getPropertyScope(requestingUserId, isSuperAdmin, allProperties);
 
     const tickets = await prisma.ticket.findMany({
-      where: { departmentId, ...scopeFilter },
+      where: {
+        ...scopeFilter,
+        OR: [
+          { departmentId },
+          // Tickets where this department is currently the blocker
+          // (the "waiting on" department on an unresolved block).
+          { blocks: { some: { departmentId, resolvedAt: null } } },
+        ],
+      },
       include: TICKET_REPORT_INCLUDE,
       orderBy: { createdAt: "desc" },
     });
 
-    const wasBlockerCount = await prisma.ticketBlock.count({
-      where: { departmentId },
-    });
+    const [wasBlockerCount, currentlyBlockingCount] = await Promise.all([
+      prisma.ticketBlock.count({ where: { departmentId } }),
+      prisma.ticketBlock.count({ where: { departmentId, resolvedAt: null } }),
+    ]);
 
     return {
       entityType: "department",
-      meta: { id: dept.id, name: dept.name, memberCount: dept._count.users, wasBlockerCount },
+      meta: { id: dept.id, name: dept.name, memberCount: dept._count.users, wasBlockerCount, currentlyBlockingCount },
       tickets: tickets.map(mapTicketRow),
     };
   },
