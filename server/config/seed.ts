@@ -62,9 +62,6 @@ export async function seed() {
         P.REPORTS.VIEW,
         P.AUDIT.VIEW,
         P.USERS.VIEW,
-        P.SETTINGS.ASSET_CATEGORIES_MANAGE,
-        P.SETTINGS.TICKET_CATEGORIES_MANAGE,
-        P.SETTINGS.DESIGNATIONS_MANAGE,
       ],
     },
     {
