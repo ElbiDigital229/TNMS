@@ -46,7 +46,8 @@ export async function seed() {
       permissions: [], // isSuperAdmin bypasses all permission checks
     },
     {
-      // Manager — full management of properties, assets, tickets, settings
+      // Manager — view-only on assets, tickets, users, departments, area groups.
+      // Property/floor/unit hierarchy still editable since they own that workflow.
       name: "Manager",
       level: 1,
       canAssignToMaxLevel: 2,
@@ -54,18 +55,15 @@ export async function seed() {
         P.PROPERTIES.VIEW, P.PROPERTIES.CREATE, P.PROPERTIES.EDIT, P.PROPERTIES.DEACTIVATE, P.PROPERTIES.EXPORT,
         P.FLOORS.VIEW, P.FLOORS.CREATE, P.FLOORS.EDIT, P.FLOORS.DEACTIVATE, P.FLOORS.IMPORT, P.FLOORS.DELETE,
         P.UNITS.VIEW, P.UNITS.CREATE, P.UNITS.EDIT, P.UNITS.DEACTIVATE, P.UNITS.EXPORT, P.UNITS.IMPORT,
-        P.ASSETS.VIEW, P.ASSETS.CREATE, P.ASSETS.EDIT, P.ASSETS.DEACTIVATE, P.ASSETS.EXPORT, P.ASSETS.IMPORT, P.ASSETS.QR_DOWNLOAD,
-        P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED, P.TICKETS.CREATE, P.TICKETS.EDIT,
-        P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.ASSIGNEE_ELIGIBLE,
-        P.TICKETS.COMMENT, P.TICKETS.EXPORT, P.TICKETS.REOPEN,
+        P.ASSETS.VIEW, P.ASSETS.EXPORT, P.ASSETS.QR_DOWNLOAD,
+        P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED, P.TICKETS.EXPORT,
         P.TODOS.ACCESS,
         P.DASHBOARD.VIEW,
         P.REPORTS.VIEW,
         P.AUDIT.VIEW,
-        P.SETTINGS.AREA_GROUPS_MANAGE,
+        P.USERS.VIEW,
         P.SETTINGS.ASSET_CATEGORIES_MANAGE,
         P.SETTINGS.TICKET_CATEGORIES_MANAGE,
-        P.SETTINGS.DEPARTMENTS_MANAGE,
         P.SETTINGS.DESIGNATIONS_MANAGE,
       ],
     },
