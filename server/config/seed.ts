@@ -29,6 +29,23 @@ export async function seed() {
   // Three-tier role model: Super Admin / Manager / Staff.
   // Legacy roles (CEO, OPS Lead, Community Executive, Supervisor, Technician)
   // were removed in 2026-04. They are auto-deactivated below if still in DB.
+  //
+  // ⚠️  PRODUCTION SNAPSHOT — 2026-04-08
+  // The permission lists below were snapshotted FROM the live production
+  // database after operator edits via the Role Management UI. The seed
+  // runner now SKIPS existing roles, so this block only runs on a fresh
+  // install, but we keep it in sync with live so fresh installs match
+  // what operators expect.
+  //
+  // If you need to change a live role, do BOTH:
+  //   1. Edit via Role Management UI in the app (takes effect immediately)
+  //   2. Update the arrays below so fresh installs match
+  //
+  // A machine-readable copy lives in prisma/live-role-snapshot.json.
+  //
+  // Note on canAssignToMaxLevel: the live DB currently has 0 for all three
+  // system roles. That looks wrong (Manager should be 2 so it can assign
+  // Staff) but it is what's live, so we preserve it. Flag to re-visit.
   console.log("Seeding roles...");
 
   const P = PERMISSIONS;
@@ -46,18 +63,21 @@ export async function seed() {
       permissions: [], // isSuperAdmin bypasses all permission checks
     },
     {
-      // Manager — view-only on assets, tickets, users, departments, area groups.
-      // Property/floor/unit hierarchy still editable since they own that workflow.
+      // Manager — live snapshot 2026-04-08.
+      // View-only on properties/floors/units. Full ticket lifecycle.
+      // Read access to assets, audit, users. No settings, no todos.
       name: "Manager",
       level: 1,
       canAssignToMaxLevel: 2,
       permissions: [
-        P.PROPERTIES.VIEW, P.PROPERTIES.CREATE, P.PROPERTIES.EDIT, P.PROPERTIES.DEACTIVATE, P.PROPERTIES.EXPORT,
-        P.FLOORS.VIEW, P.FLOORS.CREATE, P.FLOORS.EDIT, P.FLOORS.DEACTIVATE, P.FLOORS.IMPORT, P.FLOORS.DELETE,
-        P.UNITS.VIEW, P.UNITS.CREATE, P.UNITS.EDIT, P.UNITS.DEACTIVATE, P.UNITS.EXPORT, P.UNITS.IMPORT,
+        P.PROPERTIES.VIEW, P.PROPERTIES.EXPORT,
+        P.FLOORS.VIEW, P.FLOORS.IMPORT,
+        P.UNITS.VIEW, P.UNITS.IMPORT, P.UNITS.EXPORT,
         P.ASSETS.VIEW, P.ASSETS.EXPORT, P.ASSETS.QR_DOWNLOAD,
-        P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED, P.TICKETS.EXPORT,
-        P.TODOS.ACCESS,
+        P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED,
+        P.TICKETS.CREATE, P.TICKETS.EDIT, P.TICKETS.DELETE,
+        P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGN, P.TICKETS.ASSIGNEE_ELIGIBLE,
+        P.TICKETS.COMMENT, P.TICKETS.EXPORT, P.TICKETS.REOPEN,
         P.DASHBOARD.VIEW,
         P.REPORTS.VIEW,
         P.AUDIT.VIEW,
@@ -65,7 +85,9 @@ export async function seed() {
       ],
     },
     {
-      // Staff — read-only inventory, work their own ticket queue
+      // Staff — live snapshot 2026-04-08.
+      // Read-only on hierarchy. Broader ticket access than original seed:
+      // can see ALL tickets and edit them, not just assigned queue.
       name: "Staff",
       level: 2,
       canAssignToMaxLevel: null,
@@ -73,15 +95,14 @@ export async function seed() {
         P.PROPERTIES.VIEW,
         P.FLOORS.VIEW,
         P.UNITS.VIEW,
-        P.ASSETS.VIEW,
-        P.TICKETS.VIEW_ASSIGNED,
-        P.TICKETS.CREATE,
-        P.TICKETS.UPDATE_STATUS,
-        P.TICKETS.ASSIGNEE_ELIGIBLE,
-        P.TICKETS.COMMENT,
-        P.TICKETS.REOPEN,
+        P.ASSETS.VIEW, P.ASSETS.QR_DOWNLOAD,
+        P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED,
+        P.TICKETS.CREATE, P.TICKETS.EDIT,
+        P.TICKETS.UPDATE_STATUS, P.TICKETS.ASSIGNEE_ELIGIBLE,
+        P.TICKETS.COMMENT, P.TICKETS.REOPEN,
         P.TODOS.ACCESS,
         P.DASHBOARD.VIEW,
+        P.USERS.VIEW,
       ],
     },
   ];

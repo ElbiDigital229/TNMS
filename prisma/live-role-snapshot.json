@@ -1,0 +1,77 @@
+{
+  "_comment": "Snapshot of system role permissions pulled from live production DB. Source of truth is the DB itself — this file exists so we can diff against it and so fresh installs/seeds produce the same config operators expect. Update when live roles change.",
+  "snapshotAt": "2026-04-08",
+  "snapshotSource": "production (apitnms.duckdns.org)",
+  "knownIssues": [
+    "canAssignToMaxLevel is 0 for all three system roles in the DB. Manager should probably be 2 (assign Staff). Re-visit."
+  ],
+  "roles": [
+    {
+      "name": "Super Admin",
+      "level": 0,
+      "canAssignToMaxLevel": 0,
+      "isSystemRole": true,
+      "note": "isSuperAdmin flag bypasses all permission checks — permission list is explicit for completeness only",
+      "permissions": [
+        "assets.create", "assets.deactivate", "assets.edit", "assets.export",
+        "assets.import", "assets.qr_download", "assets.view",
+        "audit.export", "audit.view",
+        "dashboard.view",
+        "floors.create", "floors.deactivate", "floors.delete", "floors.edit",
+        "floors.import", "floors.view",
+        "properties.create", "properties.deactivate", "properties.edit",
+        "properties.export", "properties.view",
+        "reports.view",
+        "roles.manage", "roles.view",
+        "settings.area_groups.manage", "settings.asset_categories.manage",
+        "settings.departments.manage", "settings.ticket_categories.manage",
+        "tickets.assign", "tickets.assignee_eligible", "tickets.comment",
+        "tickets.create", "tickets.edit", "tickets.export", "tickets.reopen",
+        "tickets.update_status", "tickets.view_all", "tickets.view_assigned",
+        "todos.access",
+        "units.create", "units.deactivate", "units.edit", "units.export",
+        "units.import", "units.view",
+        "users.create", "users.deactivate", "users.edit", "users.import",
+        "users.view"
+      ]
+    },
+    {
+      "name": "Manager",
+      "level": 1,
+      "canAssignToMaxLevel": 0,
+      "isSystemRole": true,
+      "permissions": [
+        "assets.export", "assets.qr_download", "assets.view",
+        "audit.view",
+        "dashboard.view",
+        "floors.import", "floors.view",
+        "properties.export", "properties.view",
+        "reports.view",
+        "tickets.assign", "tickets.assignee_eligible", "tickets.comment",
+        "tickets.create", "tickets.delete", "tickets.edit", "tickets.export",
+        "tickets.reopen", "tickets.update_status", "tickets.view_all",
+        "tickets.view_assigned",
+        "units.export", "units.import", "units.view",
+        "users.view"
+      ]
+    },
+    {
+      "name": "Staff",
+      "level": 2,
+      "canAssignToMaxLevel": 0,
+      "isSystemRole": true,
+      "permissions": [
+        "assets.qr_download", "assets.view",
+        "dashboard.view",
+        "floors.view",
+        "properties.view",
+        "tickets.assignee_eligible", "tickets.comment", "tickets.create",
+        "tickets.edit", "tickets.reopen", "tickets.update_status",
+        "tickets.view_all", "tickets.view_assigned",
+        "todos.access",
+        "units.view",
+        "users.view"
+      ]
+    }
+  ]
+}
