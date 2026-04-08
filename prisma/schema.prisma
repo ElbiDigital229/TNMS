@@ -174,6 +174,13 @@ model User {
   roleId        String
   role          Role     @relation(fields: [roleId], references: [id])
   status        Status   @default(ACTIVE)
+  // Bumped on password change / status change / role change / "sign out
+  // everywhere". JWTs carry this value in their payload; tokens whose tv
+  // does not match the user's current tokenVersion are rejected.
+  tokenVersion  Int      @default(0)
+  // When true, the user is forced through a "set a new password" flow on
+  // next login (used for seeded / admin-created accounts).
+  mustChangePassword Boolean @default(false)
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -186,6 +193,7 @@ model User {
   auditLogs           AuditLog[]
   notifications       Notification[]
   deviceTokens        DeviceToken[]
+  passwordResetTokens PasswordResetToken[]
   createdTickets      Ticket[]  @relation("TicketCreator")
   assignedTickets     Ticket[]  @relation("TicketAssignee")
   blocksRaised        TicketBlock[] @relation("BlockRaisedBy")
@@ -504,4 +512,20 @@ model DeviceToken {
   updatedAt DateTime @updatedAt
 
   @@index([userId])
+}
+
+/// Short-lived single-use tokens for the password-reset flow.
+/// We store only a hash of the opaque token (never the token itself) so a
+/// DB leak can't be replayed to reset passwords.
+model PasswordResetToken {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  tokenHash String   @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt])
 }

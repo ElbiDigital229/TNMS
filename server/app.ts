@@ -1,9 +1,11 @@
 import express from "express";
 import cors from "cors";
+import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
 import path from "path";
 import { fileURLToPath } from "url";
+import { env } from "./config/env.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { propertyRoutes } from "./modules/property/property.routes.js";
@@ -30,8 +32,38 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 export const app = express();
 app.set("trust proxy", 1);
+app.disable("x-powered-by");
 
-app.use(cors());
+// --- Security headers ----------------------------------------------------
+// Keep CSP off here: we serve the SPA statically and Vite inlines bootstrap
+// scripts, and the helmet default CSP would break it. Everything else
+// (HSTS, frame-guard, nosniff, referrer-policy, etc.) is enabled.
+app.use(
+  helmet({
+    contentSecurityPolicy: false,
+    crossOriginResourcePolicy: { policy: "cross-origin" },
+  }),
+);
+
+// --- CORS -----------------------------------------------------------------
+// In production we whitelist known origins. In development we allow any
+// localhost port so the Vite dev server on whatever port works out of the box.
+const corsAllowlist = new Set(env.CORS_ORIGINS);
+app.use(
+  cors({
+    origin: (origin, cb) => {
+      // Non-browser clients (curl, server-to-server, mobile webview) send no Origin
+      if (!origin) return cb(null, true);
+      if (!env.IS_PROD && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?$/.test(origin)) {
+        return cb(null, true);
+      }
+      if (corsAllowlist.has(origin)) return cb(null, true);
+      return cb(new Error(`CORS: origin ${origin} is not allowed`));
+    },
+    credentials: true,
+  }),
+);
+
 app.use(express.json({ limit: "5mb" }));
 app.use(express.urlencoded({ extended: true, limit: "5mb" }));
 app.use(cookieParser());
@@ -73,8 +105,10 @@ app.use("/api", apiLimiter);
 // Serve uploaded files
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// API routes — apply stricter limiter to login endpoint
+// API routes — apply stricter limiter to login + password-reset endpoints
 app.use("/api/auth/login", loginLimiter);
+app.use("/api/auth/forgot-password", loginLimiter);
+app.use("/api/auth/reset-password", loginLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/properties", floorRoutes);
@@ -98,5 +132,10 @@ app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ticket-schedules", ticketScheduleRoutes);
 
-// Error handler
+// Unmatched /api/* → JSON 404 (don't fall through to SPA)
+app.use("/api", (_req, res) => {
+  res.status(404).json({ success: false, error: "Not found", code: "NOT_FOUND" });
+});
+
+// Error handler (keep last)
 app.use(errorHandler);

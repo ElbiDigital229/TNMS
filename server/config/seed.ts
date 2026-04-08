@@ -156,9 +156,15 @@ export async function seed() {
     where: { username: "admin" },
   });
 
-  const passwordHash = await bcrypt.hash("admin", env.BCRYPT_SALT_ROUNDS);
-
   if (!existingAdmin) {
+    // Generate a random initial password. Logged once on creation so the
+    // operator can grab it from the boot log — never hardcoded to "admin".
+    // The SEED_ADMIN_PASSWORD env var overrides for scripted bootstraps.
+    const initialPassword =
+      process.env.SEED_ADMIN_PASSWORD ||
+      (await import("crypto")).randomBytes(12).toString("base64url");
+    const passwordHash = await bcrypt.hash(initialPassword, env.BCRYPT_SALT_ROUNDS);
+
     await prisma.user.create({
       data: {
         username: "admin",
@@ -167,10 +173,20 @@ export async function seed() {
         isSuperAdmin: true,
         allProperties: true,
         roleId: roleMap["Super Admin"],
+        mustChangePassword: true,
       },
     });
-    console.log("Seeded admin user (admin/admin)");
+    console.log("");
+    console.log("==========================================================");
+    console.log("  Seeded admin user");
+    console.log("  username: admin");
+    console.log(`  password: ${initialPassword}`);
+    console.log("  (must be changed on first login)");
+    console.log("==========================================================");
+    console.log("");
   } else {
+    // Never rotate an existing admin's password during seed. Only normalize
+    // their role/flags.
     await prisma.user.update({
       where: { id: existingAdmin.id },
       data: {
@@ -179,7 +195,7 @@ export async function seed() {
         roleId: roleMap["Super Admin"],
       },
     });
-    console.log("Updated admin user with Super Admin role");
+    console.log("Admin user already exists — left credentials untouched");
   }
 
   // ─── 5+ Only seed mock data when explicitly requested ─────

@@ -34,7 +34,11 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
   const token = authHeader.split(" ")[1];
 
   try {
-    const decoded = jwt.verify(token, env.JWT_SECRET) as { id: string; username: string };
+    const decoded = jwt.verify(token, env.JWT_SECRET) as {
+      id: string;
+      username: string;
+      tv?: number;
+    };
 
     // Hydrate user data from database
     prisma.user
@@ -53,6 +57,15 @@ export function authenticate(req: Request, res: Response, next: NextFunction) {
       .then((user) => {
         if (!user || user.status === "INACTIVE" || user.status === "BLOCKED") {
           return sendError(res, "Account not found or deactivated", 401);
+        }
+
+        // Session invalidation: reject any token whose tv claim does not
+        // match the user's current tokenVersion. Tokens predating this
+        // feature have no tv claim — treat them as 0, matching a fresh
+        // user, so existing sessions survive the rollout.
+        const tokenTv = decoded.tv ?? 0;
+        if (tokenTv !== user.tokenVersion) {
+          return sendError(res, "Session expired, please sign in again", 401);
         }
 
         const permissions = user.isSuperAdmin

@@ -113,6 +113,8 @@ export const userService = {
         ...userData,
         allProperties: effectiveAllProperties,
         passwordHash,
+        // Admin-created users must pick their own password on first login.
+        mustChangePassword: true,
       },
       include: {
         role: true,
@@ -158,9 +160,15 @@ export const userService = {
       if (newRole) changes.push(`role changed to ${newRole.name}`);
     }
 
+    // Bump tokenVersion when role changes, so the old JWT with stale
+    // permissions is immediately rejected by authenticate middleware.
+    const roleChanged = data.roleId && data.roleId !== existing.roleId;
     await prisma.user.update({
       where: { id },
-      data: userData,
+      data: {
+        ...userData,
+        ...(roleChanged ? { tokenVersion: { increment: 1 } } : {}),
+      },
     });
 
     if (propertyIds) {
@@ -218,7 +226,13 @@ export const userService = {
 
     const result = await prisma.user.update({
       where: { id },
-      data: { passwordHash },
+      data: {
+        passwordHash,
+        // Invalidate all existing sessions and force the user to pick a
+        // new password on next login if an admin reset it for them.
+        tokenVersion: { increment: 1 },
+        mustChangePassword: resetByUserId && resetByUserId !== id ? true : false,
+      },
       select: { id: true, username: true },
     });
 
@@ -247,7 +261,7 @@ export const userService = {
 
     const result = await prisma.user.update({
       where: { id },
-      data: { status: "INACTIVE" },
+      data: { status: "INACTIVE", tokenVersion: { increment: 1 } },
       include: { role: true },
     });
 
@@ -266,7 +280,7 @@ export const userService = {
 
     const result = await prisma.user.update({
       where: { id },
-      data: { status: "BLOCKED" },
+      data: { status: "BLOCKED", tokenVersion: { increment: 1 } },
       include: { role: true },
     });
 

@@ -1,29 +1,52 @@
 import type { Request, Response } from "express";
 import { authService } from "./auth.service.js";
-import { sendSuccess, sendError } from "../../utils/apiResponse.js";
+import { sendSuccess } from "../../utils/apiResponse.js";
+import { AppError } from "../../utils/appError.js";
+import { asyncHandler } from "../../utils/asyncHandler.js";
 
 export const authController = {
-  async login(req: Request, res: Response) {
+  login: asyncHandler(async (req: Request, res: Response) => {
+    // req.body is validated by `validate(loginSchema)` on the route.
+    const { username, password } = req.body as { username: string; password: string };
     try {
-      const { username, password } = req.body;
-
-      if (!username || !password) {
-        return sendError(res, "Email and password are required", 400);
-      }
-
       const result = await authService.login(username, password);
       sendSuccess(res, result, "Login successful");
-    } catch (error: any) {
-      sendError(res, error.message || "Login failed", 401);
+    } catch (err) {
+      // Normalize all auth failures to a 401 with a generic message so we
+      // don't leak whether a username exists, is deactivated, etc.
+      throw AppError.unauthorized("Invalid credentials");
     }
-  },
+  }),
 
-  async me(req: Request, res: Response) {
-    try {
-      const user = await authService.getMe(req.user!.id);
-      sendSuccess(res, user);
-    } catch (error: any) {
-      sendError(res, error.message || "User not found", 404);
-    }
-  },
+  me: asyncHandler(async (req: Request, res: Response) => {
+    const user = await authService.getMe(req.user!.id);
+    sendSuccess(res, user);
+  }),
+
+  forgotPassword: asyncHandler(async (req: Request, res: Response) => {
+    const { email } = req.body as { email: string };
+    await authService.requestPasswordReset(email);
+    // Always return success, never reveal whether the email exists.
+    sendSuccess(res, null, "If that email exists, a reset link has been sent");
+  }),
+
+  resetPassword: asyncHandler(async (req: Request, res: Response) => {
+    const { token, newPassword } = req.body as { token: string; newPassword: string };
+    await authService.consumePasswordReset(token, newPassword);
+    sendSuccess(res, null, "Password updated successfully");
+  }),
+
+  changePassword: asyncHandler(async (req: Request, res: Response) => {
+    const { currentPassword, newPassword } = req.body as {
+      currentPassword: string;
+      newPassword: string;
+    };
+    await authService.changePassword(req.user!.id, currentPassword, newPassword);
+    sendSuccess(res, null, "Password updated successfully");
+  }),
+
+  signOutEverywhere: asyncHandler(async (req: Request, res: Response) => {
+    await authService.bumpTokenVersion(req.user!.id);
+    sendSuccess(res, null, "Signed out on all devices");
+  }),
 };
