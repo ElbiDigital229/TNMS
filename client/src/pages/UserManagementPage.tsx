@@ -155,7 +155,6 @@ export default function UserManagementPage() {
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm);
-    setManagerPropertyIds(null);
     setModalOpen(true);
   };
 

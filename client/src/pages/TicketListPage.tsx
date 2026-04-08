@@ -11,6 +11,7 @@ import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable
 import PageHeader from "../components/ui/PageHeader";
 import BulkImportModal from "../components/ui/BulkImportModal";
 import Modal from "../components/ui/Modal";
+import MultiSelect from "../components/ui/MultiSelect";
 import {
   Plus, Search, Eye, ChevronUp, ChevronDown,
   ClipboardList, X, ArrowUpDown, Upload, SlidersHorizontal,
@@ -48,12 +49,34 @@ const overdueDays = (dueDate: string | null) =>
 const lateDays = (completedAt: string, dueDate: string | null) =>
   dueDate ? Math.ceil((new Date(completedAt).getTime() - new Date(dueDate).getTime()) / 86400000) : 0;
 
-const sectionLabel = "px-3 pt-4 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-gray-400";
+const sectionLabel = "px-3 pt-3 pb-1 text-[10px] font-semibold uppercase tracking-wider text-gray-400";
 const radioRow = "flex w-full items-center justify-between gap-2 rounded-md px-3 py-1.5 text-[12.5px] text-gray-700 hover:bg-gray-100 transition-colors";
 const radioActive = "bg-primary-50 text-primary-700 hover:bg-primary-50 font-medium";
 const filterField = "px-3";
-const filterFieldLabel = "mb-1 block text-[11px] font-medium text-gray-500";
 const chip = "inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700";
+
+const STATUS_OPTIONS = [
+  { value: "UNASSIGNED", label: "Unassigned" },
+  { value: "ASSIGNED", label: "Assigned" },
+  { value: "IN_PROGRESS", label: "In Progress" },
+  { value: "BLOCKED", label: "Blocked" },
+  { value: "COMPLETED", label: "Completed" },
+];
+const PRIORITY_OPTIONS = [
+  { value: "CRITICAL", label: "Critical" },
+  { value: "HIGH", label: "High" },
+  { value: "MEDIUM", label: "Medium" },
+  { value: "LOW", label: "Low" },
+];
+const TASKTYPE_OPTIONS = [
+  { value: "MAINTENANCE", label: "Maintenance" },
+  { value: "INSPECT", label: "Inspect" },
+  { value: "COMPLAIN", label: "Complain" },
+  { value: "TASK", label: "Task" },
+];
+
+const csv = (arr: string[]) => arr.join(",");
+const fromCsv = (s: string | null) => (s ? s.split(",").filter(Boolean) : []);
 
 export default function TicketListPage() {
   const navigate = useNavigate();
@@ -70,13 +93,24 @@ export default function TicketListPage() {
   const [view, setView] = useState<View>(((searchParams.get("view") as View) || "active"));
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState(searchParams.get("status") || "");
+  const [statusFilter, setStatusFilter] = useState<string[]>(fromCsv(searchParams.get("status")));
   const [overdueFilter, setOverdueFilter] = useState(searchParams.get("overdue") === "1");
-  const [filters, setFilters] = useState({
-    priority: searchParams.get("priority") || "",
-    taskType: searchParams.get("taskType") || "",
+  const [filters, setFilters] = useState<{
+    priority: string[];
+    taskType: string[];
+    blocked: string;
+    propertyId: string[];
+    assigneeId: string;
+    createdById: string;
+    createdFrom: string;
+    createdTo: string;
+    dueDateFrom: string;
+    dueDateTo: string;
+  }>({
+    priority: fromCsv(searchParams.get("priority")),
+    taskType: fromCsv(searchParams.get("taskType")),
     blocked: "",
-    propertyId: searchParams.get("propertyId") || "",
+    propertyId: fromCsv(searchParams.get("propertyId")),
     assigneeId: "",
     createdById: "",
     createdFrom: "",
@@ -109,10 +143,10 @@ export default function TicketListPage() {
   // Sync filters from URL when query params change (e.g. clicking dashboard chart)
   useEffect(() => {
     const v = (searchParams.get("view") as View) || "active";
-    const status = searchParams.get("status") || "";
-    const priority = searchParams.get("priority") || "";
-    const taskType = searchParams.get("taskType") || "";
-    const propertyId = searchParams.get("propertyId") || "";
+    const status = fromCsv(searchParams.get("status"));
+    const priority = fromCsv(searchParams.get("priority"));
+    const taskType = fromCsv(searchParams.get("taskType"));
+    const propertyId = fromCsv(searchParams.get("propertyId"));
     const overdue = searchParams.get("overdue") === "1";
     setView(v);
     setStatusFilter(status);
@@ -132,11 +166,17 @@ export default function TicketListPage() {
     try {
       const params: Record<string, string | number> = { page, limit: 20, sortBy, sortOrder };
       if (search) params.search = search;
-      if (statusFilter) params.status = statusFilter;
+      if (statusFilter.length > 0) params.status = csv(statusFilter);
       if (overdueFilter) params.overdue = "1";
       if (view === "legacy") params.legacy = "1";
       if (view === "archived") params.deleted = "1";
-      for (const [k, v] of Object.entries(filters)) { if (v) params[k] = v; }
+      for (const [k, v] of Object.entries(filters)) {
+        if (Array.isArray(v)) {
+          if (v.length > 0) params[k] = csv(v);
+        } else if (v) {
+          params[k] = v;
+        }
+      }
       const res = await ticketApi.list(params);
       setTickets(res.data.data.data);
       setPagination(res.data.data.pagination);
@@ -149,21 +189,28 @@ export default function TicketListPage() {
 
   useEffect(() => { fetchTickets(); }, [fetchTickets]);
 
-  const setFilter = (key: keyof typeof filters, value: string) => {
+  const setFilter = <K extends keyof typeof filters>(key: K, value: (typeof filters)[K]) => {
     setFilters((f) => ({ ...f, [key]: value }));
     setPage(1);
   };
-  const clearFilter = (key: keyof typeof filters) => setFilter(key, "");
+  const clearFilter = (key: keyof typeof filters) => {
+    setFilters((f) => {
+      const cur = f[key];
+      return { ...f, [key]: Array.isArray(cur) ? [] : "" } as typeof f;
+    });
+    setPage(1);
+  };
 
+  const isFilterActive = (v: unknown) => (Array.isArray(v) ? v.length > 0 : !!v);
   const activeFilterCount =
-    Object.values(filters).filter(Boolean).length +
-    (statusFilter ? 1 : 0) +
+    Object.values(filters).filter(isFilterActive).length +
+    (statusFilter.length > 0 ? 1 : 0) +
     (overdueFilter ? 1 : 0) +
     (search ? 1 : 0);
 
   const clearAll = () => {
-    setFilters({ priority: "", taskType: "", blocked: "", propertyId: "", assigneeId: "", createdById: "", createdFrom: "", createdTo: "", dueDateFrom: "", dueDateTo: "" });
-    setStatusFilter("");
+    setFilters({ priority: [], taskType: [], blocked: "", propertyId: [], assigneeId: "", createdById: "", createdFrom: "", createdTo: "", dueDateFrom: "", dueDateTo: "" });
+    setStatusFilter([]);
     setOverdueFilter(false);
     setSearchInput("");
     setSearch("");
@@ -228,15 +275,6 @@ export default function TicketListPage() {
 
   // ── Sidebar component (used inline + inside mobile drawer) ────────────
   const Sidebar = useMemo(() => {
-    const StatusRow = ({ value, label, count }: { value: string; label: string; count?: number }) => (
-      <button
-        onClick={() => { setStatusFilter(value); setOverdueFilter(false); setPage(1); }}
-        className={`${radioRow} ${statusFilter === value && !overdueFilter ? radioActive : ""}`}
-      >
-        <span>{label}</span>
-        {count !== undefined && <span className="text-[10px] text-gray-400">{count}</span>}
-      </button>
-    );
     const ViewRow = ({ value, label, icon }: { value: View; label: string; icon: React.ReactNode }) => (
       <button
         onClick={() => switchView(value)}
@@ -279,43 +317,42 @@ export default function TicketListPage() {
 
         {/* Status */}
         <div className={sectionLabel}>Status</div>
-        <div className="px-1.5">
-          <StatusRow value="" label="All" />
-          <StatusRow value="UNASSIGNED" label="Unassigned" />
-          <StatusRow value="ASSIGNED" label="Assigned" />
-          <StatusRow value="IN_PROGRESS" label="In Progress" />
-          <StatusRow value="BLOCKED" label="Blocked" />
-          <StatusRow value="COMPLETED" label="Completed" />
+        <div className={filterField}>
+          <MultiSelect
+            options={STATUS_OPTIONS}
+            value={statusFilter}
+            onChange={(v) => { setStatusFilter(v); setPage(1); }}
+            placeholder="Any status"
+          />
           <button
-            onClick={() => { setStatusFilter(""); setOverdueFilter((v) => !v); setPage(1); }}
-            className={`${radioRow} ${overdueFilter ? "bg-red-50 text-red-700 hover:bg-red-50 font-medium" : ""}`}
+            onClick={() => { setOverdueFilter((v) => !v); setPage(1); }}
+            className={`mt-1.5 flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[12px] ${overdueFilter ? "bg-red-50 text-red-700 font-medium" : "text-gray-600 hover:bg-gray-100"}`}
           >
-            <span>Overdue</span>
+            <span>Overdue only</span>
+            {overdueFilter && <X size={11} />}
           </button>
         </div>
 
         {/* Priority */}
         <div className={sectionLabel}>Priority</div>
         <div className={filterField}>
-          <select value={filters.priority} onChange={(e) => setFilter("priority", e.target.value)} className={`w-full ${cls.select} text-[12px]`}>
-            <option value="">Any</option>
-            <option value="CRITICAL">Critical</option>
-            <option value="HIGH">High</option>
-            <option value="MEDIUM">Medium</option>
-            <option value="LOW">Low</option>
-          </select>
+          <MultiSelect
+            options={PRIORITY_OPTIONS}
+            value={filters.priority}
+            onChange={(v) => setFilter("priority", v)}
+            placeholder="Any priority"
+          />
         </div>
 
         {/* Task type */}
         <div className={sectionLabel}>Task Type</div>
         <div className={filterField}>
-          <select value={filters.taskType} onChange={(e) => setFilter("taskType", e.target.value)} className={`w-full ${cls.select} text-[12px]`}>
-            <option value="">Any</option>
-            <option value="MAINTENANCE">Maintenance</option>
-            <option value="INSPECT">Inspect</option>
-            <option value="COMPLAIN">Complain</option>
-            <option value="TASK">Task</option>
-          </select>
+          <MultiSelect
+            options={TASKTYPE_OPTIONS}
+            value={filters.taskType}
+            onChange={(v) => setFilter("taskType", v)}
+            placeholder="Any type"
+          />
         </div>
 
         {/* Block status */}
@@ -331,10 +368,13 @@ export default function TicketListPage() {
         {/* Property */}
         <div className={sectionLabel}>Property</div>
         <div className={filterField}>
-          <select value={filters.propertyId} onChange={(e) => setFilter("propertyId", e.target.value)} className={`w-full ${cls.select} text-[12px]`}>
-            <option value="">Any</option>
-            {properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </select>
+          <MultiSelect
+            options={properties.map((p) => ({ value: p.id, label: p.name }))}
+            value={filters.propertyId}
+            onChange={(v) => setFilter("propertyId", v)}
+            placeholder="Any property"
+            searchable
+          />
         </div>
 
         {/* Assignee */}
@@ -358,18 +398,18 @@ export default function TicketListPage() {
         {/* Created date */}
         <div className={sectionLabel}>Created Date</div>
         <div className={filterField}>
-          <div className="flex gap-1.5">
-            <input type="date" value={filters.createdFrom} onChange={(e) => setFilter("createdFrom", e.target.value)} className={`${cls.input} text-[12px]`} />
-            <input type="date" value={filters.createdTo} onChange={(e) => setFilter("createdTo", e.target.value)} className={`${cls.input} text-[12px]`} />
+          <div className="flex flex-col gap-1.5">
+            <input type="date" value={filters.createdFrom} onChange={(e) => setFilter("createdFrom", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
+            <input type="date" value={filters.createdTo} onChange={(e) => setFilter("createdTo", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
           </div>
         </div>
 
         {/* Due date */}
         <div className={sectionLabel}>Due Date</div>
         <div className={`${filterField} pb-4`}>
-          <div className="flex gap-1.5">
-            <input type="date" value={filters.dueDateFrom} onChange={(e) => setFilter("dueDateFrom", e.target.value)} className={`${cls.input} text-[12px]`} />
-            <input type="date" value={filters.dueDateTo} onChange={(e) => setFilter("dueDateTo", e.target.value)} className={`${cls.input} text-[12px]`} />
+          <div className="flex flex-col gap-1.5">
+            <input type="date" value={filters.dueDateFrom} onChange={(e) => setFilter("dueDateFrom", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
+            <input type="date" value={filters.dueDateTo} onChange={(e) => setFilter("dueDateTo", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
           </div>
         </div>
       </div>
@@ -435,12 +475,12 @@ export default function TicketListPage() {
           {activeFilterCount > 0 && (
             <div className="mb-2 flex flex-wrap gap-1">
               {search && <span className={chip}>Search: {search}<button onClick={() => { setSearchInput(""); setSearch(""); }}><X size={10} /></button></span>}
-              {statusFilter && <span className={chip}>Status: {statusFilter}<button onClick={() => setStatusFilter("")}><X size={10} /></button></span>}
+              {statusFilter.length > 0 && <span className={chip}>Status: {statusFilter.length === 1 ? (STATUS_OPTIONS.find(o => o.value === statusFilter[0])?.label || statusFilter[0]) : `${statusFilter.length} selected`}<button onClick={() => setStatusFilter([])}><X size={10} /></button></span>}
               {overdueFilter && <span className={`${chip} bg-red-100 text-red-700`}>Overdue<button onClick={() => setOverdueFilter(false)}><X size={10} /></button></span>}
-              {filters.priority && <span className={chip}>Priority: {filters.priority}<button onClick={() => clearFilter("priority")}><X size={10} /></button></span>}
-              {filters.taskType && <span className={chip}>Type: {filters.taskType}<button onClick={() => clearFilter("taskType")}><X size={10} /></button></span>}
+              {filters.priority.length > 0 && <span className={chip}>Priority: {filters.priority.length === 1 ? filters.priority[0] : `${filters.priority.length} selected`}<button onClick={() => clearFilter("priority")}><X size={10} /></button></span>}
+              {filters.taskType.length > 0 && <span className={chip}>Type: {filters.taskType.length === 1 ? filters.taskType[0] : `${filters.taskType.length} selected`}<button onClick={() => clearFilter("taskType")}><X size={10} /></button></span>}
               {filters.blocked && <span className={`${chip} bg-orange-100 text-orange-700`}>{filters.blocked === "yes" ? "Blocked" : "Not blocked"}<button onClick={() => clearFilter("blocked")}><X size={10} /></button></span>}
-              {filters.propertyId && <span className={chip}>Property: {properties.find(p => p.id === filters.propertyId)?.name || "..."}<button onClick={() => clearFilter("propertyId")}><X size={10} /></button></span>}
+              {filters.propertyId.length > 0 && <span className={chip}>Property: {filters.propertyId.length === 1 ? (properties.find(p => p.id === filters.propertyId[0])?.name || "...") : `${filters.propertyId.length} selected`}<button onClick={() => clearFilter("propertyId")}><X size={10} /></button></span>}
               {filters.assigneeId && <span className={chip}>Assignee: {users.find(u => u.id === filters.assigneeId)?.fullName || "..."}<button onClick={() => clearFilter("assigneeId")}><X size={10} /></button></span>}
               {filters.createdById && <span className={chip}>Created by: {users.find(u => u.id === filters.createdById)?.fullName || "..."}<button onClick={() => clearFilter("createdById")}><X size={10} /></button></span>}
               {(filters.createdFrom || filters.createdTo) && <span className={chip}>Created: {filters.createdFrom || "..."} → {filters.createdTo || "..."}<button onClick={() => { clearFilter("createdFrom"); clearFilter("createdTo"); }}><X size={10} /></button></span>}

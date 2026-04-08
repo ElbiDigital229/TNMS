@@ -94,11 +94,37 @@ export const ticketService = {
         { ticketNumber: { contains: params.search, mode: "insensitive" } },
       ];
     }
-    if (params.status) where.status = params.status;
-    if (params.priority) where.priority = params.priority;
-    if (params.taskType) where.taskType = params.taskType;
-    if (params.propertyId) where.propertyId = params.propertyId;
-    if (params.propertyIds) where.propertyId = { in: params.propertyIds };
+    // Helper: accept "VAL" or "VAL1,VAL2" → string[] for `in` queries
+    const toList = (v: string | undefined) =>
+      v ? v.split(",").map((s) => s.trim()).filter(Boolean) : [];
+    const statusList = toList(params.status);
+    const priorityList = toList(params.priority);
+    const taskTypeList = toList(params.taskType);
+    const propIdList = toList(params.propertyId);
+    if (statusList.length === 1) where.status = statusList[0];
+    else if (statusList.length > 1) where.status = { in: statusList };
+    if (priorityList.length === 1) where.priority = priorityList[0];
+    else if (priorityList.length > 1) where.priority = { in: priorityList };
+    if (taskTypeList.length === 1) where.taskType = taskTypeList[0];
+    else if (taskTypeList.length > 1) where.taskType = { in: taskTypeList };
+    if (propIdList.length === 1) where.propertyId = propIdList[0];
+    else if (propIdList.length > 1) where.propertyId = { in: propIdList };
+    // RBAC scope intersection
+    if (params.propertyIds) {
+      if (where.propertyId) {
+        // intersect: caller's selection ∩ allowed scope
+        const callerIds = Array.isArray(where.propertyId)
+          ? where.propertyId
+          : typeof where.propertyId === "object"
+          ? where.propertyId.in
+          : [where.propertyId];
+        const allowed = params.propertyIds;
+        const intersection = callerIds.filter((id: string) => allowed.includes(id));
+        where.propertyId = intersection.length === 1 ? intersection[0] : { in: intersection };
+      } else {
+        where.propertyId = { in: params.propertyIds };
+      }
+    }
     if (params.assigneeId) where.assignedToId = params.assigneeId;
     if (params.createdById) where.createdById = params.createdById;
     if (params.createdFrom || params.createdTo) {
