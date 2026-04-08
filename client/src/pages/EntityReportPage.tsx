@@ -355,6 +355,7 @@ export default function EntityReportPage() {
       avgHours,
       onTimePct,
       wasBlockerCount: meta?.wasBlockerCount ?? 0,
+      currentlyBlockingCount: meta?.currentlyBlockingCount ?? 0,
     };
   }, [filteredTickets, meta]);
 
@@ -611,6 +612,7 @@ export default function EntityReportPage() {
         <div className="col-span-1"><KpiCard label="Blocked" value={summary.blocked} color="text-orange-600" /></div>
         <div className="col-span-1"><KpiCard label="Avg Hours" value={summary.avgHours} sub="to complete" color="text-blue-600" /></div>
         <div className="col-span-1"><KpiCard label="On Time" value={`${summary.onTimePct}%`} sub="of completed" color={summary.onTimePct >= 80 ? "text-green-600" : summary.onTimePct >= 50 ? "text-amber-600" : "text-red-600"} /></div>
+        <div className="col-span-1"><KpiCard label="Currently Blocking" value={summary.currentlyBlockingCount} sub="active blocks" color="text-orange-600" /></div>
         <div className="col-span-1"><KpiCard label="Was Blocker" value={summary.wasBlockerCount} sub="total blocks raised" color="text-purple-600" /></div>
       </div>
 

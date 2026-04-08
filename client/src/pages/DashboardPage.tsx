@@ -58,16 +58,19 @@ export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    Promise.all([
-      dashboardApi.getStats(),
-      todoApi.getStats(),
-    ])
-      .then(([dashRes, todoRes]) => {
-        setStats(dashRes.data.data);
-        setTodoStats(todoRes.data.data);
-      })
+    // Load each independently so one failure doesn't take the whole page down.
+    let pending = 2;
+    const done = () => { if (--pending === 0) setLoading(false); };
+    dashboardApi
+      .getStats()
+      .then((res) => setStats(res.data.data))
       .catch(() => toast.error("Failed to load dashboard"))
-      .finally(() => setLoading(false));
+      .finally(done);
+    todoApi
+      .getStats()
+      .then((res) => setTodoStats(res.data.data))
+      .catch(() => {/* todos optional — silently degrade */})
+      .finally(done);
   }, []);
 
   if (loading) {

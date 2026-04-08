@@ -45,6 +45,9 @@ export const userService = {
           isSuperAdmin: true,
           role: { select: { id: true, name: true, level: true } },
           department: { select: { id: true, name: true } },
+          propertyAssignments: {
+            select: { property: { select: { id: true, name: true } } },
+          },
           _count: { select: { propertyAssignments: true } },
         },
         orderBy: { createdAt: "desc" },

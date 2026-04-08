@@ -40,6 +40,7 @@ export const ticketController = {
         sortOrder: sortOrder as "asc" | "desc",
         viewMode,
         userId: req.user!.id,
+        includeBlockerTicketsForUserId: req.user!.id,
       });
       // Flatten blocks[0] → activeBlock for the list
       const mapped = {

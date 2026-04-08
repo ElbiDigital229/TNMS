@@ -894,19 +894,26 @@ export const entityReportService = {
     const tickets = await prisma.ticket.findMany({
       where: {
         ...scopeFilter,
-        OR: [{ assignedToId: targetUserId }, { createdById: targetUserId }],
+        OR: [
+          { assignedToId: targetUserId },
+          { createdById: targetUserId },
+          // Tickets where this user is currently blocking (so the active
+          // block shows up in their queue / "Blocked" KPI).
+          { blocks: { some: { blockingUserId: targetUserId, resolvedAt: null } } },
+        ],
       },
       include: TICKET_REPORT_INCLUDE,
       orderBy: { createdAt: "desc" },
     });
 
-    const wasBlockerCount = await prisma.ticketBlock.count({
-      where: { blockingUserId: targetUserId },
-    });
+    const [wasBlockerCount, currentlyBlockingCount] = await Promise.all([
+      prisma.ticketBlock.count({ where: { blockingUserId: targetUserId } }),
+      prisma.ticketBlock.count({ where: { blockingUserId: targetUserId, resolvedAt: null } }),
+    ]);
 
     return {
       entityType: "user",
-      meta: { ...user, wasBlockerCount },
+      meta: { ...user, wasBlockerCount, currentlyBlockingCount },
       tickets: tickets.map(mapTicketRow),
     };
   },

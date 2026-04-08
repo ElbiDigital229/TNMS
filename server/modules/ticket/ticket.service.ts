@@ -76,6 +76,9 @@ export const ticketService = {
     sortOrder?: "asc" | "desc";
     viewMode?: "all" | "assigned";
     userId?: string;
+    /** When set, also include tickets where this user is an active blocker
+     *  (bypassing the propertyIds RBAC scope). */
+    includeBlockerTicketsForUserId?: string;
   }) {
     const page = params.page || 1;
     const limit = params.limit || 10;
@@ -124,6 +127,27 @@ export const ticketService = {
       } else {
         where.propertyId = { in: params.propertyIds };
       }
+    }
+    // Allow blocker tickets to bypass the property scope: caller can always
+    // see tickets where they are actively blocking, even if the ticket lives
+    // on a property they aren't directly assigned to. We move the property
+    // scope into an AND[] so it doesn't collide with the search OR.
+    if (params.includeBlockerTicketsForUserId && where.propertyId) {
+      const propertyScope = where.propertyId;
+      delete where.propertyId;
+      where.AND = [
+        ...(where.AND || []),
+        {
+          OR: [
+            { propertyId: propertyScope },
+            {
+              blocks: {
+                some: { blockingUserId: params.includeBlockerTicketsForUserId, resolvedAt: null },
+              },
+            },
+          ],
+        },
+      ];
     }
     if (params.assigneeId) where.assignedToId = params.assigneeId;
     if (params.createdById) where.createdById = params.createdById;

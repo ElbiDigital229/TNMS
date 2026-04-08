@@ -56,6 +56,7 @@ interface User {
   allProperties: boolean;
   isSuperAdmin: boolean;
   properties?: Property[];
+  propertyAssignments?: { property: { id: string; name: string } }[];
   department?: { id: string; name: string } | null;
   departmentId?: string | null;
   _count?: { propertyAssignments: number };
@@ -174,9 +175,15 @@ export default function UserManagementPage() {
     setModalOpen(true);
   };
 
+  const userPropertyIdList = (user: User): string[] => {
+    if (user.properties && user.properties.length > 0) return user.properties.map((p) => p.id);
+    if (user.propertyAssignments) return user.propertyAssignments.map((a) => a.property.id);
+    return [];
+  };
+
   const deriveAccessMode = (user: User): AccessMode => {
     if (user.allProperties) return "all";
-    const userPropIds = new Set(user.properties?.map((p) => p.id) || []);
+    const userPropIds = new Set(userPropertyIdList(user));
     if (userPropIds.size === 0) return "specific";
     // Check if user's properties exactly match an area group
     for (const ag of areaGroups) {
@@ -207,7 +214,7 @@ export default function UserManagementPage() {
       roleId: user.role?.id || user.roleId || "",
       departmentId: user.department?.id || "",
       allProperties: user.allProperties ?? true,
-      propertyIds: user.properties?.map((p) => p.id) || [],
+      propertyIds: userPropertyIdList(user),
       accessMode: mode,
     });
     setModalOpen(true);
