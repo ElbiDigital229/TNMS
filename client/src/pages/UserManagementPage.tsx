@@ -591,10 +591,15 @@ export default function UserManagementPage() {
               type="email"
               value={form.email}
               onChange={(e) => updateForm("email", e.target.value)}
-              readOnly={!!editing}
-              className={`${cls.input} ${editing ? "bg-gray-50 text-gray-500 cursor-not-allowed" : ""}`}
+              className={cls.input}
               placeholder="Enter email address"
             />
+            {editing && (
+              <p className="mt-1 text-[11px] text-gray-500">
+                Changing the email will also change the sign-in username and
+                force this user to log in again.
+              </p>
+            )}
           </div>
 
           {/* Password (create only) / Reset Password (edit) */}

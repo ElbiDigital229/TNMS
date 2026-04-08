@@ -160,14 +160,44 @@ export const userService = {
       if (newRole) changes.push(`role changed to ${newRole.name}`);
     }
 
-    // Bump tokenVersion when role changes, so the old JWT with stale
-    // permissions is immediately rejected by authenticate middleware.
+    // If the admin is changing the email, keep username in sync (username
+    // is seeded from email at creation time) and make sure the new address
+    // isn't already taken by someone else. Also bump tokenVersion so the
+    // user is forced to re-authenticate with the new identity.
+    const normalizedNewEmail = data.email?.trim().toLowerCase();
+    const emailChanged =
+      !!normalizedNewEmail && normalizedNewEmail !== (existing.email ?? "").toLowerCase();
+
+    if (emailChanged) {
+      const clash = await prisma.user.findFirst({
+        where: {
+          id: { not: id },
+          OR: [
+            { email: normalizedNewEmail },
+            { username: normalizedNewEmail },
+          ],
+        },
+        select: { id: true },
+      });
+      if (clash) {
+        throw new Error("That email is already in use by another user");
+      }
+      // Rewrite both fields on the update payload.
+      (userData as Record<string, unknown>).email = normalizedNewEmail;
+      (userData as Record<string, unknown>).username = normalizedNewEmail;
+      changes.push("email updated");
+    }
+
+    // Bump tokenVersion when role or email changes — old JWTs should no
+    // longer work because either permissions or identity have shifted.
     const roleChanged = data.roleId && data.roleId !== existing.roleId;
+    const shouldBumpToken = roleChanged || emailChanged;
+
     await prisma.user.update({
       where: { id },
       data: {
         ...userData,
-        ...(roleChanged ? { tokenVersion: { increment: 1 } } : {}),
+        ...(shouldBumpToken ? { tokenVersion: { increment: 1 } } : {}),
       },
     });
 
