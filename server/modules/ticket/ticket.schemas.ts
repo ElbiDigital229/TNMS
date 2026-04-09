@@ -120,14 +120,17 @@ export const ticketCommentParamSchema = z.object({
   commentId: z.string().uuid("Invalid comment id"),
 });
 
+// CSV-safe string: accept single value or comma-separated values
+const csvString = z.string().max(2000).optional();
+
 export const listTicketsQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
   search: z.string().max(200).optional(),
-  status: statusEnum.optional(),
-  priority: priorityEnum.optional(),
-  taskType: taskTypeEnum.optional(),
-  propertyId: z.string().uuid().optional(),
+  status: csvString,
+  priority: csvString,
+  taskType: csvString,
+  propertyId: csvString,
   assigneeId: z.string().uuid().optional(),
   createdById: z.string().uuid().optional(),
   createdFrom: z.string().optional(),
