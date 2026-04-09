@@ -30,6 +30,19 @@ router.use(requirePermission(PERMISSIONS.TODOS.ACCESS));
 router.get("/", validate({ query: listTodosQuerySchema }), todoController.findAll);
 router.get("/stats", todoController.getStats);
 router.post("/", validate({ body: createTodoSchema }), todoController.create);
+const updateTodoSchema = z.object({
+  title: z.string().trim().min(1).max(300).optional(),
+  dueDate: z
+    .string()
+    .refine((v) => !Number.isNaN(Date.parse(v)), { message: "Invalid date" })
+    .optional(),
+});
+
+router.put(
+  "/:id",
+  validate({ params: uuidIdParamSchema, body: updateTodoSchema }),
+  todoController.update,
+);
 router.patch(
   "/:id/complete",
   validate({ params: uuidIdParamSchema }),

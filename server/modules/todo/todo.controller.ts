@@ -40,6 +40,16 @@ export const todoController = {
     }
   },
 
+  async update(req: Request, res: Response) {
+    try {
+      const { title, dueDate } = req.body;
+      const todo = await todoService.update(req.params.id, req.user!.id, { title, dueDate });
+      sendSuccess(res, todo, "Todo updated");
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
   async complete(req: Request, res: Response) {
     try {
       const todo = await todoService.complete(req.params.id, req.user!.id);

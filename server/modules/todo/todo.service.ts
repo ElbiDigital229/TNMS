@@ -100,6 +100,16 @@ export const todoService = {
     });
   },
 
+  async update(id: string, userId: string, data: { title?: string; dueDate?: string }) {
+    const updateData: any = {};
+    if (data.title !== undefined) updateData.title = data.title;
+    if (data.dueDate !== undefined) updateData.dueDate = new Date(data.dueDate);
+    return prisma.todo.update({
+      where: { id, userId },
+      data: updateData,
+    });
+  },
+
   async complete(id: string, userId: string) {
     return prisma.todo.update({
       where: { id, userId },

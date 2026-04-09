@@ -13,6 +13,9 @@ import {
   ListChecks,
   Trash2,
   RotateCcw,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 
 interface Todo {
@@ -42,6 +45,33 @@ export default function TodoListPage() {
   const [title, setTitle] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [adding, setAdding] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDueDate, setEditDueDate] = useState("");
+
+  const startEdit = (todo: Todo) => {
+    setEditingId(todo.id);
+    setEditTitle(todo.title);
+    setEditDueDate(todo.dueDate.slice(0, 10));
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle("");
+    setEditDueDate("");
+  };
+
+  const handleEdit = async (id: string) => {
+    if (!editTitle.trim()) { toast.error("Title cannot be empty"); return; }
+    try {
+      await todoApi.update(id, { title: editTitle.trim(), dueDate: editDueDate });
+      cancelEdit();
+      fetchTodos();
+      toast.success("Task updated");
+    } catch {
+      toast.error("Failed to update task");
+    }
+  };
 
   const fetchTodos = useCallback(async () => {
     setLoading(true);
@@ -244,48 +274,84 @@ export default function TodoListPage() {
                   )}
                 </button>
 
-                <div className="min-w-0 flex-1">
-                  <p className={`text-sm ${todo.status === "COMPLETED" ? "text-gray-400 line-through" : "text-gray-900"}`}>
-                    {todo.title}
-                  </p>
-                  {todo.status === "COMPLETED" && todo.completedAt && (
-                    <p className="text-[11px] text-gray-400">
-                      Completed {new Date(todo.completedAt).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-
-                <span className={`flex-shrink-0 rounded-md px-1.5 py-px text-[11px] font-medium ${
-                  todo.status === "COMPLETED"
-                    ? "bg-gray-50 text-gray-400"
-                    : isOverdue(todo)
-                      ? "bg-red-50 text-red-600"
-                      : isToday(todo.dueDate)
-                        ? "bg-primary-50 text-primary-600"
-                        : "bg-gray-50 text-gray-600"
-                }`}>
-                  <Clock size={10} className="mr-1 inline-block" />
-                  {formatDate(todo.dueDate)}
-                </span>
-
-                <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                  {todo.status === "COMPLETED" && (
-                    <button
-                      onClick={() => handleToggle(todo)}
-                      className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                      title="Reopen"
-                    >
-                      <RotateCcw size={13} />
+                {editingId === todo.id ? (
+                  <>
+                    <input
+                      type="text"
+                      value={editTitle}
+                      onChange={(e) => setEditTitle(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") handleEdit(todo.id); if (e.key === "Escape") cancelEdit(); }}
+                      className={`min-w-0 flex-1 ${cls.input} text-sm`}
+                      autoFocus
+                    />
+                    <input
+                      type="date"
+                      value={editDueDate}
+                      onChange={(e) => setEditDueDate(e.target.value)}
+                      className={`w-36 ${cls.input} text-sm`}
+                    />
+                    <button onClick={() => handleEdit(todo.id)} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="Save">
+                      <Check size={14} />
                     </button>
-                  )}
-                  <button
-                    onClick={() => handleDelete(todo.id)}
-                    className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                    title="Delete"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                </div>
+                    <button onClick={cancelEdit} className="rounded-md p-1 text-gray-400 hover:bg-gray-100" title="Cancel">
+                      <X size={14} />
+                    </button>
+                  </>
+                ) : (
+                  <>
+                    <div className="min-w-0 flex-1">
+                      <p className={`text-sm ${todo.status === "COMPLETED" ? "text-gray-400 line-through" : "text-gray-900"}`}>
+                        {todo.title}
+                      </p>
+                      {todo.status === "COMPLETED" && todo.completedAt && (
+                        <p className="text-[11px] text-gray-400">
+                          Completed {new Date(todo.completedAt).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+
+                    <span className={`flex-shrink-0 rounded-md px-1.5 py-px text-[11px] font-medium ${
+                      todo.status === "COMPLETED"
+                        ? "bg-gray-50 text-gray-400"
+                        : isOverdue(todo)
+                          ? "bg-red-50 text-red-600"
+                          : isToday(todo.dueDate)
+                            ? "bg-primary-50 text-primary-600"
+                            : "bg-gray-50 text-gray-600"
+                    }`}>
+                      <Clock size={10} className="mr-1 inline-block" />
+                      {formatDate(todo.dueDate)}
+                    </span>
+
+                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                      {todo.status === "OPEN" && (
+                        <button
+                          onClick={() => startEdit(todo)}
+                          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                          title="Edit"
+                        >
+                          <Pencil size={13} />
+                        </button>
+                      )}
+                      {todo.status === "COMPLETED" && (
+                        <button
+                          onClick={() => handleToggle(todo)}
+                          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                          title="Reopen"
+                        >
+                          <RotateCcw size={13} />
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDelete(todo.id)}
+                        className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                        title="Delete"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </>
+                )}
               </li>
             ))}
           </ul>

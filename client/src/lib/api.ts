@@ -227,6 +227,8 @@ export const todoApi = {
   getStats: () => api.get("/todos/stats"),
   create: (title: string, dueDate: string) =>
     api.post("/todos", { title, dueDate }),
+  update: (id: string, data: { title?: string; dueDate?: string }) =>
+    api.put(`/todos/${id}`, data),
   complete: (id: string) => api.patch(`/todos/${id}/complete`),
   reopen: (id: string) => api.patch(`/todos/${id}/reopen`),
   remove: (id: string) => api.delete(`/todos/${id}`),
