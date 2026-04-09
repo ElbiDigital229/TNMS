@@ -95,10 +95,6 @@ export const ticketController = {
         departmentId,
         assignedToId,
         priority,
-        isRecurring,
-        recurringType,
-        recurringDay,
-        recurringDueDays,
         assetIds,
       } = req.body;
 
@@ -125,12 +121,6 @@ export const ticketController = {
         departmentId: departmentId || undefined,
         assignedToId: assignedToId || undefined,
         priority: priority || "MEDIUM",
-        isRecurring: isRecurring === "true" || isRecurring === true,
-        recurringType: recurringType || undefined,
-        recurringDay: recurringDay ? parseInt(recurringDay) : undefined,
-        recurringDueDays: recurringDueDays
-          ? parseInt(recurringDueDays)
-          : undefined,
         imagePath,
         assetIds: assetIds
           ? typeof assetIds === "string"
@@ -157,10 +147,6 @@ export const ticketController = {
         subTaskType,
         categoryId,
         priority,
-        isRecurring,
-        recurringType,
-        recurringDay,
-        recurringDueDays,
         assetIds,
       } = req.body;
 
@@ -188,15 +174,6 @@ export const ticketController = {
         subTaskType,
         categoryId,
         priority,
-        isRecurring:
-          isRecurring !== undefined
-            ? isRecurring === "true" || isRecurring === true
-            : undefined,
-        recurringType: recurringType || undefined,
-        recurringDay: recurringDay ? parseInt(recurringDay) : undefined,
-        recurringDueDays: recurringDueDays
-          ? parseInt(recurringDueDays)
-          : undefined,
         imagePath,
         assetIds: assetIds
           ? typeof assetIds === "string"

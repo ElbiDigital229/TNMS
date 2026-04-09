@@ -15,13 +15,6 @@ const statusEnum = z.enum([
 ]);
 const taskTypeEnum = z.enum(["COMPLAIN", "MAINTENANCE", "INSPECT", "TASK"]);
 const subTaskTypeEnum = z.enum(["REACTIVE", "PREVENTIVE"]);
-const recurringTypeEnum = z.enum(["DAILY", "WEEKLY", "MONTHLY"]);
-
-// Multipart booleans: "true" | "false" | boolean → boolean
-const stringBool = z
-  .union([z.boolean(), z.literal("true"), z.literal("false")])
-  .transform((v) => v === true || v === "true");
-
 // Optional int coerced from string, empty → undefined.
 const optionalInt = z
   .union([z.string(), z.number()])
@@ -70,10 +63,6 @@ export const createTicketSchema = z.object({
   departmentId: z.string().uuid().optional().or(z.literal("")),
   assignedToId: z.string().uuid().optional().or(z.literal("")),
   priority: priorityEnum.optional(),
-  isRecurring: stringBool.optional(),
-  recurringType: recurringTypeEnum.optional().or(z.literal("")),
-  recurringDay: optionalInt,
-  recurringDueDays: optionalInt,
   assetIds: assetIdsField,
 });
 
@@ -86,10 +75,6 @@ export const updateTicketSchema = z.object({
   subTaskType: subTaskTypeEnum.optional(),
   categoryId: z.string().uuid().optional().or(z.literal("")).nullable(),
   priority: priorityEnum.optional(),
-  isRecurring: stringBool.optional(),
-  recurringType: recurringTypeEnum.optional().or(z.literal("")),
-  recurringDay: optionalInt,
-  recurringDueDays: optionalInt,
   assetIds: assetIdsField,
 });
 

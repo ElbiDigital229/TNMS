@@ -18,7 +18,6 @@ import {
   SUB_TASK_TYPE_LABELS,
   PRIORITY_LABELS,
   TICKET_STATUS_LABELS,
-  RECURRING_TYPE_LABELS,
   computeUrgency,
 } from "../../../shared/types";
 import {
@@ -67,15 +66,6 @@ function parseImagePaths(imagePath: string | null | undefined): string[] {
 
 const MAX_IMAGES = 5;
 
-const DAY_NAMES: Record<string, string> = {
-  "1": "Monday",
-  "2": "Tuesday",
-  "3": "Wednesday",
-  "4": "Thursday",
-  "5": "Friday",
-  "6": "Saturday",
-  "7": "Sunday",
-};
 
 function relativeTime(dateStr: string): string {
   const now = Date.now();
@@ -1056,62 +1046,6 @@ export default function TicketDetailPage() {
               </div>
             </dl>
           </div>
-
-          {/* Recurring Info */}
-          {ticket.isRecurring && (
-            <div className="rounded-lg bg-white p-3.5 ring-1 ring-gray-200">
-              <h3 className="mb-3 text-[13px] font-semibold text-gray-900">
-                Recurring Schedule
-              </h3>
-              <div className="space-y-2 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-500">Frequency</span>
-                  <span className="font-medium">
-                    {RECURRING_TYPE_LABELS[ticket.recurringType]}
-                  </span>
-                </div>
-                {ticket.recurringType === "MONTHLY" && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Day of Month</span>
-                      <span className="font-medium">{ticket.recurringDay}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Due After</span>
-                      <span className="font-medium">
-                        {ticket.recurringDueDays} days
-                      </span>
-                    </div>
-                  </>
-                )}
-                {ticket.recurringType === "WEEKLY" && (
-                  <>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Day of Week</span>
-                      <span className="font-medium">
-                        {DAY_NAMES[ticket.recurringDay?.toString()] ||
-                          ticket.recurringDay}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-500">Due After</span>
-                      <span className="font-medium">
-                        {ticket.recurringDueDays} days
-                      </span>
-                    </div>
-                  </>
-                )}
-                {ticket.recurringType === "DAILY" && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-500">Due</span>
-                    <span className="font-medium">
-                      {ticket.recurringDueDays === 0 ? "Same day" : "Next day"}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
 
           {/* Block History */}
           {ticket.blocks?.length > 0 && (

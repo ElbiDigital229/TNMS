@@ -76,7 +76,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await notificationApi.list({ limit: 20, isRead: false });
+      const res = await notificationApi.list({ limit: 20, isRead: "false" });
       setNotifications(res.data.data.data);
     } catch {
       // Silently fail

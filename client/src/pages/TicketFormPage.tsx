@@ -85,10 +85,6 @@ export default function TicketFormPage() {
   const [deptUsers, setDeptUsers] = useState<DeptUser[]>([]);
   const [assignedToId, setAssignedToId] = useState("");
   const [priority, setPriority] = useState("");
-  const [isRecurring, setIsRecurring] = useState(false);
-  const [recurringType, setRecurringType] = useState("");
-  const [recurringDay, setRecurringDay] = useState("");
-  const [recurringDueDays, setRecurringDueDays] = useState("");
   const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [assetSearch, setAssetSearch] = useState("");
@@ -128,10 +124,6 @@ export default function TicketFormPage() {
       setDepartmentId(t.departmentId);
       setAssignedToId(t.assignedToId || "");
       setPriority(t.priority);
-      setIsRecurring(t.isRecurring);
-      setRecurringType(t.recurringType || "");
-      setRecurringDay(t.recurringDay?.toString() || "");
-      setRecurringDueDays(t.recurringDueDays?.toString() || "");
     });
   }, [id]);
 
@@ -198,13 +190,6 @@ export default function TicketFormPage() {
     if (departmentId) formData.append("departmentId", departmentId);
     if (assignedToId) formData.append("assignedToId", assignedToId);
     if (priority) formData.append("priority", priority);
-    formData.append("isRecurring", String(isRecurring));
-    if (isRecurring && recurringType) {
-      formData.append("recurringType", recurringType);
-      if (recurringDay) formData.append("recurringDay", recurringDay);
-      if (recurringDueDays)
-        formData.append("recurringDueDays", recurringDueDays);
-    }
     if (selectedAssetIds.length > 0) {
       formData.append("assetIds", JSON.stringify(selectedAssetIds));
     }
@@ -509,125 +494,6 @@ export default function TicketFormPage() {
                 <option value="LOW">Low</option>
               </select>
             </div>
-          </div>
-
-          {/* Recurring */}
-          <div className="rounded-lg ring-1 ring-gray-200 p-3">
-            <label className="flex cursor-pointer items-center gap-2">
-              <input
-                type="checkbox"
-                checked={isRecurring}
-                onChange={(e) => {
-                  setIsRecurring(e.target.checked);
-                  if (!e.target.checked) {
-                    setRecurringType("");
-                    setRecurringDay("");
-                    setRecurringDueDays("");
-                  }
-                }}
-                className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
-              />
-              <span className="text-[13px] font-medium text-gray-700">
-                Is this a recurring ticket?
-              </span>
-            </label>
-
-            {isRecurring && (
-              <div className="mt-3 space-y-3">
-                <div>
-                  <label className={cls.label}>Recurring Frequency</label>
-                  <select
-                    value={recurringType}
-                    onChange={(e) => {
-                      setRecurringType(e.target.value);
-                      setRecurringDay("");
-                      setRecurringDueDays("");
-                    }}
-                    className={`w-full ${cls.select}`}
-                  >
-                    <option value="">Select frequency</option>
-                    <option value="DAILY">Daily</option>
-                    <option value="WEEKLY">Weekly</option>
-                    <option value="MONTHLY">Monthly</option>
-                  </select>
-                </div>
-
-                {recurringType === "MONTHLY" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={cls.label}>Day of Month (1-28)</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={28}
-                        value={recurringDay}
-                        onChange={(e) => setRecurringDay(e.target.value)}
-                        className={cls.input}
-                      />
-                    </div>
-                    <div>
-                      <label className={cls.label}>Days until due (max 15)</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={15}
-                        value={recurringDueDays}
-                        onChange={(e) => setRecurringDueDays(e.target.value)}
-                        className={cls.input}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {recurringType === "WEEKLY" && (
-                  <div className="grid grid-cols-2 gap-3">
-                    <div>
-                      <label className={cls.label}>Day of Week</label>
-                      <select
-                        value={recurringDay}
-                        onChange={(e) => setRecurringDay(e.target.value)}
-                        className={`w-full ${cls.select}`}
-                      >
-                        <option value="">Select day</option>
-                        <option value="1">Monday</option>
-                        <option value="2">Tuesday</option>
-                        <option value="3">Wednesday</option>
-                        <option value="4">Thursday</option>
-                        <option value="5">Friday</option>
-                        <option value="6">Saturday</option>
-                        <option value="7">Sunday</option>
-                      </select>
-                    </div>
-                    <div>
-                      <label className={cls.label}>Days until due (max 7)</label>
-                      <input
-                        type="number"
-                        min={1}
-                        max={7}
-                        value={recurringDueDays}
-                        onChange={(e) => setRecurringDueDays(e.target.value)}
-                        className={cls.input}
-                      />
-                    </div>
-                  </div>
-                )}
-
-                {recurringType === "DAILY" && (
-                  <div>
-                    <label className={cls.label}>Due date</label>
-                    <select
-                      value={recurringDueDays}
-                      onChange={(e) => setRecurringDueDays(e.target.value)}
-                      className={`w-full ${cls.select}`}
-                    >
-                      <option value="">Select</option>
-                      <option value="0">Same day</option>
-                      <option value="1">Next day</option>
-                    </select>
-                  </div>
-                )}
-              </div>
-            )}
           </div>
 
           {/* Images */}

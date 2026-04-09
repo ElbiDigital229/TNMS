@@ -4,7 +4,6 @@ import type {
   SubTaskType,
   Priority,
   TicketStatus,
-  RecurringType,
 } from "@prisma/client";
 import { notificationTrigger, fireAndForgetNotify } from "../../services/notificationTrigger.service.js";
 
@@ -272,10 +271,6 @@ export const ticketService = {
     departmentId?: string;
     assignedToId?: string;
     priority?: Priority;
-    isRecurring?: boolean;
-    recurringType?: RecurringType;
-    recurringDay?: number;
-    recurringDueDays?: number;
     imagePath?: string;
     assetIds?: string[];
     createdById?: string;
@@ -380,10 +375,6 @@ export const ticketService = {
       subTaskType?: SubTaskType;
       categoryId?: string;
       priority?: Priority;
-      isRecurring?: boolean;
-      recurringType?: RecurringType | null;
-      recurringDay?: number | null;
-      recurringDueDays?: number | null;
       imagePath?: string;
       assetIds?: string[];
     },
