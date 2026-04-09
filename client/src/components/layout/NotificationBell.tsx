@@ -144,7 +144,7 @@ export default function NotificationBell() {
             ) : notifications.length === 0 ? (
               <div className="px-4 py-8 text-center">
                 <Bell size={32} className="mx-auto mb-2 text-gray-200" />
-                <p className="text-sm text-gray-400">No notifications yet</p>
+                <p className="text-sm text-gray-400">You're all caught up</p>
               </div>
             ) : (
               notifications.map((n) => {
@@ -203,19 +203,17 @@ export default function NotificationBell() {
           </div>
 
           {/* Footer */}
-          {notifications.length > 0 && (
-            <div className="border-t border-gray-100 px-4 py-2.5">
-              <button
-                onClick={() => {
-                  setOpen(false);
-                  navigate("/notifications");
-                }}
-                className="w-full text-center text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
-              >
-                View all notifications
-              </button>
-            </div>
-          )}
+          <div className="border-t border-gray-100 px-4 py-2.5">
+            <button
+              onClick={() => {
+                setOpen(false);
+                navigate("/notifications");
+              }}
+              className="w-full text-center text-xs font-medium text-primary-600 hover:text-primary-700 transition-colors"
+            >
+              View all notifications
+            </button>
+          </div>
         </div>
       )}
     </div>

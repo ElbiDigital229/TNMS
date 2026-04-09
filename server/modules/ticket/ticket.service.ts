@@ -414,7 +414,7 @@ export const ticketService = {
     // Build specific change details
     const changes: string[] = [];
     if (oldTicket) {
-      if (data.name !== undefined && data.name !== oldTicket.name) changes.push(`Name changed to "${data.name}"`);
+      if (data.name !== undefined && data.name !== oldTicket.name) changes.push(`Name changed from "${oldTicket.name}" to "${data.name}"`);
       if (data.priority !== undefined && data.priority !== oldTicket.priority) changes.push(`Priority changed from ${oldTicket.priority} to ${data.priority}`);
       if (data.dueDate !== undefined) {
         const oldDate = oldTicket.dueDate ? oldTicket.dueDate.toISOString().split("T")[0] : "none";
@@ -426,7 +426,11 @@ export const ticketService = {
         const newCategory = data.categoryId ? await prisma.ticketCategory.findUnique({ where: { id: data.categoryId }, select: { name: true } }) : null;
         changes.push(`Category changed from ${oldTicket.category?.name || "none"} to ${newCategory?.name || "none"}`);
       }
-      if (data.description !== undefined && data.description !== oldTicket.description) changes.push("Description updated");
+      if (data.description !== undefined && data.description !== oldTicket.description) {
+        const oldDesc = oldTicket.description ? (oldTicket.description.length > 60 ? oldTicket.description.slice(0, 60) + "..." : oldTicket.description) : "empty";
+        const newDesc = data.description ? (data.description.length > 60 ? data.description.slice(0, 60) + "..." : data.description) : "empty";
+        changes.push(`Description changed from "${oldDesc}" to "${newDesc}"`);
+      }
       if (data.taskType !== undefined && data.taskType !== oldTicket.taskType) changes.push(`Task type changed from ${oldTicket.taskType} to ${data.taskType}`);
       if (data.subTaskType !== undefined && data.subTaskType !== oldTicket.subTaskType) changes.push(`Sub-task type changed from ${oldTicket.subTaskType || "none"} to ${data.subTaskType || "none"}`);
     }
@@ -452,6 +456,9 @@ export const ticketService = {
   },
 
   async updateStatus(id: string, status: TicketStatus, updatedByUserId?: string) {
+    // Fetch old status for change tracking
+    const oldTicket = await prisma.ticket.findUnique({ where: { id }, select: { status: true } });
+
     // If completing a blocked ticket, auto-resolve the active block first
     if (status === "COMPLETED") {
       const activeBlock = await prisma.ticketBlock.findFirst({
@@ -486,7 +493,7 @@ export const ticketService = {
       data: {
         ticketId: id,
         action: "STATUS_CHANGED",
-        details: `Status changed to ${status}`,
+        details: `Status changed from ${oldTicket?.status || "unknown"} to ${status}`,
         performedById: updatedByUserId || null,
       },
     });
@@ -506,11 +513,12 @@ export const ticketService = {
       data: { ticketId, content, commenterId: commenterId || null },
     });
 
+    const commentPreview = content.length > 120 ? content.slice(0, 120) + "..." : content;
     await prisma.ticketActivity.create({
       data: {
         ticketId,
         action: "COMMENT_ADDED",
-        details: "New comment added",
+        details: `Comment added: "${commentPreview}"`,
         performedById: commenterId || null,
       },
     });
@@ -570,11 +578,13 @@ export const ticketService = {
       include: { commenter: { select: { id: true, fullName: true, username: true } } },
     });
 
+    const oldPreview = comment.content.length > 80 ? comment.content.slice(0, 80) + "..." : comment.content;
+    const newPreview = content.length > 80 ? content.slice(0, 80) + "..." : content;
     await prisma.ticketActivity.create({
       data: {
         ticketId: comment.ticketId,
         action: "COMMENT_EDITED",
-        details: "Comment edited",
+        details: `Comment changed from "${oldPreview}" to "${newPreview}"`,
         performedById: userId,
       },
     });
