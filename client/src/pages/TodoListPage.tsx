@@ -276,26 +276,30 @@ export default function TodoListPage() {
 
                 {editingId === todo.id ? (
                   <>
-                    <input
-                      type="text"
-                      value={editTitle}
-                      onChange={(e) => setEditTitle(e.target.value)}
-                      onKeyDown={(e) => { if (e.key === "Enter") handleEdit(todo.id); if (e.key === "Escape") cancelEdit(); }}
-                      className={`min-w-0 flex-1 ${cls.input} text-sm`}
-                      autoFocus
-                    />
-                    <input
-                      type="date"
-                      value={editDueDate}
-                      onChange={(e) => setEditDueDate(e.target.value)}
-                      className={`w-28 shrink-0 ${cls.input} text-[12px]`}
-                    />
-                    <button onClick={() => handleEdit(todo.id)} className="shrink-0 rounded-md p-1 text-green-600 hover:bg-green-50" title="Save">
-                      <Check size={14} />
-                    </button>
-                    <button onClick={cancelEdit} className="shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-100" title="Cancel">
-                      <X size={14} />
-                    </button>
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <input
+                        type="text"
+                        value={editTitle}
+                        onChange={(e) => setEditTitle(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") handleEdit(todo.id); if (e.key === "Escape") cancelEdit(); }}
+                        className={`w-full ${cls.input} text-sm`}
+                        autoFocus
+                      />
+                      <input
+                        type="date"
+                        value={editDueDate}
+                        onChange={(e) => setEditDueDate(e.target.value)}
+                        className={`w-auto ${cls.input} text-[12px]`}
+                      />
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <button onClick={() => handleEdit(todo.id)} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="Save">
+                        <Check size={14} />
+                      </button>
+                      <button onClick={cancelEdit} className="rounded-md p-1 text-gray-400 hover:bg-gray-100" title="Cancel">
+                        <X size={14} />
+                      </button>
+                    </div>
                   </>
                 ) : (
                   <>
