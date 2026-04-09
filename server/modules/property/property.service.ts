@@ -81,7 +81,7 @@ export const propertyService = {
         where,
         include: {
           areaGroup: true,
-          _count: { select: { floors: true, units: true, assets: true, tickets: true } },
+          _count: { select: { floors: true, units: true, assets: true, tickets: { where: { legacy: false, deletedAt: null } } } },
         },
         orderBy: { createdAt: "desc" },
         skip,
@@ -106,7 +106,7 @@ export const propertyService = {
       where: { id },
       include: {
         areaGroup: true,
-        _count: { select: { floors: true, units: true, assets: true, tickets: true } },
+        _count: { select: { floors: true, units: true, assets: true, tickets: { where: { legacy: false, deletedAt: null } } } },
       },
     });
   },
@@ -240,7 +240,7 @@ export const propertyService = {
       where,
       include: {
         areaGroup: true,
-        _count: { select: { floors: true, units: true, assets: true, tickets: true } },
+        _count: { select: { floors: true, units: true, assets: true, tickets: { where: { legacy: false, deletedAt: null } } } },
       },
       orderBy: { createdAt: "desc" },
     });
