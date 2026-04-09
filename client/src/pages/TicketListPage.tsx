@@ -466,7 +466,7 @@ export default function TicketListPage() {
       <div className="flex gap-3">
         {/* Desktop sidebar */}
         <aside className="hidden w-60 shrink-0 lg:block">
-          <div className="sticky top-0 max-h-[calc(100vh-5.5rem)] overflow-y-auto rounded-lg bg-white ring-1 ring-gray-200">
+          <div className="sticky top-0 max-h-[calc(100vh-5.5rem)] overflow-y-auto overscroll-contain rounded-lg bg-white ring-1 ring-gray-200">
             {Sidebar}
           </div>
         </aside>
