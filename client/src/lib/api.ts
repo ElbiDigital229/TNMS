@@ -224,7 +224,8 @@ export const designationApi = {
 export const todoApi = {
   list: (params?: Record<string, string | number>) =>
     api.get("/todos", { params }),
-  getStats: () => api.get("/todos/stats"),
+  getStats: (params?: Record<string, string>) =>
+    api.get("/todos/stats", { params }),
   create: (title: string, dueDate: string) =>
     api.post("/todos", { title, dueDate }),
   update: (id: string, data: { title?: string; dueDate?: string }) =>
@@ -232,6 +233,13 @@ export const todoApi = {
   complete: (id: string) => api.patch(`/todos/${id}/complete`),
   reopen: (id: string) => api.patch(`/todos/${id}/reopen`),
   remove: (id: string) => api.delete(`/todos/${id}`),
+  // Watchers
+  getWatchers: () => api.get("/todos/watchers"),
+  addWatcher: (watcherId: string) =>
+    api.post("/todos/watchers", { watcherId }),
+  removeWatcher: (watcherId: string) =>
+    api.delete(`/todos/watchers/${watcherId}`),
+  getWatching: () => api.get("/todos/watching"),
 };
 
 // User API

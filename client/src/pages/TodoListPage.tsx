@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, type FormEvent } from "react";
-import { todoApi } from "../lib/api";
+import { todoApi, userApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { cls } from "../lib/styles";
 import { EmptyState, TableLoading } from "../components/ui/DataTable";
@@ -16,6 +16,10 @@ import {
   Pencil,
   Check,
   X,
+  Eye,
+  UserPlus,
+  Users,
+  ChevronDown,
 } from "lucide-react";
 
 interface Todo {
@@ -34,6 +38,22 @@ interface Stats {
   dueToday: number;
 }
 
+interface WatchedList {
+  id: string;
+  owner: { id: string; fullName: string; username: string };
+}
+
+interface Watcher {
+  id: string;
+  watcher: { id: string; fullName: string; username: string };
+}
+
+interface UserOption {
+  id: string;
+  fullName: string;
+  username: string;
+}
+
 type Period = "all" | "today" | "this_week" | "overdue" | "archived";
 
 export default function TodoListPage() {
@@ -48,6 +68,20 @@ export default function TodoListPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
   const [editDueDate, setEditDueDate] = useState("");
+
+  // Watcher state
+  const [viewingUserId, setViewingUserId] = useState<string | null>(null); // null = my own list
+  const [viewingUserName, setViewingUserName] = useState("");
+  const [watchedLists, setWatchedLists] = useState<WatchedList[]>([]);
+  const [myWatchers, setMyWatchers] = useState<Watcher[]>([]);
+  const [showWatcherModal, setShowWatcherModal] = useState(false);
+  const [showManageModal, setShowManageModal] = useState(false);
+  const [showViewDropdown, setShowViewDropdown] = useState(false);
+  const [users, setUsers] = useState<UserOption[]>([]);
+  const [userSearch, setUserSearch] = useState("");
+  const [addingWatcher, setAddingWatcher] = useState(false);
+
+  const isWatchedView = viewingUserId !== null;
 
   const startEdit = (todo: Todo) => {
     setEditingId(todo.id);
@@ -78,6 +112,7 @@ export default function TodoListPage() {
     try {
       const params: Record<string, string | number> = { limit: 100 };
       if (period !== "all") params.period = period;
+      if (viewingUserId) params.userId = viewingUserId;
       const res = await todoApi.list(params);
       setTodos(res.data.data.data);
     } catch {
@@ -85,19 +120,40 @@ export default function TodoListPage() {
     } finally {
       setLoading(false);
     }
-  }, [period]);
+  }, [period, viewingUserId]);
 
-  const fetchStats = async () => {
+  const fetchStats = useCallback(async () => {
     try {
-      const res = await todoApi.getStats();
+      const params: Record<string, string> = {};
+      if (viewingUserId) params.userId = viewingUserId;
+      const res = await todoApi.getStats(params);
       setStats(res.data.data);
+    } catch {
+      // silently fail
+    }
+  }, [viewingUserId]);
+
+  const fetchWatchedLists = async () => {
+    try {
+      const res = await todoApi.getWatching();
+      setWatchedLists(res.data.data);
+    } catch {
+      // silently fail
+    }
+  };
+
+  const fetchMyWatchers = async () => {
+    try {
+      const res = await todoApi.getWatchers();
+      setMyWatchers(res.data.data);
     } catch {
       // silently fail
     }
   };
 
   useEffect(() => { fetchTodos(); }, [fetchTodos]);
-  useEffect(() => { fetchStats(); }, []);
+  useEffect(() => { fetchStats(); }, [fetchStats]);
+  useEffect(() => { fetchWatchedLists(); fetchMyWatchers(); }, []);
 
   const handleAdd = async (e: FormEvent) => {
     e.preventDefault();
@@ -142,6 +198,61 @@ export default function TodoListPage() {
     }
   };
 
+  const handleAddWatcher = async (userId: string) => {
+    setAddingWatcher(true);
+    try {
+      await todoApi.addWatcher(userId);
+      fetchMyWatchers();
+      toast.success("Watcher added");
+      setShowWatcherModal(false);
+      setUserSearch("");
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || "Failed to add watcher");
+    } finally {
+      setAddingWatcher(false);
+    }
+  };
+
+  const handleRemoveWatcher = async (watcherId: string) => {
+    try {
+      await todoApi.removeWatcher(watcherId);
+      fetchMyWatchers();
+      toast.success("Watcher removed");
+    } catch {
+      toast.error("Failed to remove watcher");
+    }
+  };
+
+  const loadUsers = async (search: string) => {
+    try {
+      const res = await userApi.list({ search, limit: 20, status: "ACTIVE" });
+      setUsers(res.data.data.data || res.data.data);
+    } catch {
+      setUsers([]);
+    }
+  };
+
+  useEffect(() => {
+    if (showWatcherModal && userSearch.length >= 2) {
+      const t = setTimeout(() => loadUsers(userSearch), 300);
+      return () => clearTimeout(t);
+    }
+    if (userSearch.length < 2) setUsers([]);
+  }, [userSearch, showWatcherModal]);
+
+  const switchToMyList = () => {
+    setViewingUserId(null);
+    setViewingUserName("");
+    setShowViewDropdown(false);
+  };
+
+  const switchToWatchedList = (userId: string, name: string) => {
+    setViewingUserId(userId);
+    setViewingUserName(name);
+    setPeriod("all");
+    setShowViewDropdown(false);
+  };
+
   const isOverdue = (todo: Todo) => {
     if (todo.status === "COMPLETED") return false;
     const today = new Date();
@@ -172,9 +283,82 @@ export default function TodoListPage() {
     { key: "archived", label: "Archived", count: stats.completed },
   ];
 
+  const watcherIds = new Set(myWatchers.map((w) => w.watcher.id));
+
   return (
     <div>
-      <PageHeader title="To-Do List" subtitle="Track your tasks and stay organized." />
+      <PageHeader
+        title="To-Do List"
+        subtitle={isWatchedView ? `Viewing ${viewingUserName}'s tasks` : "Track your tasks and stay organized."}
+      />
+
+      {/* View Switcher + Watcher Actions */}
+      <div className="mb-3 flex items-center gap-2">
+        {/* View switcher dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowViewDropdown((p) => !p)}
+            className={`${cls.btnSecondary} min-w-[160px] justify-between`}
+          >
+            <span className="flex items-center gap-1.5">
+              {isWatchedView ? <Eye size={13} /> : <ListChecks size={13} />}
+              {isWatchedView ? viewingUserName : "My Tasks"}
+            </span>
+            <ChevronDown size={13} />
+          </button>
+
+          {showViewDropdown && (
+            <>
+              <div className="fixed inset-0 z-10" onClick={() => setShowViewDropdown(false)} />
+              <div className="absolute left-0 z-20 mt-1 w-56 rounded-lg bg-white py-1 shadow-lg ring-1 ring-gray-200">
+                <button
+                  onClick={switchToMyList}
+                  className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-gray-50 ${
+                    !isWatchedView ? "bg-primary-50 text-primary-700 font-medium" : "text-gray-700"
+                  }`}
+                >
+                  <ListChecks size={14} />
+                  My Tasks
+                </button>
+                {watchedLists.length > 0 && (
+                  <>
+                    <div className="mx-3 my-1 border-t border-gray-100" />
+                    <p className="px-3 py-1 text-[11px] font-medium uppercase text-gray-400">Watched Lists</p>
+                    {watchedLists.map((w) => (
+                      <button
+                        key={w.id}
+                        onClick={() => switchToWatchedList(w.owner.id, w.owner.fullName || w.owner.username)}
+                        className={`flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] transition-colors hover:bg-gray-50 ${
+                          viewingUserId === w.owner.id ? "bg-primary-50 text-primary-700 font-medium" : "text-gray-700"
+                        }`}
+                      >
+                        <Eye size={14} />
+                        {w.owner.fullName || w.owner.username}
+                      </button>
+                    ))}
+                  </>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        <div className="flex-1" />
+
+        {/* Manage watchers button (only on my list) */}
+        {!isWatchedView && (
+          <>
+            <button onClick={() => setShowManageModal(true)} className={cls.btnSecondary}>
+              <Users size={13} />
+              Watchers{myWatchers.length > 0 && ` (${myWatchers.length})`}
+            </button>
+            <button onClick={() => { setShowWatcherModal(true); setUserSearch(""); setUsers([]); }} className={cls.btnSecondary}>
+              <UserPlus size={13} />
+              Add Watcher
+            </button>
+          </>
+        )}
+      </div>
 
       {/* Stats */}
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -193,35 +377,37 @@ export default function TodoListPage() {
         ))}
       </div>
 
-      {/* Quick Add */}
-      <form
-        onSubmit={handleAdd}
-        className="mb-3 flex flex-col gap-3 rounded-lg bg-white p-3 ring-1 ring-gray-200 sm:flex-row sm:items-end"
-      >
-        <div className="flex-1">
-          <label className={cls.label}>Task</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className={cls.input}
-            placeholder="What needs to be done?"
-          />
-        </div>
-        <div className="sm:w-44">
-          <label className={cls.label}>Due Date</label>
-          <input
-            type="date"
-            value={dueDate}
-            onChange={(e) => setDueDate(e.target.value)}
-            className={cls.input}
-          />
-        </div>
-        <button type="submit" disabled={adding} className={cls.btnPrimary}>
-          <Plus size={14} />
-          Add
-        </button>
-      </form>
+      {/* Quick Add (only on my list) */}
+      {!isWatchedView && (
+        <form
+          onSubmit={handleAdd}
+          className="mb-3 flex flex-col gap-3 rounded-lg bg-white p-3 ring-1 ring-gray-200 sm:flex-row sm:items-end"
+        >
+          <div className="flex-1">
+            <label className={cls.label}>Task</label>
+            <input
+              type="text"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              className={cls.input}
+              placeholder="What needs to be done?"
+            />
+          </div>
+          <div className="sm:w-44">
+            <label className={cls.label}>Due Date</label>
+            <input
+              type="date"
+              value={dueDate}
+              onChange={(e) => setDueDate(e.target.value)}
+              className={cls.input}
+            />
+          </div>
+          <button type="submit" disabled={adding} className={cls.btnPrimary}>
+            <Plus size={14} />
+            Add
+          </button>
+        </form>
+      )}
 
       {/* Filter Tabs */}
       <div className="mb-3 flex gap-1 rounded-lg bg-gray-100/80 p-1">
@@ -255,7 +441,7 @@ export default function TodoListPage() {
           <EmptyState
             icon={<ListChecks size={40} />}
             title={period === "archived" ? "No completed tasks yet" : "No tasks found"}
-            subtitle={period === "archived" ? "Completed tasks will appear here" : "Add a task above to get started"}
+            subtitle={period === "archived" ? "Completed tasks will appear here" : isWatchedView ? "This user has no tasks" : "Add a task above to get started"}
           />
         ) : (
           <ul className="divide-y divide-gray-100/80">
@@ -266,15 +452,26 @@ export default function TodoListPage() {
                   isOverdue(todo) ? "bg-red-50/30" : ""
                 }`}
               >
-                <button onClick={() => handleToggle(todo)} className="flex-shrink-0">
-                  {todo.status === "COMPLETED" ? (
-                    <CheckCircle2 size={16} className="text-green-500" />
-                  ) : (
-                    <Circle size={16} className="text-gray-300 hover:text-primary-500 transition-colors" />
-                  )}
-                </button>
+                {/* Toggle button (only for own list) */}
+                {!isWatchedView ? (
+                  <button onClick={() => handleToggle(todo)} className="flex-shrink-0">
+                    {todo.status === "COMPLETED" ? (
+                      <CheckCircle2 size={16} className="text-green-500" />
+                    ) : (
+                      <Circle size={16} className="text-gray-300 hover:text-primary-500 transition-colors" />
+                    )}
+                  </button>
+                ) : (
+                  <span className="flex-shrink-0">
+                    {todo.status === "COMPLETED" ? (
+                      <CheckCircle2 size={16} className="text-green-500" />
+                    ) : (
+                      <Circle size={16} className="text-gray-300" />
+                    )}
+                  </span>
+                )}
 
-                {editingId === todo.id ? (
+                {!isWatchedView && editingId === todo.id ? (
                   <>
                     <div className="min-w-0 flex-1 space-y-1">
                       <input
@@ -327,33 +524,36 @@ export default function TodoListPage() {
                       {formatDate(todo.dueDate)}
                     </span>
 
-                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
-                      {todo.status === "OPEN" && (
+                    {/* Actions (only for own list) */}
+                    {!isWatchedView && (
+                      <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
+                        {todo.status === "OPEN" && (
+                          <button
+                            onClick={() => startEdit(todo)}
+                            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            title="Edit"
+                          >
+                            <Pencil size={13} />
+                          </button>
+                        )}
+                        {todo.status === "COMPLETED" && (
+                          <button
+                            onClick={() => handleToggle(todo)}
+                            className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                            title="Reopen"
+                          >
+                            <RotateCcw size={13} />
+                          </button>
+                        )}
                         <button
-                          onClick={() => startEdit(todo)}
-                          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                          title="Edit"
+                          onClick={() => handleDelete(todo.id)}
+                          className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                          title="Delete"
                         >
-                          <Pencil size={13} />
+                          <Trash2 size={13} />
                         </button>
-                      )}
-                      {todo.status === "COMPLETED" && (
-                        <button
-                          onClick={() => handleToggle(todo)}
-                          className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
-                          title="Reopen"
-                        >
-                          <RotateCcw size={13} />
-                        </button>
-                      )}
-                      <button
-                        onClick={() => handleDelete(todo.id)}
-                        className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
-                        title="Delete"
-                      >
-                        <Trash2 size={13} />
-                      </button>
-                    </div>
+                      </div>
+                    )}
                   </>
                 )}
               </li>
@@ -361,6 +561,95 @@ export default function TodoListPage() {
           </ul>
         )}
       </div>
+
+      {/* Add Watcher Modal */}
+      {showWatcherModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowWatcherModal(false)}>
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">Add Watcher</h3>
+            <p className="mb-3 text-[12px] text-gray-500">
+              Search for a user to give them view access to your to-do list.
+            </p>
+            <input
+              type="text"
+              value={userSearch}
+              onChange={(e) => setUserSearch(e.target.value)}
+              className={cls.input}
+              placeholder="Search by name or username..."
+              autoFocus
+            />
+            {users.length > 0 && (
+              <ul className="mt-2 max-h-48 overflow-y-auto rounded-md border border-gray-200">
+                {users
+                  .filter((u) => !watcherIds.has(u.id))
+                  .map((u) => (
+                    <li key={u.id}>
+                      <button
+                        onClick={() => handleAddWatcher(u.id)}
+                        disabled={addingWatcher}
+                        className="flex w-full items-center gap-2 px-3 py-2 text-left text-[13px] hover:bg-gray-50 disabled:opacity-50"
+                      >
+                        <UserPlus size={13} className="text-gray-400" />
+                        <span className="font-medium text-gray-800">{u.fullName || u.username}</span>
+                        {u.fullName && <span className="text-gray-400">@{u.username}</span>}
+                      </button>
+                    </li>
+                  ))}
+              </ul>
+            )}
+            {userSearch.length >= 2 && users.filter((u) => !watcherIds.has(u.id)).length === 0 && (
+              <p className="mt-2 text-center text-[12px] text-gray-400">No users found</p>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowWatcherModal(false)} className={cls.btnSecondary}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Watchers Modal */}
+      {showManageModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40" onClick={() => setShowManageModal(false)}>
+          <div className="w-full max-w-md rounded-lg bg-white p-5 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-3 text-sm font-semibold text-gray-900">Manage Watchers</h3>
+            <p className="mb-3 text-[12px] text-gray-500">
+              These users can view your to-do list.
+            </p>
+            {myWatchers.length === 0 ? (
+              <p className="py-4 text-center text-[13px] text-gray-400">No watchers yet</p>
+            ) : (
+              <ul className="divide-y divide-gray-100 rounded-md border border-gray-200">
+                {myWatchers.map((w) => (
+                  <li key={w.id} className="flex items-center justify-between px-3 py-2">
+                    <div>
+                      <p className="text-[13px] font-medium text-gray-800">
+                        {w.watcher.fullName || w.watcher.username}
+                      </p>
+                      {w.watcher.fullName && (
+                        <p className="text-[11px] text-gray-400">@{w.watcher.username}</p>
+                      )}
+                    </div>
+                    <button
+                      onClick={() => handleRemoveWatcher(w.watcher.id)}
+                      className="rounded-md p-1 text-gray-400 hover:bg-red-50 hover:text-red-600"
+                      title="Remove watcher"
+                    >
+                      <X size={14} />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            <div className="mt-4 flex justify-end">
+              <button onClick={() => setShowManageModal(false)} className={cls.btnSecondary}>
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

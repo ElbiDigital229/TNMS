@@ -16,20 +16,13 @@ const createTodoSchema = z.object({
 });
 
 const listTodosQuerySchema = z.object({
-  period: z.enum(["today", "week", "month", "all"]).optional(),
+  period: z.enum(["today", "this_week", "overdue", "archived", "all"]).optional(),
   status: z.enum(["OPEN", "COMPLETED", "all"]).optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
+  userId: z.string().uuid().optional(),
 });
 
-const router = Router();
-
-router.use(authenticate);
-router.use(requirePermission(PERMISSIONS.TODOS.ACCESS));
-
-router.get("/", validate({ query: listTodosQuerySchema }), todoController.findAll);
-router.get("/stats", todoController.getStats);
-router.post("/", validate({ body: createTodoSchema }), todoController.create);
 const updateTodoSchema = z.object({
   title: z.string().trim().min(1).max(300).optional(),
   dueDate: z
@@ -38,6 +31,27 @@ const updateTodoSchema = z.object({
     .optional(),
 });
 
+const addWatcherSchema = z.object({
+  watcherId: z.string().uuid("Invalid user ID"),
+});
+
+const router = Router();
+
+router.use(authenticate);
+router.use(requirePermission(PERMISSIONS.TODOS.ACCESS));
+
+// Todo list + stats
+router.get("/", validate({ query: listTodosQuerySchema }), todoController.findAll);
+router.get("/stats", todoController.getStats);
+router.post("/", validate({ body: createTodoSchema }), todoController.create);
+
+// Watcher endpoints (must be before /:id to avoid route collision)
+router.get("/watchers", todoController.getMyWatchers);
+router.post("/watchers", validate({ body: addWatcherSchema }), todoController.addWatcher);
+router.delete("/watchers/:id", todoController.removeWatcher);
+router.get("/watching", todoController.getWatchedLists);
+
+// Todo item CRUD
 router.put(
   "/:id",
   validate({ params: uuidIdParamSchema, body: updateTodoSchema }),

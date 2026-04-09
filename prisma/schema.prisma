@@ -205,6 +205,8 @@ model User {
   ticketComments      TicketComment[] @relation("CommentAuthor")
   schedulesAssigned   TicketSchedule[] @relation("ScheduleAssignee")
   schedulesCreated    TicketSchedule[] @relation("ScheduleCreator")
+  todoWatchersOwned   TodoWatcher[] @relation("TodoOwner")
+  todoWatchersWatching TodoWatcher[] @relation("TodoWatcherUser")
 
   @@index([roleId])
   @@index([departmentId])
@@ -523,6 +525,19 @@ model Todo {
   updatedAt   DateTime   @updatedAt
 
   @@index([userId, status, dueDate])
+}
+
+model TodoWatcher {
+  id        String   @id @default(uuid())
+  ownerId   String
+  owner     User     @relation("TodoOwner", fields: [ownerId], references: [id], onDelete: Cascade)
+  watcherId String
+  watcher   User     @relation("TodoWatcherUser", fields: [watcherId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([ownerId, watcherId])
+  @@index([ownerId])
+  @@index([watcherId])
 }
 
 model Notification {

@@ -1,12 +1,24 @@
 import type { Request, Response } from "express";
 import { todoService } from "./todo.service.js";
+import { todoWatcherService } from "./todoWatcher.service.js";
 import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 
 export const todoController = {
   async findAll(req: Request, res: Response) {
     try {
-      const { period, status, page, limit } = req.query;
-      const result = await todoService.findAll(req.user!.id, {
+      const { period, status, page, limit, userId } = req.query;
+
+      // If userId is provided, verify the requester is a watcher
+      let targetUserId = req.user!.id;
+      if (userId && userId !== req.user!.id) {
+        const allowed = await todoWatcherService.isWatcher(userId as string, req.user!.id);
+        if (!allowed) {
+          return sendError(res, "You do not have access to this user's todo list", 403);
+        }
+        targetUserId = userId as string;
+      }
+
+      const result = await todoService.findAll(targetUserId, {
         period: period as string,
         status: status as string,
         page: page ? parseInt(page as string) : undefined,
@@ -20,7 +32,17 @@ export const todoController = {
 
   async getStats(req: Request, res: Response) {
     try {
-      const stats = await todoService.getStats(req.user!.id);
+      const userId = (req.query.userId as string) || req.user!.id;
+
+      // If viewing someone else's stats, check watcher access
+      if (userId !== req.user!.id) {
+        const allowed = await todoWatcherService.isWatcher(userId, req.user!.id);
+        if (!allowed) {
+          return sendError(res, "You do not have access to this user's stats", 403);
+        }
+      }
+
+      const stats = await todoService.getStats(userId);
       sendSuccess(res, stats);
     } catch (error: any) {
       sendError(res, error.message);
@@ -72,6 +94,47 @@ export const todoController = {
     try {
       await todoService.remove(req.params.id, req.user!.id);
       sendSuccess(res, null, "Todo deleted");
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
+  // Watcher endpoints
+  async addWatcher(req: Request, res: Response) {
+    try {
+      const { watcherId } = req.body;
+      const watcher = await todoWatcherService.addWatcher(req.user!.id, watcherId);
+      sendSuccess(res, watcher, "Watcher added", 201);
+    } catch (error: any) {
+      if (error.code === "P2002") {
+        return sendError(res, "This user is already a watcher", 409);
+      }
+      sendError(res, error.message);
+    }
+  },
+
+  async removeWatcher(req: Request, res: Response) {
+    try {
+      await todoWatcherService.removeWatcher(req.user!.id, req.params.id);
+      sendSuccess(res, null, "Watcher removed");
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
+  async getMyWatchers(req: Request, res: Response) {
+    try {
+      const watchers = await todoWatcherService.getMyWatchers(req.user!.id);
+      sendSuccess(res, watchers);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
+  async getWatchedLists(req: Request, res: Response) {
+    try {
+      const watched = await todoWatcherService.getWatchedLists(req.user!.id);
+      sendSuccess(res, watched);
     } catch (error: any) {
       sendError(res, error.message);
     }
