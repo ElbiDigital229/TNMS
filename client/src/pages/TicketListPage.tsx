@@ -398,18 +398,20 @@ export default function TicketListPage() {
         {/* Created date */}
         <div className={sectionLabel}>Created Date</div>
         <div className={filterField}>
-          <div className="flex flex-col gap-1.5">
-            <input type="date" value={filters.createdFrom} onChange={(e) => setFilter("createdFrom", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
-            <input type="date" value={filters.createdTo} onChange={(e) => setFilter("createdTo", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
+          <div className="flex items-center gap-1.5">
+            <input type="date" value={filters.createdFrom} onChange={(e) => setFilter("createdFrom", e.target.value)} className={`min-w-0 flex-1 ${cls.input} text-[12px]`} />
+            <span className="text-xs text-gray-400">–</span>
+            <input type="date" value={filters.createdTo} onChange={(e) => setFilter("createdTo", e.target.value)} className={`min-w-0 flex-1 ${cls.input} text-[12px]`} />
           </div>
         </div>
 
         {/* Due date */}
         <div className={sectionLabel}>Due Date</div>
         <div className={`${filterField} pb-4`}>
-          <div className="flex flex-col gap-1.5">
-            <input type="date" value={filters.dueDateFrom} onChange={(e) => setFilter("dueDateFrom", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
-            <input type="date" value={filters.dueDateTo} onChange={(e) => setFilter("dueDateTo", e.target.value)} className={`w-full ${cls.input} text-[12px]`} />
+          <div className="flex items-center gap-1.5">
+            <input type="date" value={filters.dueDateFrom} onChange={(e) => setFilter("dueDateFrom", e.target.value)} className={`min-w-0 flex-1 ${cls.input} text-[12px]`} />
+            <span className="text-xs text-gray-400">–</span>
+            <input type="date" value={filters.dueDateTo} onChange={(e) => setFilter("dueDateTo", e.target.value)} className={`min-w-0 flex-1 ${cls.input} text-[12px]`} />
           </div>
         </div>
       </div>

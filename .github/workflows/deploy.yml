@@ -6,81 +6,48 @@ on:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
+    env:
+      FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
     steps:
-      - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1
+      - name: Ensure swap
+        run: |
+          if [ ! -f /swapfile ]; then
+            sudo fallocate -l 2G /swapfile
+            sudo chmod 600 /swapfile
+            sudo mkswap /swapfile
+            sudo swapon /swapfile
+            echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+          fi
+          sudo swapon --show
+      - name: Deploy
         env:
-          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          envs: FIREBASE_SERVICE_ACCOUNT_JSON
-          script: |
-            set -e
-            cd /home/ubuntu/TNMS
-            git checkout -- .
-            git clean -fd
-            git pull origin main
-            npm install
+          NODE_OPTIONS: "--max-old-space-size=512"
+        run: |
+          set -e
+          cd /home/ubuntu/TNMS
+          git checkout -- .
+          git clean -fd
+          git pull origin main
+          npm install
 
-            # Write Firebase service account key
-            echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /home/ubuntu/firebase-key.json
-            chmod 600 /home/ubuntu/firebase-key.json
+          # Write Firebase service account key
+          echo "$FIREBASE_SERVICE_ACCOUNT_JSON" > /home/ubuntu/firebase-key.json
+          chmod 600 /home/ubuntu/firebase-key.json
 
-            # Ensure .env has the Firebase path
-            grep -q "FIREBASE_SERVICE_ACCOUNT_PATH" .env 2>/dev/null || echo 'FIREBASE_SERVICE_ACCOUNT_PATH=/home/ubuntu/firebase-key.json' >> .env
+          # Ensure .env has the Firebase path
+          grep -q "FIREBASE_SERVICE_ACCOUNT_PATH" .env 2>/dev/null || echo 'FIREBASE_SERVICE_ACCOUNT_PATH=/home/ubuntu/firebase-key.json' >> .env
 
-            npx prisma migrate resolve --applied 20260401000000_add_departments_ticket_blocking 2>/dev/null || true
-            npx prisma migrate deploy
-            npx prisma generate
-            npm run build
+          npx prisma migrate deploy
+          npx prisma generate
+          npm run build
 
-            # Fix nginx — proxy everything to Express (Express serves static files now)
-            sudo tee /etc/nginx/sites-available/tnms > /dev/null << 'NGINXCONF'
-            upstream tnms_backend {
-                server 127.0.0.1:3000;
-                keepalive 32;
-            }
-            limit_req_zone $binary_remote_addr zone=general:10m rate=30r/s;
-            server {
-                listen 80;
-                server_name _;
-                client_max_body_size 10M;
-                gzip on;
-                gzip_vary on;
-                gzip_proxied any;
-                gzip_comp_level 6;
-                gzip_min_length 1000;
-                gzip_types text/plain text/css application/json application/javascript text/xml application/xml text/javascript image/svg+xml;
-                location ~ /\. {
-                    deny all;
-                    return 404;
-                }
-                location / {
-                    limit_req zone=general burst=50 nodelay;
-                    proxy_pass http://tnms_backend;
-                    proxy_http_version 1.1;
-                    proxy_set_header Upgrade $http_upgrade;
-                    proxy_set_header Connection "upgrade";
-                    proxy_set_header Host $host;
-                    proxy_set_header X-Real-IP $remote_addr;
-                    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-                    proxy_set_header X-Forwarded-Proto $scheme;
-                    proxy_connect_timeout 60s;
-                    proxy_send_timeout 60s;
-                    proxy_read_timeout 60s;
-                }
-            }
-            NGINXCONF
-            sudo ln -sf /etc/nginx/sites-available/tnms /etc/nginx/sites-enabled/tnms
-            sudo rm -f /etc/nginx/sites-enabled/default
-            sudo nginx -t && sudo systemctl reload nginx
+          # Reload nginx (config is managed on-server with certbot SSL)
+          sudo nginx -t && sudo systemctl reload nginx
 
-            pm2 delete tnms 2>/dev/null || true
-            pm2 start ecosystem.config.cjs
+          pm2 delete tnms 2>/dev/null || true
+          pm2 start ecosystem.config.cjs
 
-            sleep 3
-            curl -sf http://localhost:3000/ > /dev/null && echo "Health check passed" || echo "Health check warning"
-            echo "Deployed successfully at $(date)"
+          sleep 3
+          curl -sf http://localhost:3000/ > /dev/null && echo "Health check passed" || echo "Health check warning"
+          echo "Deployed successfully at $(date)"

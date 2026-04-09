@@ -1,34 +1,46 @@
 import { Routes, Route, Navigate } from "react-router-dom";
+import { Suspense, lazy } from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ToastProvider } from "./components/ui/Toast";
 import ProtectedRoute from "./components/ProtectedRoute";
 import RequirePermission from "./components/RequirePermission";
 import DashboardLayout from "./components/layout/DashboardLayout";
 import LoginPage from "./pages/LoginPage";
-import PropertyListPage from "./pages/PropertyListPage";
-import PropertyFormPage from "./pages/PropertyFormPage";
-import PropertyDetailPage from "./pages/PropertyDetailPage";
-import AssetDetailPage from "./pages/AssetDetailPage";
-import AssetsListPage from "./pages/AssetsListPage";
-import UnitListPage from "./pages/UnitListPage";
-import AreaGroupSettingsPage from "./pages/AreaGroupSettingsPage";
-import AssetCategoriesPage from "./pages/AssetCategoriesPage";
-import TicketListPage from "./pages/TicketListPage";
-import TicketFormPage from "./pages/TicketFormPage";
-import TicketDetailPage from "./pages/TicketDetailPage";
-import TicketCategoriesPage from "./pages/TicketCategoriesPage";
-import TicketSchedulesPage from "./pages/TicketSchedulesPage";
-import DepartmentsPage from "./pages/DepartmentsPage";
-import DesignationsPage from "./pages/DesignationsPage";
 import DashboardPage from "./pages/DashboardPage";
-import TodoListPage from "./pages/TodoListPage";
-import UserManagementPage from "./pages/UserManagementPage";
-import RoleManagementPage from "./pages/RoleManagementPage";
-import AuditLogPage from "./pages/AuditLogPage";
-import ReportPage from "./pages/ReportPage";
-import ReportBuilderPage from "./pages/ReportBuilderPage";
-import EntityReportPage from "./pages/EntityReportPage";
-import NotificationsPage from "./pages/NotificationsPage";
+
+// Lazy-load everything that isn't on the initial critical path. The login
+// screen and the dashboard stay in the main bundle because they're what
+// users see first. Everything else is code-split so the initial download
+// stays small.
+const PropertyListPage = lazy(() => import("./pages/PropertyListPage"));
+const PropertyFormPage = lazy(() => import("./pages/PropertyFormPage"));
+const PropertyDetailPage = lazy(() => import("./pages/PropertyDetailPage"));
+const AssetDetailPage = lazy(() => import("./pages/AssetDetailPage"));
+const AssetsListPage = lazy(() => import("./pages/AssetsListPage"));
+const UnitListPage = lazy(() => import("./pages/UnitListPage"));
+const AreaGroupSettingsPage = lazy(() => import("./pages/AreaGroupSettingsPage"));
+const AssetCategoriesPage = lazy(() => import("./pages/AssetCategoriesPage"));
+const TicketListPage = lazy(() => import("./pages/TicketListPage"));
+const TicketFormPage = lazy(() => import("./pages/TicketFormPage"));
+const TicketDetailPage = lazy(() => import("./pages/TicketDetailPage"));
+const TicketCategoriesPage = lazy(() => import("./pages/TicketCategoriesPage"));
+const TicketSchedulesPage = lazy(() => import("./pages/TicketSchedulesPage"));
+const DepartmentsPage = lazy(() => import("./pages/DepartmentsPage"));
+const DesignationsPage = lazy(() => import("./pages/DesignationsPage"));
+const TodoListPage = lazy(() => import("./pages/TodoListPage"));
+const UserManagementPage = lazy(() => import("./pages/UserManagementPage"));
+const RoleManagementPage = lazy(() => import("./pages/RoleManagementPage"));
+const AuditLogPage = lazy(() => import("./pages/AuditLogPage"));
+const ReportPage = lazy(() => import("./pages/ReportPage"));
+const ReportBuilderPage = lazy(() => import("./pages/ReportBuilderPage"));
+const EntityReportPage = lazy(() => import("./pages/EntityReportPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+
+function PageFallback() {
+  return (
+    <div style={{ padding: 24, color: "#64748b", fontSize: 14 }}>Loading…</div>
+  );
+}
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { PERMISSIONS } from "../../shared/permissions";
 import { useAuth } from "./contexts/AuthContext";
@@ -53,6 +65,7 @@ export default function App() {
     <AuthProvider>
       <ToastProvider>
         <NotificationProvider>
+        <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route path="/login" element={<LoginPage />} />
 
@@ -88,6 +101,7 @@ export default function App() {
             </Route>
           </Route>
         </Routes>
+        </Suspense>
         </NotificationProvider>
       </ToastProvider>
     </AuthProvider>

@@ -3,9 +3,13 @@ import cors from "cors";
 import helmet from "helmet";
 import cookieParser from "cookie-parser";
 import rateLimit from "express-rate-limit";
+import pinoHttp from "pino-http";
+import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
 import { env } from "./config/env.js";
+import { logger } from "./config/logger.js";
+import { prisma } from "./config/db.js";
 import { errorHandler } from "./middleware/errorHandler.js";
 import { authRoutes } from "./modules/auth/auth.routes.js";
 import { propertyRoutes } from "./modules/property/property.routes.js";
@@ -33,6 +37,37 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const app = express();
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
+
+// --- Request logging -----------------------------------------------------
+// pino-http attaches a request-scoped logger and emits a single JSON line
+// per response with method, url, status, latency, and a correlation id.
+// Health checks are dropped to keep the noise down.
+app.use(
+  pinoHttp({
+    logger,
+    genReqId: (req) =>
+      (req.headers["x-request-id"] as string | undefined) ??
+      crypto.randomUUID(),
+    customLogLevel: (_req, res, err) => {
+      if (err || res.statusCode >= 500) return "error";
+      if (res.statusCode >= 400) return "warn";
+      return "info";
+    },
+    autoLogging: {
+      ignore: (req) => req.url === "/api/health",
+    },
+    serializers: {
+      req(req) {
+        return {
+          id: req.id,
+          method: req.method,
+          url: req.url,
+          remoteAddress: req.remoteAddress,
+        };
+      },
+    },
+  }),
+);
 
 // --- Security headers ----------------------------------------------------
 // Keep CSP off here: we serve the SPA statically and Vite inlines bootstrap
@@ -99,16 +134,41 @@ const notificationPollLimiter = rateLimit({
 });
 app.use("/api/notifications/unread-count", notificationPollLimiter);
 
+// Tight limit for expensive endpoints: report builder, exports, bulk
+// imports. These do heavy DB work and/or touch large payloads. 30 reqs
+// per 15 minutes is more than enough for interactive use and stops
+// runaway loops / accidental abuse.
+const expensiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 30,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many requests for this operation, please wait." },
+  validate: { xForwardedForHeader: false },
+});
+app.use("/api/reports", expensiveLimiter);
+app.use("/api/users/bulk-import", expensiveLimiter);
+
 // Apply general rate limit to all API routes
 app.use("/api", apiLimiter);
 
 // Serve uploaded files
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
 
-// API routes — apply stricter limiter to login + password-reset endpoints
+// --- Liveness probe ------------------------------------------------------
+// Dead-simple health check for PM2 / uptime monitoring. Also pokes the DB
+// so a wedged connection pool shows up as unhealthy. Never cached.
+app.get("/api/health", async (_req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ status: "ok", db: "ok", uptime: process.uptime() });
+  } catch {
+    res.status(503).json({ status: "degraded", db: "down" });
+  }
+});
+
+// API routes — apply stricter limiter to login endpoint
 app.use("/api/auth/login", loginLimiter);
-app.use("/api/auth/forgot-password", loginLimiter);
-app.use("/api/auth/reset-password", loginLimiter);
 app.use("/api/auth", authRoutes);
 app.use("/api/properties", propertyRoutes);
 app.use("/api/properties", floorRoutes);

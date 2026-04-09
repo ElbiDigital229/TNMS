@@ -6,7 +6,7 @@ import type {
   TicketStatus,
   RecurringType,
 } from "@prisma/client";
-import { notificationTrigger } from "../../services/notificationTrigger.service.js";
+import { notificationTrigger, fireAndForgetNotify } from "../../services/notificationTrigger.service.js";
 
 export const ticketService = {
   /** Parse imagePath field — handles legacy single path, JSON array, or null */
@@ -354,12 +354,16 @@ export const ticketService = {
 
     // Fire-and-forget notifications
     if (data.createdById) {
-      notificationTrigger.onTicketCreated(ticket.id, data.createdById).catch(console.error);
+      fireAndForgetNotify("onTicketCreated", () =>
+        notificationTrigger.onTicketCreated(ticket.id, data.createdById!),
+      );
     }
 
     // Notify the assignee if ticket is assigned on creation (manual or auto)
     if (effectiveAssigneeId && data.createdById) {
-      notificationTrigger.onTicketAssigned(ticket.id, effectiveAssigneeId, data.createdById, null).catch(console.error);
+      fireAndForgetNotify("onTicketAssigned", () =>
+        notificationTrigger.onTicketAssigned(ticket.id, effectiveAssigneeId, data.createdById!, null),
+      );
     }
 
     return ticket;
@@ -448,7 +452,9 @@ export const ticketService = {
 
     // Fire-and-forget notification (#9 ticket edited)
     if (editorUserId) {
-      notificationTrigger.onTicketEdited(id, editorUserId).catch(console.error);
+      fireAndForgetNotify("onTicketEdited", () =>
+        notificationTrigger.onTicketEdited(id, editorUserId),
+      );
     }
 
     return ticket;
@@ -470,7 +476,9 @@ export const ticketService = {
           data: { ticketId: id, action: "UNBLOCKED", details: "Auto-resolved: ticket marked as completed", performedById: updatedByUserId || null },
         });
         if (updatedByUserId) {
-          notificationTrigger.onTicketUnblocked(id, updatedByUserId, activeBlock.blockedById).catch(console.error);
+          fireAndForgetNotify("onTicketUnblocked", () =>
+            notificationTrigger.onTicketUnblocked(id, updatedByUserId, activeBlock.blockedById),
+          );
         }
       }
     }
@@ -494,7 +502,9 @@ export const ticketService = {
 
     // Fire-and-forget notification
     if (updatedByUserId) {
-      notificationTrigger.onTicketStatusChanged(id, status, updatedByUserId).catch(console.error);
+      fireAndForgetNotify("onTicketStatusChanged", () =>
+        notificationTrigger.onTicketStatusChanged(id, status, updatedByUserId),
+      );
     }
 
     return ticket;
@@ -516,7 +526,9 @@ export const ticketService = {
 
     // Fire-and-forget notification
     if (commenterId) {
-      notificationTrigger.onTicketCommentAdded(ticketId, commenterId).catch(console.error);
+      fireAndForgetNotify("onTicketCommentAdded", () =>
+        notificationTrigger.onTicketCommentAdded(ticketId, commenterId),
+      );
 
       // Parse @mentions and notify mentioned users
       const mentionPattern = /@([A-Za-z\u00C0-\u024F]+(?: [A-Za-z\u00C0-\u024F]+)?)/g;
@@ -539,9 +551,13 @@ export const ticketService = {
         });
 
         if (mentionedUsers.length > 0) {
-          notificationTrigger
-            .onTicketMention(ticketId, mentionedUsers.map((u) => u.id), commenterId)
-            .catch(console.error);
+          fireAndForgetNotify("onTicketMention", () =>
+            notificationTrigger.onTicketMention(
+              ticketId,
+              mentionedUsers.map((u) => u.id),
+              commenterId,
+            ),
+          );
         }
       }
     }
@@ -557,11 +573,22 @@ export const ticketService = {
     const ageMs = Date.now() - new Date(comment.createdAt).getTime();
     if (ageMs > 15 * 60 * 1000) throw new Error("Comments can only be edited within 15 minutes");
 
-    return prisma.ticketComment.update({
+    const updated = await prisma.ticketComment.update({
       where: { id: commentId },
       data: { content, editedAt: new Date() },
       include: { commenter: { select: { id: true, fullName: true, username: true } } },
     });
+
+    await prisma.ticketActivity.create({
+      data: {
+        ticketId: comment.ticketId,
+        action: "COMMENT_EDITED",
+        details: "Comment edited",
+        performedById: userId,
+      },
+    });
+
+    return updated;
   },
 
   async deleteComment(commentId: string, userId: string) {
@@ -611,9 +638,9 @@ export const ticketService = {
       },
     });
 
-    notificationTrigger
-      .onTicketAssigned(ticketId, assigneeId, assignerId, ticket.assignedToId)
-      .catch(console.error);
+    fireAndForgetNotify("onTicketAssigned", () =>
+      notificationTrigger.onTicketAssigned(ticketId, assigneeId, assignerId, ticket.assignedToId),
+    );
 
     return updated;
   },
@@ -664,7 +691,9 @@ export const ticketService = {
     });
 
     if (data.blockingUserId) {
-      notificationTrigger.onTicketBlocked(ticketId, blockedById, data.blockingUserId, data.reason).catch(console.error);
+      fireAndForgetNotify("onTicketBlocked", () =>
+        notificationTrigger.onTicketBlocked(ticketId, blockedById, data.blockingUserId!, data.reason),
+      );
     }
   },
 
@@ -733,7 +762,9 @@ export const ticketService = {
       },
     });
 
-    notificationTrigger.onTicketUnblocked(ticketId, resolvedById, activeBlock.blockedById).catch(console.error);
+    fireAndForgetNotify("onTicketUnblocked", () =>
+      notificationTrigger.onTicketUnblocked(ticketId, resolvedById, activeBlock.blockedById),
+    );
   },
 
   async findRelated(ticketId: string) {

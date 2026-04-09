@@ -1,7 +1,7 @@
 import { prisma } from "../../config/db.js";
 import { CITY_CODES } from "../../../shared/types.js";
 import type { City, PropertyType, Status } from "@prisma/client";
-import { notificationTrigger } from "../../services/notificationTrigger.service.js";
+import { notificationTrigger, fireAndForgetNotify } from "../../services/notificationTrigger.service.js";
 
 export const propertyService = {
   async generateCode(city: City): Promise<string> {
@@ -174,7 +174,9 @@ export const propertyService = {
 
     // Fire-and-forget notification
     if (property) {
-      notificationTrigger.onPropertyDeactivated(id, property.name).catch(console.error);
+      fireAndForgetNotify("onPropertyDeactivated", () =>
+        notificationTrigger.onPropertyDeactivated(id, property.name),
+      );
     }
 
     return prisma.property.findUnique({

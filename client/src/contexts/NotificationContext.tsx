@@ -76,7 +76,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     if (!user) return;
     setIsLoading(true);
     try {
-      const res = await notificationApi.list({ limit: 20 });
+      const res = await notificationApi.list({ limit: 20, isRead: false });
       setNotifications(res.data.data.data);
     } catch {
       // Silently fail
@@ -89,11 +89,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
     async (id: string) => {
       try {
         await notificationApi.markAsRead(id);
-        setNotifications((prev) =>
-          prev.map((n) =>
-            n.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
-          )
-        );
+        setNotifications((prev) => prev.filter((n) => n.id !== id));
         setUnreadCount((prev) => Math.max(0, prev - 1));
         prevCountRef.current = Math.max(0, prevCountRef.current - 1);
       } catch {
@@ -106,9 +102,7 @@ export function NotificationProvider({ children }: { children: ReactNode }) {
   const markAllAsRead = useCallback(async () => {
     try {
       await notificationApi.markAllAsRead();
-      setNotifications((prev) =>
-        prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() }))
-      );
+      setNotifications([]);
       setUnreadCount(0);
       prevCountRef.current = 0;
     } catch {

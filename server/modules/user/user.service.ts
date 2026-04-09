@@ -2,7 +2,7 @@ import bcrypt from "bcrypt";
 import { prisma } from "../../config/db.js";
 import { env } from "../../config/env.js";
 import type { Status } from "@prisma/client";
-import { notificationTrigger } from "../../services/notificationTrigger.service.js";
+import { notificationTrigger, fireAndForgetNotify } from "../../services/notificationTrigger.service.js";
 
 export const userService = {
   async findAll(params: {
@@ -268,7 +268,9 @@ export const userService = {
 
     // Fire-and-forget notification (#14)
     if (resetByUserId && resetByUserId !== id) {
-      notificationTrigger.onPasswordReset(id, resetByUserId).catch(console.error);
+      fireAndForgetNotify("onPasswordReset", () =>
+        notificationTrigger.onPasswordReset(id, resetByUserId),
+      );
     }
 
     return result;
@@ -297,7 +299,9 @@ export const userService = {
 
     // Fire-and-forget notification (#15)
     if (changedByUserId) {
-      notificationTrigger.onUserStatusChanged(id, "deactivated", changedByUserId).catch(console.error);
+      fireAndForgetNotify("onUserStatusChanged:deactivated", () =>
+        notificationTrigger.onUserStatusChanged(id, "deactivated", changedByUserId),
+      );
     }
 
     return result;
@@ -316,7 +320,9 @@ export const userService = {
 
     // Fire-and-forget notification (#15)
     if (changedByUserId) {
-      notificationTrigger.onUserStatusChanged(id, "blocked", changedByUserId).catch(console.error);
+      fireAndForgetNotify("onUserStatusChanged:blocked", () =>
+        notificationTrigger.onUserStatusChanged(id, "blocked", changedByUserId),
+      );
     }
 
     return result;
@@ -331,7 +337,9 @@ export const userService = {
 
     // Fire-and-forget notification (#15)
     if (changedByUserId) {
-      notificationTrigger.onUserStatusChanged(id, "activated", changedByUserId).catch(console.error);
+      fireAndForgetNotify("onUserStatusChanged:activated", () =>
+        notificationTrigger.onUserStatusChanged(id, "activated", changedByUserId),
+      );
     }
 
     return result;

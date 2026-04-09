@@ -92,7 +92,6 @@ User
  ├── allProperties         — access to every property without explicit assignment
  ├── roleId                — FK to Role (RBAC)
  ├── departmentId          — FK to Department
- ├── reportsToId           — FK to User (manager/hierarchy)
  └── status                — ACTIVE | INACTIVE | BLOCKED
 ```
 
@@ -101,8 +100,7 @@ Classic RBAC. Roles hold a bundle of permissions.
 
 ```
 Role
- ├── name, level           — level 0 = highest authority
- ├── canAssignToMaxLevel   — limits who this role can assign tickets to
+ ├── name                  — unique
  ├── isSystemRole          — can't be deleted
  └── permissions           — many-to-many via RolePermission
 
@@ -110,6 +108,11 @@ Permission
  ├── key                   — e.g. "tickets.view_all"
  └── module                — e.g. "tickets"
 ```
+
+Authorization is **permissions-only**. The legacy `level` /
+`canAssignToMaxLevel` hierarchy was removed in 2026-04; who can do what is
+determined purely by the permission set attached to the user's role, with
+super-admin bypassing all checks.
 
 #### Property Hierarchy
 Properties can contain Floors, which contain Units.
@@ -255,9 +258,9 @@ Todo
      "isSuperAdmin": false,
      "roleId": "uuid",
      "roleName": "Supervisor",
-     "roleLevel": 2,
      "permissions": ["tickets.view_all", "assets.edit", "..."],
-     "allProperties": false
+     "allProperties": false,
+     "tv": 3
    }
    ```
 4. Client stores token in `localStorage`, attaches as `Authorization: Bearer <token>` on every request
@@ -346,9 +349,11 @@ Blocking is a separate overlay — it does NOT change the ticket's status. A tic
 Assignment is validated by the RBAC service:
 1. Assigner must have `tickets.assign` permission
 2. Assignee must be active and have `tickets.assignee_eligible` permission
-3. Assignee's role level must be ≥ assigner's role level (can't assign upward in hierarchy)
-4. Assignee must have access to the ticket's property
-5. Super admins bypass hierarchy checks
+3. Assignee must have access to the ticket's property
+4. Super admins bypass all checks
+
+Role hierarchy / "cannot assign upward" was removed in 2026-04; assignment
+is governed entirely by the permission set.
 
 ### Ticket Filters
 
@@ -425,8 +430,7 @@ The RBAC service (`server/services/rbac.service.ts`) handles:
 | `getUserPermissions(userId)` | Returns all permission keys for a user |
 | `getUserPropertyIds(userId)` | Returns accessible property IDs (or `"all"`) |
 | `userHasPropertyAccess(userId, propertyId)` | Single property check |
-| `getUserSubordinateIds(userId)` | Recursive walk down the reporting tree |
-| `canAssignTo(assignerId, assigneeId, propertyId)` | Full assignment validation |
+| `canAssignTo(assignerId, assigneeId, propertyId)` | Permission + property-access validation |
 | `getAssignableUsers(assignerId, propertyId)` | List of valid assignees for a ticket |
 
 ---

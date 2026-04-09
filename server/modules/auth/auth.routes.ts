@@ -2,31 +2,17 @@ import { Router } from "express";
 import { authController } from "./auth.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { validate } from "../../middleware/validate.js";
-import {
-  loginSchema,
-  forgotPasswordSchema,
-  resetPasswordSchema,
-  changePasswordSchema,
-} from "./auth.schemas.js";
+import { loginSchema, changePasswordSchema } from "./auth.schemas.js";
 
 export const authRoutes = Router();
 
 authRoutes.post("/login", validate({ body: loginSchema }), authController.login);
 authRoutes.get("/me", authenticate, authController.me);
 
-// Password-reset flow (unauthenticated — tokenized).
-authRoutes.post(
-  "/forgot-password",
-  validate({ body: forgotPasswordSchema }),
-  authController.forgotPassword,
-);
-authRoutes.post(
-  "/reset-password",
-  validate({ body: resetPasswordSchema }),
-  authController.resetPassword,
-);
-
 // Authenticated self-service password change.
+// Forgotten-password recovery is admin-assisted only: a user who can't log
+// in contacts an admin, who uses POST /api/users/:id/reset-password to
+// issue a new password and force a change on next login.
 authRoutes.post(
   "/change-password",
   authenticate,

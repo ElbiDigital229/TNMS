@@ -153,6 +153,11 @@ model AuditLog {
   ipAddress String?
   user      User     @relation(fields: [userId], references: [id])
   createdAt DateTime @default(now())
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@index([module, createdAt(sort: Desc)])
+  @@index([entityId])
+  @@index([createdAt(sort: Desc)])
 }
 
 // ─── Core Models ───────────────────────────────────────────
@@ -191,7 +196,6 @@ model User {
   auditLogs           AuditLog[]
   notifications       Notification[]
   deviceTokens        DeviceToken[]
-  passwordResetTokens PasswordResetToken[]
   createdTickets      Ticket[]  @relation("TicketCreator")
   assignedTickets     Ticket[]  @relation("TicketAssignee")
   blocksRaised        TicketBlock[] @relation("BlockRaisedBy")
@@ -201,6 +205,10 @@ model User {
   ticketComments      TicketComment[] @relation("CommentAuthor")
   schedulesAssigned   TicketSchedule[] @relation("ScheduleAssignee")
   schedulesCreated    TicketSchedule[] @relation("ScheduleCreator")
+
+  @@index([roleId])
+  @@index([departmentId])
+  @@index([designationId])
 }
 
 model AreaGroup {
@@ -235,6 +243,9 @@ model Property {
   tickets         Ticket[]
   userAssignments UserPropertyAssignment[]
   ticketSchedules TicketSchedule[]
+
+  @@index([areaGroupId])
+  @@index([city, status])
 }
 
 model Floor {
@@ -248,6 +259,8 @@ model Floor {
 
   units  Unit[]
   assets Asset[]
+
+  @@index([propertyId])
 }
 
 model Unit {
@@ -266,6 +279,9 @@ model Unit {
 
   tickets Ticket[]
   ticketSchedules TicketSchedule[]
+
+  @@index([propertyId])
+  @@index([floorId])
 }
 
 model Asset {
@@ -291,6 +307,11 @@ model Asset {
   updatedAt         DateTime       @updatedAt
 
   ticketAssets      TicketAsset[]
+
+  @@index([propertyId, status])
+  @@index([propertyId, categoryId])
+  @@index([floorId])
+  @@index([categoryId])
 }
 
 model Ticket {
@@ -338,6 +359,14 @@ model Ticket {
 
   @@index([legacy])
   @@index([deletedAt])
+  @@index([propertyId, status])
+  @@index([propertyId, createdAt(sort: Desc)])
+  @@index([assignedToId, status])
+  @@index([status, dueDate])
+  @@index([createdById])
+  @@index([categoryId])
+  @@index([departmentId])
+  @@index([unitId])
 }
 
 model TicketAsset {
@@ -348,6 +377,7 @@ model TicketAsset {
   asset     Asset  @relation(fields: [assetId], references: [id])
 
   @@unique([ticketId, assetId])
+  @@index([assetId])
 }
 
 model TicketComment {
@@ -359,6 +389,9 @@ model TicketComment {
   commenter   User?     @relation("CommentAuthor", fields: [commenterId], references: [id])
   editedAt    DateTime?
   createdAt   DateTime  @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([commenterId])
 }
 
 model TicketActivity {
@@ -370,6 +403,9 @@ model TicketActivity {
   performedById  String?
   performedBy    User?    @relation("ActivityPerformedBy", fields: [performedById], references: [id])
   createdAt      DateTime @default(now())
+
+  @@index([ticketId, createdAt])
+  @@index([performedById])
 }
 
 model TicketCategory {
@@ -425,6 +461,10 @@ model TicketBlock {
   resolvedBy      User?        @relation("BlockResolvedBy", fields: [resolvedById], references: [id])
   resolvedNote    String?
   createdAt       DateTime     @default(now())
+
+  @@index([ticketId])
+  @@index([departmentId])
+  @@index([blockingUserId])
 }
 
 model TicketSchedule {
@@ -481,6 +521,8 @@ model Todo {
   user        User       @relation(fields: [userId], references: [id])
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  @@index([userId, status, dueDate])
 }
 
 model Notification {
@@ -512,18 +554,3 @@ model DeviceToken {
   @@index([userId])
 }
 
-/// Short-lived single-use tokens for the password-reset flow.
-/// We store only a hash of the opaque token (never the token itself) so a
-/// DB leak can't be replayed to reset passwords.
-model PasswordResetToken {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  tokenHash String   @unique
-  expiresAt DateTime
-  usedAt    DateTime?
-  createdAt DateTime @default(now())
-
-  @@index([userId])
-  @@index([expiresAt])
-}

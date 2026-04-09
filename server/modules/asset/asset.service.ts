@@ -5,7 +5,7 @@ import fs from "fs";
 import path from "path";
 import type { AssetCondition } from "@prisma/client";
 import { rbacService } from "../../services/rbac.service.js";
-import { notificationTrigger } from "../../services/notificationTrigger.service.js";
+import { notificationTrigger, fireAndForgetNotify } from "../../services/notificationTrigger.service.js";
 
 export const assetService = {
   async generateCode(): Promise<string> {
@@ -189,9 +189,14 @@ export const assetService = {
 
     // Fire-and-forget notification if condition just became POOR
     if (data.condition === "POOR" && !wasPoor) {
-      notificationTrigger
-        .onAssetConditionPoor(asset.id, asset.name, asset.code, (asset as any).property.id)
-        .catch(console.error);
+      fireAndForgetNotify("onAssetConditionPoor", () =>
+        notificationTrigger.onAssetConditionPoor(
+          asset.id,
+          asset.name,
+          asset.code,
+          (asset as any).property.id,
+        ),
+      );
     }
 
     return asset;

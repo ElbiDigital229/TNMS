@@ -1,7 +1,31 @@
 import { prisma } from "../config/db.js";
 import { notificationService } from "../modules/notification/notification.service.js";
 import { rbacService } from "./rbac.service.js";
+import { logger } from "../config/logger.js";
 import type { NotificationType } from "@prisma/client";
+
+/**
+ * Fire-and-forget wrapper for notification triggers. Failures are logged
+ * through the structured logger (not console) and transient errors get one
+ * retry after a short delay. Call sites should prefer this over
+ * `.catch(console.error)` so that transient DB blips don't silently drop a
+ * notification and all failures end up in the log aggregator.
+ */
+export function fireAndForgetNotify<T>(
+  label: string,
+  fn: () => Promise<T>,
+): void {
+  const attempt = (retriesLeft: number) => {
+    fn().catch((err) => {
+      if (retriesLeft > 0) {
+        setTimeout(() => attempt(retriesLeft - 1), 750);
+        return;
+      }
+      logger.error({ err, label }, "notification trigger failed");
+    });
+  };
+  attempt(1);
+}
 
 // Helper: get display name
 async function getUserName(userId: string): Promise<string> {

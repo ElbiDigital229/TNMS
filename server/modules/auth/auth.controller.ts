@@ -23,19 +23,6 @@ export const authController = {
     sendSuccess(res, user);
   }),
 
-  forgotPassword: asyncHandler(async (req: Request, res: Response) => {
-    const { email } = req.body as { email: string };
-    await authService.requestPasswordReset(email);
-    // Always return success, never reveal whether the email exists.
-    sendSuccess(res, null, "If that email exists, a reset link has been sent");
-  }),
-
-  resetPassword: asyncHandler(async (req: Request, res: Response) => {
-    const { token, newPassword } = req.body as { token: string; newPassword: string };
-    await authService.consumePasswordReset(token, newPassword);
-    sendSuccess(res, null, "Password updated successfully");
-  }),
-
   changePassword: asyncHandler(async (req: Request, res: Response) => {
     const { currentPassword, newPassword } = req.body as {
       currentPassword: string;
