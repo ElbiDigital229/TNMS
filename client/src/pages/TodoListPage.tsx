@@ -288,12 +288,12 @@ export default function TodoListPage() {
                       type="date"
                       value={editDueDate}
                       onChange={(e) => setEditDueDate(e.target.value)}
-                      className={`w-36 ${cls.input} text-sm`}
+                      className={`w-28 shrink-0 ${cls.input} text-[12px]`}
                     />
-                    <button onClick={() => handleEdit(todo.id)} className="rounded-md p-1 text-green-600 hover:bg-green-50" title="Save">
+                    <button onClick={() => handleEdit(todo.id)} className="shrink-0 rounded-md p-1 text-green-600 hover:bg-green-50" title="Save">
                       <Check size={14} />
                     </button>
-                    <button onClick={cancelEdit} className="rounded-md p-1 text-gray-400 hover:bg-gray-100" title="Cancel">
+                    <button onClick={cancelEdit} className="shrink-0 rounded-md p-1 text-gray-400 hover:bg-gray-100" title="Cancel">
                       <X size={14} />
                     </button>
                   </>
