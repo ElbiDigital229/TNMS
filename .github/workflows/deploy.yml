@@ -26,9 +26,9 @@ jobs:
         run: |
           set -e
           cd /home/ubuntu/TNMS
-          git checkout -- .
+          git fetch origin main
+          git reset --hard origin/main
           git clean -fd
-          git pull origin main
           npm install
 
           # Write Firebase service account key
