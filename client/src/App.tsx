@@ -37,9 +37,7 @@ const EntityReportPage = lazy(() => import("./pages/EntityReportPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 
 function PageFallback() {
-  return (
-    <div style={{ padding: 24, color: "#64748b", fontSize: 14 }}>Loading…</div>
-  );
+  return null;
 }
 import { NotificationProvider } from "./contexts/NotificationContext";
 import { PERMISSIONS } from "../../shared/permissions";
