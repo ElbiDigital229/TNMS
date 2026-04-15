@@ -125,7 +125,7 @@ export default function TicketListPage() {
   const [users, setUsers] = useState<{ id: string; fullName: string; username: string }[]>([]);
 
   const [importOpen, setImportOpen] = useState(false);
-  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<Ticket | null>(null);
   const [confirmRestore, setConfirmRestore] = useState<Ticket | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
@@ -425,23 +425,35 @@ export default function TicketListPage() {
         title="Tickets"
         subtitle={`${pagination.total} ${pagination.total === 1 ? "ticket" : "tickets"}${activeFilterCount > 0 ? " (filtered)" : ""}${view !== "active" ? ` · ${view === "legacy" ? "Legacy" : "Archived"}` : ""}`}
         actions={
-          hasPermission(PERMISSIONS.TICKETS.CREATE) ? (
-            <div className="hidden sm:inline-flex gap-2">
-              <button onClick={() => setImportOpen(true)} className={cls.btnSecondary}>
-                <Upload size={16} /> Import
-              </button>
-              <Link to="/tickets/new" className={cls.btnPrimary}>
-                <Plus size={16} /> Create Ticket
-              </Link>
-            </div>
-          ) : undefined
+          <div className="hidden sm:inline-flex gap-2">
+            <button
+              onClick={() => setFiltersOpen(true)}
+              className={`${cls.btnSecondary} ${activeFilterCount > 0 ? "border-primary-400 bg-primary-50 text-primary-700 ring-primary-300" : ""}`}
+            >
+              <SlidersHorizontal size={16} />
+              Filters
+              {activeFilterCount > 0 && (
+                <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-semibold text-white">{activeFilterCount}</span>
+              )}
+            </button>
+            {hasPermission(PERMISSIONS.TICKETS.CREATE) && (
+              <>
+                <button onClick={() => setImportOpen(true)} className={cls.btnSecondary}>
+                  <Upload size={16} /> Import
+                </button>
+                <Link to="/tickets/new" className={cls.btnPrimary}>
+                  <Plus size={16} /> Create Ticket
+                </Link>
+              </>
+            )}
+          </div>
         }
       />
 
       {/* Mobile filter toggle */}
-      <div className="mb-2 flex items-center gap-2 lg:hidden">
+      <div className="mb-2 flex items-center gap-2 sm:hidden">
         <button
-          onClick={() => setMobileFiltersOpen(true)}
+          onClick={() => setFiltersOpen(true)}
           className={`${cls.btnSecondary} ${activeFilterCount > 0 ? "border-primary-400 bg-primary-50 text-primary-700 ring-primary-300" : ""}`}
         >
           <SlidersHorizontal size={14} />
@@ -462,16 +474,8 @@ export default function TicketListPage() {
         </div>
       </div>
 
-      {/* Two-column layout */}
-      <div className="flex gap-3">
-        {/* Desktop sidebar */}
-        <aside className="hidden w-60 shrink-0 lg:block">
-          <div className="sticky top-0 max-h-[calc(100vh-5.5rem)] overflow-y-auto overscroll-contain rounded-lg bg-white ring-1 ring-gray-200">
-            {Sidebar}
-          </div>
-        </aside>
-
-        {/* Main */}
+      {/* Full-width content */}
+      <div>
         <main className="min-w-0 flex-1">
           {/* Active filter chips */}
           {activeFilterCount > 0 && (
@@ -608,21 +612,21 @@ export default function TicketListPage() {
         </main>
       </div>
 
-      {/* Mobile filter drawer */}
-      {mobileFiltersOpen && (
-        <>
-          <div className="fixed inset-0 z-40 bg-black/40 lg:hidden" onClick={() => setMobileFiltersOpen(false)} />
-          <div className="fixed inset-y-0 left-0 z-50 w-72 max-w-[85vw] overflow-y-auto bg-white shadow-xl lg:hidden">
-            <div className="flex items-center justify-between border-b border-gray-200 px-3 py-2">
-              <span className="text-[13px] font-semibold text-gray-800">Filters</span>
-              <button onClick={() => setMobileFiltersOpen(false)} className={cls.btnIcon}><X size={16} /></button>
+      {/* Filter modal */}
+      {filtersOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="fixed inset-0 bg-sidebar/50 backdrop-blur-sm animate-fade-in" onClick={() => setFiltersOpen(false)} />
+          <div className="relative z-10 mx-4 w-full max-w-sm animate-scale-in rounded-lg bg-white shadow-xl ring-1 ring-gray-200 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between border-b border-gray-100 px-4 py-3">
+              <h2 className="text-[14px] font-semibold text-gray-900">Filters</h2>
+              <button onClick={() => setFiltersOpen(false)} className="rounded-md p-1 text-gray-400 hover:bg-gray-100 hover:text-gray-600"><X size={16} /></button>
             </div>
-            {Sidebar}
-            <div className="sticky bottom-0 border-t border-gray-200 bg-white p-3">
-              <button onClick={() => setMobileFiltersOpen(false)} className={`w-full ${cls.btnPrimary} justify-center`}>Apply</button>
+            <div className="flex-1 overflow-y-auto">{Sidebar}</div>
+            <div className="border-t border-gray-200 px-4 py-3">
+              <button onClick={() => setFiltersOpen(false)} className={`w-full ${cls.btnPrimary} justify-center`}>Apply</button>
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* Mobile FAB */}
