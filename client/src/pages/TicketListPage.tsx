@@ -293,20 +293,6 @@ export default function TicketListPage() {
           )}
         </div>
 
-        {/* Search */}
-        <div className="mt-3 px-3">
-          <div className="relative">
-            <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search name or #..."
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              className={`${cls.input} pl-7 text-[12px]`}
-            />
-          </div>
-        </div>
-
         {/* View switcher */}
         <div className={sectionLabel}>View</div>
         <div className="px-1.5">
@@ -425,7 +411,17 @@ export default function TicketListPage() {
         title="Tickets"
         subtitle={`${pagination.total} ${pagination.total === 1 ? "ticket" : "tickets"}${activeFilterCount > 0 ? " (filtered)" : ""}${view !== "active" ? ` · ${view === "legacy" ? "Legacy" : "Archived"}` : ""}`}
         actions={
-          <div className="hidden sm:inline-flex gap-2">
+          <div className="hidden sm:inline-flex items-center gap-2">
+            <div className="relative">
+              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                type="text"
+                placeholder="Search name or #..."
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                className={`${cls.input} w-64 pl-8 text-[13px]`}
+              />
+            </div>
             <button
               onClick={() => setFiltersOpen(true)}
               className={`${cls.btnSecondary} ${activeFilterCount > 0 ? "border-primary-400 bg-primary-50 text-primary-700 ring-primary-300" : ""}`}
