@@ -12,7 +12,7 @@ export default defineConfig({
     }
   },
   build: {
-    outDir: "dist",
+    outDir: "../dist/public",
     emptyOutDir: true,
     // Raise the warning ceiling — the main vendor chunk is legitimately
     // large (React, Router, PostHog) but still well-cached.
