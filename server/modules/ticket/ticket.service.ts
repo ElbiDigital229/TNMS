@@ -374,6 +374,7 @@ export const ticketService = {
       taskType?: TaskType;
       subTaskType?: SubTaskType;
       categoryId?: string;
+      departmentId?: string;
       priority?: Priority;
       imagePath?: string;
       assetIds?: string[];
@@ -385,8 +386,25 @@ export const ticketService = {
     // Fetch old ticket for change tracking
     const oldTicket = await prisma.ticket.findUnique({
       where: { id },
-      include: { assignedTo: { select: { fullName: true } }, category: { select: { name: true } } },
+      include: {
+        assignedTo: { select: { id: true, fullName: true, departmentId: true } },
+        category: { select: { name: true } },
+        department: { select: { name: true } },
+      },
     });
+
+    // If department changes and the current assignee no longer belongs to the
+    // new department, clear the assignment so the ticket isn't stuck with a
+    // mismatched person.
+    if (
+      data.departmentId !== undefined &&
+      oldTicket &&
+      data.departmentId !== oldTicket.departmentId &&
+      oldTicket.assignedTo &&
+      oldTicket.assignedTo.departmentId !== data.departmentId
+    ) {
+      (ticketData as any).assignedToId = null;
+    }
 
     // Update assets if provided
     if (assetIds !== undefined) {
@@ -433,6 +451,10 @@ export const ticketService = {
       }
       if (data.taskType !== undefined && data.taskType !== oldTicket.taskType) changes.push(`Task type changed from ${oldTicket.taskType} to ${data.taskType}`);
       if (data.subTaskType !== undefined && data.subTaskType !== oldTicket.subTaskType) changes.push(`Sub-task type changed from ${oldTicket.subTaskType || "none"} to ${data.subTaskType || "none"}`);
+      if (data.departmentId !== undefined && data.departmentId !== oldTicket.departmentId) {
+        const newDept = data.departmentId ? await prisma.department.findUnique({ where: { id: data.departmentId }, select: { name: true } }) : null;
+        changes.push(`Department changed from ${oldTicket.department?.name || "none"} to ${newDept?.name || "none"}`);
+      }
     }
     const details = changes.length > 0 ? changes.join(", ") : "Ticket details updated";
 

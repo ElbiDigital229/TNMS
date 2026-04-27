@@ -60,7 +60,7 @@ export const createTicketSchema = z.object({
   taskType: taskTypeEnum.optional(),
   subTaskType: subTaskTypeEnum.optional(),
   categoryId: z.string().uuid().optional().or(z.literal("")),
-  departmentId: z.string().uuid().optional().or(z.literal("")),
+  departmentId: z.string().uuid("Department is required"),
   assignedToId: z.string().uuid().optional().or(z.literal("")),
   priority: priorityEnum.optional(),
   assetIds: assetIdsField,
@@ -74,6 +74,7 @@ export const updateTicketSchema = z.object({
   taskType: taskTypeEnum.optional(),
   subTaskType: subTaskTypeEnum.optional(),
   categoryId: z.string().uuid().optional().or(z.literal("")).nullable(),
+  departmentId: z.string().uuid("Invalid departmentId").optional(),
   priority: priorityEnum.optional(),
   assetIds: assetIdsField,
 });

@@ -172,8 +172,8 @@ export default function TicketFormPage() {
   };
 
   const handleSubmit = async () => {
-    if (!name || !description || !propertyId) {
-      toast.error("Title, description, and property are required");
+    if (!name || !description || !propertyId || !departmentId) {
+      toast.error("Title, description, property, and department are required");
       return;
     }
 
@@ -187,7 +187,7 @@ export default function TicketFormPage() {
     if (taskType) formData.append("taskType", taskType);
     if (subTaskType) formData.append("subTaskType", subTaskType);
     if (categoryId) formData.append("categoryId", categoryId);
-    if (departmentId) formData.append("departmentId", departmentId);
+    formData.append("departmentId", departmentId);
     if (assignedToId) formData.append("assignedToId", assignedToId);
     if (priority) formData.append("priority", priority);
     if (selectedAssetIds.length > 0) {
@@ -423,19 +423,23 @@ export default function TicketFormPage() {
           {/* Department */}
           <div>
             <label className={cls.label}>
-              Department
+              Department <span className="text-red-500">*</span>
             </label>
             <select
               value={departmentId}
               onChange={(e) => { setDepartmentId(e.target.value); setAssignedToId(""); }}
-              disabled={isEdit}
-              className={`w-full ${cls.select} disabled:bg-gray-100`}
+              className={`w-full ${cls.select}`}
             >
               <option value="">Select department</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </select>
+            {isEdit && (
+              <p className="mt-1 text-[11px] text-gray-500">
+                Changing the department will clear the assignee if they don't belong to the new department.
+              </p>
+            )}
           </div>
 
           {/* Assign To */}
