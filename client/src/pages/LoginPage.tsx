@@ -50,7 +50,7 @@ export default function LoginPage() {
               <Building2 size={20} className="text-white" />
             </div>
             <h1 className="text-lg font-semibold text-gray-900">
-              Welcome back
+              Welcome Back To TNMS
             </h1>
             <p className="mt-0.5 text-[12px] text-gray-500">
               Sign in to your account
