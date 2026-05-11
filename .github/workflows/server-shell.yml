@@ -59,10 +59,13 @@ jobs:
 
       - name: Optional extra command
         if: ${{ inputs.command != '' }}
+        env:
+          USER_CMD: ${{ inputs.command }}
         run: |
           echo "=== Running custom command ==="
-          set -e
-          bash -c "${{ inputs.command }}"
+          set +e
+          echo "$USER_CMD" > /tmp/_user_cmd.sh
+          bash /tmp/_user_cmd.sh
 
       - name: Rebuild
         if: ${{ inputs.mode == 'rebuild' }}
