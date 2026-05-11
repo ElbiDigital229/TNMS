@@ -14,10 +14,9 @@ export const assetUrl = (path: string | null | undefined): string => {
     .replace(/\/$/, "")
     .replace(/\/api$/, "");
   if (envBase) return `${envBase}/${clean}`;
-  // Fallback: when not running on localhost (e.g. Vercel preview), use the backend host directly.
-  if (typeof window !== "undefined" && !/^(localhost|127\.0\.0\.1)/.test(window.location.hostname)) {
-    return `https://apitnms.duckdns.org/${clean}`;
-  }
+  // Otherwise serve from the same origin as the current page — the backend
+  // and frontend are co-located in production, so a relative path resolves
+  // correctly regardless of which domain we're on.
   return `/${clean}`;
 };
 
