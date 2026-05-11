@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   reportApi,
@@ -12,7 +12,8 @@ import { useToast } from "../components/ui/Toast";
 import { cls } from "../lib/styles";
 import PageHeader from "../components/ui/PageHeader";
 import { EmptyState, TableLoading } from "../components/ui/DataTable";
-import { ArrowLeft, BarChart3, Plus, X, Download, Loader2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Plus, X, Download, Loader2, FileText } from "lucide-react";
+import { downloadReportPdf } from "../lib/downloadReportPdf";
 
 // ─── Types ────────────────────────────────────────────────
 type Entity = "tickets" | "assets" | "properties" | "units" | "users";
@@ -428,6 +429,24 @@ export default function ReportBuilderPage() {
   const [resultType, setResultType] = useState<string>("standard");
   const [loading, setLoading] = useState(false);
   const [hasRun, setHasRun] = useState(false);
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const exportPdf = async () => {
+    if (!resultsRef.current) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadReportPdf(resultsRef.current, {
+        filename: `report-builder-${new Date().toISOString().slice(0, 10)}.pdf`,
+        title: "Custom Report",
+        subtitle: `Generated ${new Date().toLocaleString()}`,
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   // Lookup data
   const [properties, setProperties] = useState<{ id: string; name: string }[]>([]);
@@ -694,11 +713,23 @@ export default function ReportBuilderPage() {
           <div className="mb-3 flex items-center justify-between">
             <h2 className="text-[13px] font-semibold text-gray-700">Results</h2>
             {results && results.length > 0 && (
-              <button onClick={() => exportCsv(results, measure, resultType)} className={cls.btnSecondary}>
-                <Download size={13} /> Export CSV
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={exportPdf}
+                  className={cls.btnSecondary}
+                  disabled={downloadingPdf}
+                  title="Download report as PDF"
+                >
+                  {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+                  {downloadingPdf ? "Generating…" : "Download PDF"}
+                </button>
+                <button onClick={() => exportCsv(results, measure, resultType)} className={cls.btnSecondary}>
+                  <Download size={13} /> Export CSV
+                </button>
+              </div>
             )}
           </div>
+          <div ref={resultsRef}>
 
           {loading ? (
             <TableLoading />
@@ -855,6 +886,7 @@ export default function ReportBuilderPage() {
               </div>
             </>
           )}
+          </div>
         </div>
       )}
     </div>

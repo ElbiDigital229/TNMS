@@ -47,7 +47,10 @@ import {
   ClipboardList,
   Plus,
   Trash2,
+  Download,
 } from "lucide-react";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 /** Parse imagePath: handles JSON array, legacy single path, or null */
 function parseImagePaths(imagePath: string | null | undefined): string[] {
@@ -88,6 +91,142 @@ function isWithin15Min(dateStr: string): boolean {
 function getInitials(name: string | undefined): string {
   if (!name) return "?";
   return name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+}
+
+function fmtPdfDate(d: string | null | undefined): string {
+  if (!d) return "—";
+  return new Date(d).toLocaleString();
+}
+
+function buildTicketPdf(ticket: any): jsPDF {
+  const userName = (u: any) => u?.fullName || u?.username || "—";
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
+  const margin = 40;
+  const pageWidth = doc.internal.pageSize.getWidth();
+  let y = margin;
+
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(17, 24, 39);
+  doc.text(ticket.name || "(untitled)", margin, y, { maxWidth: pageWidth - margin * 2 });
+  y += 22;
+
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(10);
+  doc.setTextColor(37, 99, 235);
+  doc.text(ticket.ticketNumber || "", margin, y);
+  y += 14;
+
+  const rows: Array<[string, string]> = [
+    ["Status", TICKET_STATUS_LABELS[ticket.status as keyof typeof TICKET_STATUS_LABELS] || ticket.status || "—"],
+    ["Priority", PRIORITY_LABELS[ticket.priority as keyof typeof PRIORITY_LABELS] || ticket.priority || "—"],
+    ["Task Type", TASK_TYPE_LABELS[ticket.taskType as keyof typeof TASK_TYPE_LABELS] || ticket.taskType || "—"],
+    ["Sub Task", SUB_TASK_TYPE_LABELS[ticket.subTaskType as keyof typeof SUB_TASK_TYPE_LABELS] || ticket.subTaskType || "—"],
+    ["Category", ticket.category?.name || "—"],
+    ["Department", ticket.department?.name || "—"],
+    ["Property", ticket.property?.name || "—"],
+    ["Unit", ticket.unit?.name || "—"],
+    ["Created By", userName(ticket.createdBy)],
+    ["Assigned To", ticket.assignedTo ? userName(ticket.assignedTo) : "Unassigned"],
+    ["Created", fmtPdfDate(ticket.createdAt)],
+    ["Due", fmtPdfDate(ticket.dueDate)],
+    ["Completed", fmtPdfDate(ticket.completedAt)],
+  ];
+
+  autoTable(doc, {
+    startY: y,
+    margin: { left: margin, right: margin },
+    body: rows,
+    theme: "plain",
+    styles: { fontSize: 9, cellPadding: 4, textColor: [17, 24, 39] },
+    columnStyles: {
+      0: { cellWidth: 110, textColor: [107, 114, 128], fontStyle: "bold" },
+      1: { cellWidth: "auto" },
+    },
+  });
+  y = (doc as any).lastAutoTable.finalY + 18;
+
+  const sectionHeading = (label: string) => {
+    if (y > doc.internal.pageSize.getHeight() - margin - 40) {
+      doc.addPage();
+      y = margin;
+    }
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(55, 65, 81);
+    doc.text(label.toUpperCase(), margin, y);
+    doc.setDrawColor(229, 231, 235);
+    doc.line(margin, y + 4, pageWidth - margin, y + 4);
+    y += 14;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(17, 24, 39);
+  };
+
+  if (ticket.description) {
+    sectionHeading("Description");
+    const lines = doc.splitTextToSize(String(ticket.description), pageWidth - margin * 2);
+    doc.text(lines, margin, y);
+    y += lines.length * 12 + 8;
+  }
+
+  if (Array.isArray(ticket.assets) && ticket.assets.length) {
+    sectionHeading("Assets");
+    for (const a of ticket.assets) {
+      doc.text(`• ${a.name || a.tag || a.id}`, margin, y);
+      y += 12;
+    }
+    y += 6;
+  }
+
+  if (Array.isArray(ticket.comments) && ticket.comments.length) {
+    sectionHeading(`Comments (${ticket.comments.length})`);
+    for (const c of ticket.comments) {
+      doc.setFont("helvetica", "bold");
+      doc.text(userName(c.user), margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(107, 114, 128);
+      doc.text(fmtPdfDate(c.createdAt), pageWidth - margin, y, { align: "right" });
+      doc.setTextColor(17, 24, 39);
+      y += 12;
+      const body = doc.splitTextToSize(String(c.content || ""), pageWidth - margin * 2);
+      doc.text(body, margin, y);
+      y += body.length * 12 + 8;
+      if (y > doc.internal.pageSize.getHeight() - margin - 40) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+  }
+
+  if (Array.isArray(ticket.activities) && ticket.activities.length) {
+    sectionHeading("Activity Log");
+    for (const a of ticket.activities) {
+      const line = `${fmtPdfDate(a.createdAt)} — ${String(a.action || "").replace(/_/g, " ")}${a.user ? ` by ${userName(a.user)}` : ""}`;
+      const wrapped = doc.splitTextToSize(line, pageWidth - margin * 2);
+      doc.text(wrapped, margin, y);
+      y += wrapped.length * 12;
+      if (y > doc.internal.pageSize.getHeight() - margin - 40) {
+        doc.addPage();
+        y = margin;
+      }
+    }
+  }
+
+  const pageCount = doc.getNumberOfPages();
+  doc.setFontSize(8);
+  doc.setTextColor(156, 163, 175);
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.text(
+      `Generated ${new Date().toLocaleString()}    ·    Page ${i} of ${pageCount}`,
+      pageWidth / 2,
+      doc.internal.pageSize.getHeight() - 20,
+      { align: "center" },
+    );
+  }
+
+  return doc;
 }
 
 export default function TicketDetailPage() {
@@ -291,6 +430,17 @@ export default function TicketDetailPage() {
     }
   };
 
+  const handleDownload = () => {
+    if (!ticket) return;
+    try {
+      const doc = buildTicketPdf(ticket);
+      doc.save(`ticket-${ticket.ticketNumber}.pdf`);
+      capture("ticket_downloaded", { ticketId: ticket.id });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate PDF");
+    }
+  };
+
   const handleImageDelete = async (imagePath: string) => {
     try {
       await ticketApi.deleteImage(id!, imagePath);
@@ -486,6 +636,14 @@ export default function TicketDetailPage() {
 
         {/* Desktop action buttons */}
         <div className="hidden items-center gap-2 md:flex">
+          <button
+            onClick={handleDownload}
+            className="inline-flex items-center gap-2 rounded-lg bg-white shadow-sm ring-1 ring-gray-300 px-3 py-1.5 text-[13px] font-medium text-gray-700 hover:bg-gray-50 transition-all duration-200"
+            title="Download ticket as PDF"
+          >
+            <Download size={16} />
+            Download
+          </button>
           {hasPermission(PERMISSIONS.TICKETS.EDIT) && (
             <Link
               to={`/tickets/${ticket.id}/edit`}
@@ -1340,6 +1498,13 @@ export default function TicketDetailPage() {
                   Edit Details
                 </button>
               )}
+              <button
+                onClick={() => { setMoreSheetOpen(false); handleDownload(); }}
+                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 active:bg-gray-100"
+              >
+                <Download size={18} className="text-gray-400" />
+                Download Ticket
+              </button>
               {isAssignee && parseImagePaths(ticket.imagePath).length < MAX_IMAGES && (
                 <label
                   className="flex w-full cursor-pointer items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium text-gray-700 active:bg-gray-100"

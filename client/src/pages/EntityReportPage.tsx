@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { reportApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
@@ -8,9 +8,10 @@ import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable
 import { StatusBadge, PriorityBadge, Badge } from "../components/ui/Badge";
 import {
   ArrowLeft, Download, Users, Building2, LayoutGrid, Package,
-  Clock, CheckCircle2, AlertCircle, Loader2, TrendingUp, ShieldAlert, X
+  Clock, CheckCircle2, AlertCircle, Loader2, TrendingUp, ShieldAlert, X, FileText
 } from "lucide-react";
 import { computeUrgency } from "../../../shared/types";
+import { downloadReportPdf } from "../lib/downloadReportPdf";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -418,6 +419,28 @@ export default function EntityReportPage() {
   };
   const clearChartFilter = () => { setChartFilter(null); setTablePage(1); };
 
+  // ── PDF export ─────────────────────────────────────────────────────────────
+  const reportRef = useRef<HTMLDivElement>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const exportPdf = async () => {
+    if (!reportRef.current) return;
+    setDownloadingPdf(true);
+    try {
+      const label = entityType ? entityType.charAt(0).toUpperCase() + entityType.slice(1) : "Entity";
+      const entityName = meta?.fullName ?? meta?.username ?? meta?.name ?? entityType;
+      await downloadReportPdf(reportRef.current, {
+        filename: `report-${entityType}-${new Date().toISOString().slice(0, 10)}.pdf`,
+        title: `${label} Report — ${entityName}`,
+        subtitle: `Generated ${new Date().toLocaleString()}`,
+      });
+    } catch (e: any) {
+      toast.error(e?.message || "Failed to generate PDF");
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
+
   // ── CSV export ─────────────────────────────────────────────────────────────
   const exportCsv = () => {
     const header = "Ticket#,Name,Status,Priority,Blocked,Property,Assignee,Due Date,Completed At,Created At\n";
@@ -513,11 +536,24 @@ export default function EntityReportPage() {
             </div>
           </div>
         </div>
-        <button onClick={exportCsv} className={cls.btnSecondary}>
-          <Download size={13} />
-          Export CSV
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={exportPdf}
+            className={cls.btnSecondary}
+            disabled={downloadingPdf}
+            title="Download report as PDF"
+          >
+            {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+            {downloadingPdf ? "Generating…" : "Download PDF"}
+          </button>
+          <button onClick={exportCsv} className={cls.btnSecondary}>
+            <Download size={13} />
+            Export CSV
+          </button>
+        </div>
       </div>
+
+      <div ref={reportRef}>
 
       {/* Filter Bar */}
       <div className="mb-3 rounded-lg bg-white p-3 ring-1 ring-gray-200">
@@ -754,6 +790,8 @@ export default function EntityReportPage() {
           pagination={{ page: tablePage, totalPages, total: filteredTickets.length, limit: TABLE_PAGE_SIZE }}
           onPageChange={setTablePage}
         />
+      </div>
+
       </div>
     </div>
   );

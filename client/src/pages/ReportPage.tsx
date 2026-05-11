@@ -7,7 +7,9 @@ import { TableLoading } from "../components/ui/DataTable";
 import {
   Users, Building2, LayoutGrid, Package, Search, ChevronRight, Settings2,
   BarChart3, Clock, CheckCircle2, AlertTriangle, ShieldCheck, ArrowUpDown,
+  FileText, Loader2,
 } from "lucide-react";
+import { downloadReportPdf } from "../lib/downloadReportPdf";
 
 // ─── Shared constants ────────────────────────────────────────────────────────
 
@@ -263,6 +265,24 @@ function DashboardTab() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [techSort, setTechSort] = useState<{ field: string; dir: "asc" | "desc" }>({ field: "assigned", dir: "desc" });
+  const dashboardRef = useRef<HTMLDivElement>(null);
+  const [downloadingPdf, setDownloadingPdf] = useState(false);
+
+  const exportPdf = async () => {
+    if (!dashboardRef.current) return;
+    setDownloadingPdf(true);
+    try {
+      await downloadReportPdf(dashboardRef.current, {
+        filename: `dashboard-report-${new Date().toISOString().slice(0, 10)}.pdf`,
+        title: "Reports Dashboard",
+        subtitle: `Generated ${new Date().toLocaleString()}`,
+      });
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setDownloadingPdf(false);
+    }
+  };
 
   useEffect(() => {
     setLoading(true);
@@ -308,6 +328,18 @@ function DashboardTab() {
 
   return (
     <div className="space-y-4">
+      <div className="flex justify-end">
+        <button
+          onClick={exportPdf}
+          className={cls.btnSecondary}
+          disabled={downloadingPdf}
+          title="Download dashboard as PDF"
+        >
+          {downloadingPdf ? <Loader2 size={13} className="animate-spin" /> : <FileText size={13} />}
+          {downloadingPdf ? "Generating…" : "Download PDF"}
+        </button>
+      </div>
+      <div ref={dashboardRef} className="space-y-4">
       {/* Row 1: KPI cards */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <KpiCard
@@ -409,6 +441,7 @@ function DashboardTab() {
             </table>
           </div>
         )}
+      </div>
       </div>
     </div>
   );
