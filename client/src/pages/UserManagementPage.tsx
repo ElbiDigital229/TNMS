@@ -234,6 +234,14 @@ export default function UserManagementPage() {
       toast.error("Password is required");
       return;
     }
+    if (!form.roleId) {
+      toast.error("Please select a Role");
+      return;
+    }
+    if (!form.departmentId) {
+      toast.error("Please select a Department");
+      return;
+    }
 
     setSaving(true);
     try {
@@ -278,7 +286,15 @@ export default function UserManagementPage() {
       closeModal();
       fetchUsers();
     } catch (err: any) {
-      const msg = err.response?.data?.error || "Failed to save user";
+      const data = err.response?.data;
+      let msg = data?.error || "Failed to save user";
+      // Surface Zod validation field details so the user can see what's wrong
+      if (Array.isArray(data?.details) && data.details.length > 0) {
+        const fields = data.details
+          .map((d: { path?: string; message?: string }) => `${d.path}: ${d.message}`)
+          .join("; ");
+        msg = `${msg} — ${fields}`;
+      }
       toast.error(msg);
     } finally {
       setSaving(false);
