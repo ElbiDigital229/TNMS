@@ -315,4 +315,61 @@ export const notificationApi = {
   markAllAsRead: () => api.patch("/notifications/read-all"),
 };
 
+// ─── Acquisitions ────────────────────────────────────────────────────────
+
+export const acquisitionAgentApi = {
+  list: (params?: Record<string, string | number | boolean>) =>
+    api.get("/acquisitions/agents", { params }),
+  getById: (id: string) => api.get(`/acquisitions/agents/${id}`),
+  getDeals: (id: string) => api.get(`/acquisitions/agents/${id}/deals`),
+  create: (data: Record<string, unknown>) =>
+    api.post("/acquisitions/agents", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.put(`/acquisitions/agents/${id}`, data),
+  remove: (id: string) => api.delete(`/acquisitions/agents/${id}`),
+  restore: (id: string) => api.patch(`/acquisitions/agents/${id}/restore`),
+  bulkImport: (items: Record<string, unknown>[]) =>
+    api.post("/acquisitions/agents/import", { items }),
+  exportUrl: (params?: Record<string, string | number | boolean>) => {
+    const qs = params ? "?" + new URLSearchParams(params as any).toString() : "";
+    return `${api.defaults.baseURL}/acquisitions/agents/export.csv${qs}`;
+  },
+};
+
+export const acquisitionLandApi = {
+  list: (params?: Record<string, string | number | boolean>) =>
+    api.get("/acquisitions/land", { params }),
+  getById: (id: string) => api.get(`/acquisitions/land/${id}`),
+  create: (data: Record<string, unknown>) =>
+    api.post("/acquisitions/land", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.put(`/acquisitions/land/${id}`, data),
+  remove: (id: string) => api.delete(`/acquisitions/land/${id}`),
+  restore: (id: string) => api.patch(`/acquisitions/land/${id}/restore`),
+  bulkImport: (items: Record<string, unknown>[]) =>
+    api.post("/acquisitions/land/import", { items }),
+  exportUrl: (params?: Record<string, string | number | boolean>) => {
+    const qs = params ? "?" + new URLSearchParams(params as any).toString() : "";
+    return `${api.defaults.baseURL}/acquisitions/land/export.csv${qs}`;
+  },
+};
+
+export const acquisitionBuildingApi = {
+  list: (params?: Record<string, string | number | boolean>) =>
+    api.get("/acquisitions/buildings", { params }),
+  getById: (id: string) => api.get(`/acquisitions/buildings/${id}`),
+  create: (data: Record<string, unknown>) =>
+    api.post("/acquisitions/buildings", data),
+  update: (id: string, data: Record<string, unknown>) =>
+    api.put(`/acquisitions/buildings/${id}`, data),
+  remove: (id: string) => api.delete(`/acquisitions/buildings/${id}`),
+  restore: (id: string) => api.patch(`/acquisitions/buildings/${id}/restore`),
+  bulkImport: (items: Record<string, unknown>[]) =>
+    api.post("/acquisitions/buildings/import", { items }),
+  exportUrl: (params?: Record<string, string | number | boolean>) => {
+    const qs = params ? "?" + new URLSearchParams(params as any).toString() : "";
+    return `${api.defaults.baseURL}/acquisitions/buildings/export.csv${qs}`;
+  },
+};
+
 export default api;

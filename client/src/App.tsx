@@ -35,6 +35,9 @@ const ReportPage = lazy(() => import("./pages/ReportPage"));
 const ReportBuilderPage = lazy(() => import("./pages/ReportBuilderPage"));
 const EntityReportPage = lazy(() => import("./pages/EntityReportPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const AcquisitionAgentsPage = lazy(() => import("./pages/AcquisitionAgentsPage"));
+const AcquisitionLandPage = lazy(() => import("./pages/AcquisitionLandPage"));
+const AcquisitionBuildingsPage = lazy(() => import("./pages/AcquisitionBuildingsPage"));
 
 function PageFallback() {
   return null;
@@ -95,6 +98,9 @@ export default function App() {
               <Route path="/reports/builder" element={<RequirePermission permission={P.REPORTS.VIEW}><ReportBuilderPage /></RequirePermission>} />
               <Route path="/reports/:entityType/:entityId" element={<RequirePermission permission={P.REPORTS.VIEW}><EntityReportPage /></RequirePermission>} />
               <Route path="/settings/audit-logs" element={<RequirePermission permission={P.AUDIT.VIEW}><AuditLogPage /></RequirePermission>} />
+              <Route path="/acquisitions/agents" element={<RequirePermission permission={P.ACQUISITIONS.VIEW}><AcquisitionAgentsPage /></RequirePermission>} />
+              <Route path="/acquisitions/land" element={<RequirePermission permission={P.ACQUISITIONS.VIEW}><AcquisitionLandPage /></RequirePermission>} />
+              <Route path="/acquisitions/buildings" element={<RequirePermission permission={P.ACQUISITIONS.VIEW}><AcquisitionBuildingsPage /></RequirePermission>} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>

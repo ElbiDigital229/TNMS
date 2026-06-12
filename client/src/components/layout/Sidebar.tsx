@@ -16,6 +16,9 @@ import {
   Users,
   Shield,
   ScrollText,
+  Briefcase,
+  Handshake,
+  MapPin,
   LogOut,
   X,
 } from "lucide-react";
@@ -147,6 +150,28 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               </NavLink>
             )}
           </div>
+
+          {hasPermission(P.ACQUISITIONS.VIEW) && (
+            <>
+              <div className="mb-1.5 mt-4 px-3 text-[10px] font-semibold uppercase tracking-wider text-sidebar-text/50">
+                Acquisitions
+              </div>
+              <div className="space-y-0.5">
+                <NavLink to="/acquisitions/agents" className={linkClass} onClick={onClose}>
+                  <Handshake size={18} />
+                  Agents
+                </NavLink>
+                <NavLink to="/acquisitions/land" className={linkClass} onClick={onClose}>
+                  <MapPin size={18} />
+                  Land
+                </NavLink>
+                <NavLink to="/acquisitions/buildings" className={linkClass} onClick={onClose}>
+                  <Briefcase size={18} />
+                  Buildings
+                </NavLink>
+              </div>
+            </>
+          )}
 
           {hasAnySettingsPermission && (
             <>
