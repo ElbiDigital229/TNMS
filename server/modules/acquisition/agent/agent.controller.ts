@@ -1,19 +1,7 @@
 import type { Request, Response } from "express";
 import { agentService } from "./agent.service.js";
 import { sendSuccess, sendError } from "../../../utils/apiResponse.js";
-
-function rowsToCsv(rows: Record<string, unknown>[], columns: { key: string; label: string }[]): string {
-  const escape = (v: unknown) => {
-    if (v == null) return "";
-    const s = typeof v === "object" ? JSON.stringify(v) : String(v);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const header = columns.map((c) => c.label).join(",");
-  const body = rows
-    .map((r) => columns.map((c) => escape((r as any)[c.key])).join(","))
-    .join("\n");
-  return "﻿" + header + "\n" + body;
-}
+import { rowsToCsv } from "../_shared.js";
 
 export const agentController = {
   async findAll(req: Request, res: Response) {

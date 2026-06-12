@@ -5,37 +5,45 @@ import type { ZodError } from "zod";
 type AcquisitionTable = "AcquisitionAgent" | "AcquisitionLand" | "AcquisitionBuilding";
 type AcquisitionCodeColumn = "agentCode" | "landCode" | "buildingCode";
 
+const SEQUENCE_BY_TABLE: Record<AcquisitionTable, string> = {
+  AcquisitionAgent: "acquisition_agent_code_seq",
+  AcquisitionLand: "acquisition_land_code_seq",
+  AcquisitionBuilding: "acquisition_building_code_seq",
+};
+
 /**
- * Compute the next sequential code "{prefix}-NNNNN" by reading MAX from
- * the column as an integer. Done via raw SQL so 5-digit codes don't get
- * lex-sorted incorrectly against any legacy 4-digit codes.
+ * Compute the next sequential code "{prefix}-NNNNN".
+ *
+ * Backed by a Postgres SEQUENCE per entity. Sequences are atomic — concurrent
+ * callers each get a distinct value, so we cannot collide on the unique code
+ * column. The sequences are seeded past any pre-existing MAX+1 codes by the
+ * migration that introduced them.
  */
 export async function nextCode(
   prefix: string,
   table: AcquisitionTable,
-  column: AcquisitionCodeColumn,
+  _column: AcquisitionCodeColumn,
 ): Promise<string> {
-  const rows = await prisma.$queryRawUnsafe<{ max: number | null }[]>(
-    `SELECT MAX(CAST(SPLIT_PART("${column}", '-', 2) AS INTEGER)) AS max
-     FROM "${table}"
-     WHERE "${column}" ~ '^${prefix}-[0-9]+$'`,
+  const seq = SEQUENCE_BY_TABLE[table];
+  const rows = await prisma.$queryRawUnsafe<{ nextval: bigint | number }[]>(
+    `SELECT nextval('${seq}') AS nextval`,
   );
-  const next = (rows[0]?.max ?? 0) + 1;
-  return `${prefix}-${String(next).padStart(5, "0")}`;
+  const n = Number(rows[0].nextval);
+  return `${prefix}-${String(n).padStart(5, "0")}`;
 }
 
 /**
- * Run an insert that needs an auto-generated unique code. If we lose a
- * race against another concurrent insert (Prisma P2002 unique constraint),
- * regenerate the code and retry. The brief jitter on retry reduces
- * thundering-herd contention from large bulk imports.
+ * Run an insert with auto-generated code. Sequences should make conflicts
+ * impossible, but the retry shell stays in place as defense-in-depth against
+ * manual code insertion or post-migration data import that bypasses the
+ * sequence.
  */
 export async function withCodeRetry<T>(
   prefix: string,
   table: AcquisitionTable,
   column: AcquisitionCodeColumn,
   attemptCreate: (code: string) => Promise<T>,
-  maxAttempts = 5,
+  maxAttempts = 3,
 ): Promise<T> {
   let lastErr: unknown;
   for (let i = 0; i < maxAttempts; i++) {
@@ -127,4 +135,51 @@ export function formatImportError(e: unknown): string {
   }
   if (e instanceof Error) return e.message.split("\n")[0];
   return "Unknown error";
+}
+
+/**
+ * Encode one cell for CSV output with formula-injection mitigation.
+ *
+ * Excel and other spreadsheet apps treat cells starting with =, +, -, @,
+ * tab, or CR as formulas. An attacker who stores `=HYPERLINK("evil")` in
+ * a free-text field can ship that payload to anyone who opens the
+ * exported CSV in Excel. We neutralise by prefixing such values with a
+ * single quote — Excel renders the value as-is and skips formula parsing.
+ *
+ * Reference: OWASP CSV Injection.
+ */
+function csvCell(v: unknown): string {
+  if (v == null) return "";
+  if (Array.isArray(v)) return csvCell(v.join("|"));
+  let s = typeof v === "object" ? JSON.stringify(v) : String(v);
+  // Defang formula-leading characters.
+  if (/^[=+\-@\t\r]/.test(s)) {
+    s = "'" + s;
+  }
+  return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+}
+
+/**
+ * Convert an array of rows into a CSV string, BOM-prefixed for Excel's
+ * UTF-8 detection. `columns[].key` may be dotted ("agent.agentCode")
+ * to walk nested objects safely.
+ */
+export function rowsToCsv(
+  rows: Record<string, unknown>[],
+  columns: { key: string; label: string }[],
+): string {
+  const header = columns.map((c) => csvCell(c.label)).join(",");
+  const body = rows
+    .map((r) =>
+      columns
+        .map((c) => {
+          const path = c.key.split(".");
+          let v: unknown = r;
+          for (const p of path) v = (v as Record<string, unknown> | null)?.[p];
+          return csvCell(v);
+        })
+        .join(","),
+    )
+    .join("\n");
+  return "﻿" + header + "\n" + body;
 }

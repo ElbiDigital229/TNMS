@@ -16,11 +16,27 @@ const utilityEnum = z.enum([
 ]);
 
 const optionalString = z.string().trim().max(2000).optional().nullable().or(z.literal(""));
-const optionalDecimal = z.union([z.number(), z.string()]).optional().nullable().or(z.literal(""));
 const optionalDate = z
   .union([z.string().datetime(), z.string().date(), z.literal("")])
   .optional()
   .nullable();
+
+/**
+ * Accept number, numeric string, or empty — coerce to a non-negative number.
+ * Rejects negative values, since none of the size/price fields they decorate
+ * (plot area, road width, asking price, etc.) make business sense as negative.
+ */
+const nonNegativeDecimal = z.preprocess(
+  (v) => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    if (typeof v === "string") {
+      const n = parseFloat(v.replace(/,/g, ""));
+      return Number.isNaN(n) ? v : n;
+    }
+    return v;
+  },
+  z.number().nonnegative("Must be zero or greater").optional(),
+);
 
 export const createLandSchema = z.object({
   agentId: z.string().uuid().optional().nullable().or(z.literal("")),
@@ -28,15 +44,15 @@ export const createLandSchema = z.object({
   areaLocation: optionalString,
   addressDescription: optionalString,
   coordinates: optionalString,
-  plotSizeKanal: optionalDecimal,
-  frontRoadWidthFt: optionalDecimal,
+  plotSizeKanal: nonNegativeDecimal,
+  frontRoadWidthFt: nonNegativeDecimal,
   zoning: zoningEnum.optional().nullable().or(z.literal("")),
   developmentStatus: optionalString,
-  maxCoveredAreaSqft: optionalDecimal,
+  maxCoveredAreaSqft: nonNegativeDecimal,
   utilities: z.array(utilityEnum).optional(),
   parkingPotential: optionalString,
   proposedModel: proposedModelEnum.optional().nullable().or(z.literal("")),
-  askingPrice: optionalDecimal,
+  askingPrice: nonNegativeDecimal,
   ownerFlexibility: optionalString,
   stage: stageEnum.optional(),
   status: statusEnum.optional(),

@@ -16,12 +16,36 @@ const utilityEnum = z.enum([
 ]);
 
 const optionalString = z.string().trim().max(2000).optional().nullable().or(z.literal(""));
-const optionalDecimal = z.union([z.number(), z.string()]).optional().nullable().or(z.literal(""));
-const optionalInt = z.union([z.number().int(), z.string()]).optional().nullable().or(z.literal(""));
 const optionalDate = z
   .union([z.string().datetime(), z.string().date(), z.literal("")])
   .optional()
   .nullable();
+
+/** Accept number, numeric string, or empty — coerce to non-negative number. */
+const nonNegativeDecimal = z.preprocess(
+  (v) => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    if (typeof v === "string") {
+      const n = parseFloat(v.replace(/,/g, ""));
+      return Number.isNaN(n) ? v : n;
+    }
+    return v;
+  },
+  z.number().nonnegative("Must be zero or greater").optional(),
+);
+
+/** Same shape, coerced to a non-negative integer (floors, parking, elevators). */
+const nonNegativeInt = z.preprocess(
+  (v) => {
+    if (v === "" || v === null || v === undefined) return undefined;
+    if (typeof v === "string") {
+      const n = parseInt(v, 10);
+      return Number.isNaN(n) ? v : n;
+    }
+    return v;
+  },
+  z.number().int().nonnegative("Must be zero or greater").optional(),
+);
 
 export const createBuildingSchema = z.object({
   agentId: z.string().uuid().optional().nullable().or(z.literal("")),
@@ -29,18 +53,18 @@ export const createBuildingSchema = z.object({
   areaLocation: optionalString,
   propertyAddress: optionalString,
   coordinates: optionalString,
-  coveredAreaSqft: optionalDecimal,
-  plotSizeKanal: optionalDecimal,
-  floors: optionalInt,
-  floorPlateSizeSqft: optionalDecimal,
-  parkingCapacity: optionalInt,
+  coveredAreaSqft: nonNegativeDecimal,
+  plotSizeKanal: nonNegativeDecimal,
+  floors: nonNegativeInt,
+  floorPlateSizeSqft: nonNegativeDecimal,
+  parkingCapacity: nonNegativeInt,
   buildingStatus: buildingStatusEnum.optional().nullable().or(z.literal("")),
   possessionTimeline: optionalString,
   utilities: z.array(utilityEnum).optional(),
   powerBackup: optionalString,
-  elevators: optionalInt,
+  elevators: nonNegativeInt,
   proposedModel: proposedModelEnum.optional().nullable().or(z.literal("")),
-  askingRent: optionalDecimal,
+  askingRent: nonNegativeDecimal,
   stage: stageEnum.optional(),
   status: statusEnum.optional(),
   lastAvailabilityCheck: optionalDate,

@@ -1,25 +1,7 @@
 import type { Request, Response } from "express";
 import { landService } from "./land.service.js";
 import { sendSuccess, sendError } from "../../../utils/apiResponse.js";
-
-function rowsToCsv(rows: Record<string, unknown>[], columns: { key: string; label: string }[]): string {
-  const escape = (v: unknown) => {
-    if (v == null) return "";
-    if (Array.isArray(v)) return v.join("|");
-    const s = typeof v === "object" ? JSON.stringify(v) : String(v);
-    return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  const header = columns.map((c) => c.label).join(",");
-  const body = rows
-    .map((r) => columns.map((c) => {
-      const path = c.key.split(".");
-      let v: any = r;
-      for (const p of path) v = v?.[p];
-      return escape(v);
-    }).join(","))
-    .join("\n");
-  return "﻿" + header + "\n" + body;
-}
+import { rowsToCsv } from "../_shared.js";
 
 export const landController = {
   async findAll(req: Request, res: Response) {
