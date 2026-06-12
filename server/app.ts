@@ -31,6 +31,9 @@ import { auditRoutes } from "./modules/audit/audit.routes.js";
 import { reportRoutes } from "./modules/report/report.routes.js";
 import { notificationRoutes } from "./modules/notification/notification.routes.js";
 import { ticketScheduleRoutes } from "./modules/ticketSchedule/ticketSchedule.routes.js";
+import { acquisitionAgentRoutes } from "./modules/acquisition/agent/agent.routes.js";
+import { acquisitionLandRoutes } from "./modules/acquisition/land/land.routes.js";
+import { acquisitionBuildingRoutes } from "./modules/acquisition/building/building.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -191,6 +194,9 @@ app.use("/api/audit-logs", auditRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/ticket-schedules", ticketScheduleRoutes);
+app.use("/api/acquisitions/agents", acquisitionAgentRoutes);
+app.use("/api/acquisitions/land", acquisitionLandRoutes);
+app.use("/api/acquisitions/buildings", acquisitionBuildingRoutes);
 
 // Unmatched /api/* → JSON 404 (don't fall through to SPA)
 app.use("/api", (_req, res) => {

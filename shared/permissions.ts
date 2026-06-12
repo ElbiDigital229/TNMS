@@ -75,6 +75,14 @@ export const PERMISSIONS = {
   REPORTS: {
     VIEW: "reports.view",
   },
+  ACQUISITIONS: {
+    VIEW: "acquisitions.view",
+    CREATE: "acquisitions.create",
+    EDIT: "acquisitions.edit",
+    DELETE: "acquisitions.delete",
+    IMPORT: "acquisitions.import",
+    EXPORT: "acquisitions.export",
+  },
 } as const;
 
 // Flat list of all permission keys
@@ -152,6 +160,13 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.AUDIT.EXPORT, module: "audit", description: "Export audit log" },
   // Reports
   { key: PERMISSIONS.REPORTS.VIEW, module: "reports", description: "Run report queries" },
+  // Acquisitions
+  { key: PERMISSIONS.ACQUISITIONS.VIEW, module: "acquisitions", description: "View acquisition agents, land, and buildings" },
+  { key: PERMISSIONS.ACQUISITIONS.CREATE, module: "acquisitions", description: "Create acquisition records" },
+  { key: PERMISSIONS.ACQUISITIONS.EDIT, module: "acquisitions", description: "Edit acquisition records" },
+  { key: PERMISSIONS.ACQUISITIONS.DELETE, module: "acquisitions", description: "Archive/restore acquisition records" },
+  { key: PERMISSIONS.ACQUISITIONS.IMPORT, module: "acquisitions", description: "Bulk import acquisition records via CSV" },
+  { key: PERMISSIONS.ACQUISITIONS.EXPORT, module: "acquisitions", description: "Export acquisition records to CSV" },
 ];
 
 // Module labels for UI grouping
@@ -168,4 +183,5 @@ export const MODULE_LABELS: Record<string, string> = {
   roles: "Roles & Permissions",
   audit: "Audit Log",
   reports: "Reports",
+  acquisitions: "Acquisitions",
 };

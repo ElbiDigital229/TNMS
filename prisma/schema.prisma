@@ -569,3 +569,157 @@ model DeviceToken {
   @@index([userId])
 }
 
+// ─── Acquisitions module ──────────────────────────────────────────────────
+// Admin-only real-estate prospecting CRM. Agents are sourced from brokers /
+// owners / consultants; each Agent may have multiple Land and Building
+// inventory rows. Sits alongside but does not interact with the existing
+// managed-property workflow (Property / Floor / Unit / Asset / Ticket).
+
+enum AcquisitionSourceType {
+  BROKER
+  OWNER
+  CONSULTANT
+}
+
+enum AcquisitionStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum LandZoning {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED_USE
+}
+
+enum LandProposedModel {
+  JV
+  DEVELOPMENT
+  SALE
+}
+
+enum BuildingStatus {
+  READY
+  UNDER_CONSTRUCTION
+}
+
+enum BuildingProposedModel {
+  LEASE
+  JV
+  OPERATOR
+}
+
+enum DealStage {
+  REVIEW
+  VISIT
+  NEGOTIATION
+  CLOSED_WON
+  CLOSED_LOST
+}
+
+enum UtilityType {
+  WATER
+  GAS
+  ELECTRICITY
+  SEWERAGE
+  INTERNET
+  PHONE
+  BOREWELL
+  SOLAR
+}
+
+model AcquisitionAgent {
+  id                    String                @id @default(uuid())
+  agentCode             String                @unique
+  agentName             String
+  companyName           String?
+  contactNumber         String
+  email                 String?
+  city                  String
+  areaFocus             String?
+  sourceType            AcquisitionSourceType
+  rating                Int                   @default(3)
+  firstContactDate      DateTime?
+  status                AcquisitionStatus     @default(ACTIVE)
+  lastAvailabilityCheck DateTime?
+  notes                 String?
+  createdAt             DateTime              @default(now())
+  updatedAt             DateTime              @updatedAt
+  deletedAt             DateTime?
+
+  lands     AcquisitionLand[]
+  buildings AcquisitionBuilding[]
+
+  @@index([status, deletedAt])
+  @@index([city])
+  @@index([sourceType])
+}
+
+model AcquisitionLand {
+  id                    String              @id @default(uuid())
+  landCode              String              @unique
+  agentId               String?
+  agent                 AcquisitionAgent?   @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  city                  String
+  areaLocation          String?
+  addressDescription    String?
+  coordinates           String?
+  plotSizeKanal         Decimal?            @db.Decimal(10, 2)
+  frontRoadWidthFt      Decimal?            @db.Decimal(6, 2)
+  zoning                LandZoning?
+  developmentStatus     String?
+  maxCoveredAreaSqft    Decimal?            @db.Decimal(12, 2)
+  utilities             UtilityType[]
+  parkingPotential      String?
+  proposedModel         LandProposedModel?
+  askingPrice           Decimal?            @db.Decimal(18, 2)
+  ownerFlexibility      String?
+  stage                 DealStage           @default(REVIEW)
+  status                AcquisitionStatus   @default(ACTIVE)
+  lastAvailabilityCheck DateTime?
+  notes                 String?
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+  deletedAt             DateTime?
+
+  @@index([agentId])
+  @@index([status, deletedAt])
+  @@index([stage])
+  @@index([city])
+}
+
+model AcquisitionBuilding {
+  id                    String                  @id @default(uuid())
+  buildingCode          String                  @unique
+  agentId               String?
+  agent                 AcquisitionAgent?       @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  city                  String
+  areaLocation          String?
+  propertyAddress       String?
+  coordinates           String?
+  coveredAreaSqft       Decimal?                @db.Decimal(12, 2)
+  plotSizeKanal         Decimal?                @db.Decimal(10, 2)
+  floors                Int?
+  floorPlateSizeSqft    Decimal?                @db.Decimal(12, 2)
+  parkingCapacity       Int?
+  buildingStatus        BuildingStatus?
+  possessionTimeline    String?
+  utilities             UtilityType[]
+  powerBackup           String?
+  elevators             Int?
+  proposedModel         BuildingProposedModel?
+  askingRent            Decimal?                @db.Decimal(18, 2)
+  stage                 DealStage               @default(REVIEW)
+  status                AcquisitionStatus       @default(ACTIVE)
+  lastAvailabilityCheck DateTime?
+  notes                 String?
+  createdAt             DateTime                @default(now())
+  updatedAt             DateTime                @updatedAt
+  deletedAt             DateTime?
+
+  @@index([agentId])
+  @@index([status, deletedAt])
+  @@index([stage])
+  @@index([city])
+}
+
