@@ -26,8 +26,12 @@ CREATE SEQUENCE IF NOT EXISTS "acquisition_building_code_seq"
   MINVALUE 1
   START WITH 1;
 
--- Seed each sequence past the highest existing code so we never collide
--- with rows that pre-date this migration.
+-- Seed each sequence to the next unused code. setval(seq, n, false) makes
+-- the next nextval() call return exactly n; combined with COALESCE(...,0)+1
+-- this works whether the table is empty (next=1) or already has rows
+-- (next=MAX+1). The "true" variant cannot be used here because it would
+-- accept 0 as "last value used", and Postgres sequences with MINVALUE 1
+-- reject setval(seq, 0, true).
 SELECT setval(
   'acquisition_agent_code_seq',
   COALESCE(
@@ -35,8 +39,8 @@ SELECT setval(
        FROM "AcquisitionAgent"
        WHERE "agentCode" ~ '^AGT-[0-9]+$'),
     0
-  ),
-  true
+  ) + 1,
+  false
 );
 
 SELECT setval(
@@ -46,8 +50,8 @@ SELECT setval(
        FROM "AcquisitionLand"
        WHERE "landCode" ~ '^LND-[0-9]+$'),
     0
-  ),
-  true
+  ) + 1,
+  false
 );
 
 SELECT setval(
@@ -57,6 +61,6 @@ SELECT setval(
        FROM "AcquisitionBuilding"
        WHERE "buildingCode" ~ '^BLD-[0-9]+$'),
     0
-  ),
-  true
+  ) + 1,
+  false
 );
