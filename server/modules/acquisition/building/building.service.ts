@@ -1,5 +1,11 @@
 import { prisma } from "../../../config/db.js";
 import type { Prisma } from "@prisma/client";
+import { createBuildingSchema } from "./building.schemas.js";
+import {
+  withCodeRetry,
+  formatZodError,
+  formatImportError,
+} from "../_shared.js";
 
 const UTILITY_VALUES = [
   "WATER",
@@ -13,19 +19,17 @@ const UTILITY_VALUES = [
 ] as const;
 type Utility = (typeof UTILITY_VALUES)[number];
 
-async function generateNextCode(): Promise<string> {
-  const last = await prisma.acquisitionBuilding.findFirst({
-    where: { buildingCode: { startsWith: "BLD-" } },
-    orderBy: { buildingCode: "desc" },
-    select: { buildingCode: true },
-  });
-  let n = 1;
-  if (last) {
-    const parsed = parseInt(last.buildingCode.split("-")[1] ?? "0", 10);
-    if (!Number.isNaN(parsed)) n = parsed + 1;
-  }
-  return `BLD-${String(n).padStart(4, "0")}`;
-}
+const AGENT_INCLUDE = {
+  agent: {
+    select: {
+      id: true,
+      agentCode: true,
+      agentName: true,
+      companyName: true,
+      deletedAt: true,
+    },
+  },
+} as const;
 
 function normalizeUtilities(value: unknown): Utility[] {
   if (Array.isArray(value)) {
@@ -52,7 +56,6 @@ function normalize(input: Record<string, unknown>) {
   for (const k of ["buildingStatus", "proposedModel"]) {
     if (data[k] === "") data[k] = null;
   }
-  // Decimals
   for (const k of ["coveredAreaSqft", "plotSizeKanal", "floorPlateSizeSqft", "askingRent"]) {
     if (data[k] === "" || data[k] === undefined) {
       data[k] = null;
@@ -61,7 +64,6 @@ function normalize(input: Record<string, unknown>) {
       data[k] = Number.isNaN(parsed) ? null : parsed;
     }
   }
-  // Ints
   for (const k of ["floors", "parkingCapacity", "elevators"]) {
     if (data[k] === "" || data[k] === undefined) {
       data[k] = null;
@@ -76,6 +78,20 @@ function normalize(input: Record<string, unknown>) {
   }
   data.utilities = normalizeUtilities(data.utilities);
   return data;
+}
+
+async function resolveAgentCode(raw: Record<string, unknown>) {
+  if (raw.agentCode && !raw.agentId) {
+    const code = String(raw.agentCode).trim();
+    const agent = await prisma.acquisitionAgent.findUnique({
+      where: { agentCode: code },
+      select: { id: true },
+    });
+    if (!agent) throw new Error(`Unknown agentCode: ${code}`);
+    raw.agentId = agent.id;
+    delete raw.agentCode;
+  }
+  return raw;
 }
 
 export const buildingService = {
@@ -116,9 +132,7 @@ export const buildingService = {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: {
-          agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-        },
+        include: AGENT_INCLUDE,
       }),
     ]);
 
@@ -131,21 +145,18 @@ export const buildingService = {
   async findById(id: string) {
     return prisma.acquisitionBuilding.findUnique({
       where: { id },
-      include: {
-        agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-      },
+      include: AGENT_INCLUDE,
     });
   },
 
   async create(input: Record<string, unknown>) {
     const data = normalize(input) as Prisma.AcquisitionBuildingCreateInput;
-    (data as any).buildingCode = await generateNextCode();
-    return prisma.acquisitionBuilding.create({
-      data,
-      include: {
-        agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-      },
-    });
+    return withCodeRetry("BLD", "AcquisitionBuilding", "buildingCode", (code) =>
+      prisma.acquisitionBuilding.create({
+        data: { ...data, buildingCode: code },
+        include: AGENT_INCLUDE,
+      }),
+    );
   },
 
   async update(id: string, input: Record<string, unknown>) {
@@ -153,9 +164,7 @@ export const buildingService = {
     return prisma.acquisitionBuilding.update({
       where: { id },
       data,
-      include: {
-        agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-      },
+      include: AGENT_INCLUDE,
     });
   },
 
@@ -177,19 +186,16 @@ export const buildingService = {
     const results: { row: number; status: "success" | "error"; id?: string; error?: string }[] = [];
     for (let i = 0; i < items.length; i++) {
       try {
-        const raw = items[i];
-        if (raw.agentCode && !raw.agentId) {
-          const agent = await prisma.acquisitionAgent.findUnique({
-            where: { agentCode: String(raw.agentCode) },
-            select: { id: true },
-          });
-          if (!agent) throw new Error(`Unknown agentCode: ${raw.agentCode}`);
-          raw.agentId = agent.id;
+        const raw = await resolveAgentCode({ ...items[i] });
+        const parsed = createBuildingSchema.safeParse(raw);
+        if (!parsed.success) {
+          results.push({ row: i + 1, status: "error", error: formatZodError(parsed.error) });
+          continue;
         }
-        const created = await this.create(raw);
+        const created = await this.create(parsed.data as Record<string, unknown>);
         results.push({ row: i + 1, status: "success", id: created.id });
-      } catch (e: any) {
-        results.push({ row: i + 1, status: "error", error: e?.message || "Unknown error" });
+      } catch (e) {
+        results.push({ row: i + 1, status: "error", error: formatImportError(e) });
       }
     }
     return results;

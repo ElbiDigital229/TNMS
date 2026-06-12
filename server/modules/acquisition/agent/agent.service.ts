@@ -1,28 +1,24 @@
 import { prisma } from "../../../config/db.js";
 import type { Prisma } from "@prisma/client";
+import { createAgentSchema } from "./agent.schemas.js";
+import {
+  withCodeRetry,
+  formatZodError,
+  formatImportError,
+} from "../_shared.js";
 
-/** Generate the next code in a "PREFIX-0001" sequence by scanning existing rows. */
-async function generateNextCode(prefix: string): Promise<string> {
-  const last = await prisma.acquisitionAgent.findFirst({
-    where: { agentCode: { startsWith: `${prefix}-` } },
-    orderBy: { agentCode: "desc" },
-    select: { agentCode: true },
-  });
-  let n = 1;
-  if (last) {
-    const parsed = parseInt(last.agentCode.split("-")[1] ?? "0", 10);
-    if (!Number.isNaN(parsed)) n = parsed + 1;
-  }
-  return `${prefix}-${String(n).padStart(4, "0")}`;
-}
-
-/** Activity counter — non-closed deals across both inventories. */
+/**
+ * Counter of "open" deals for an agent — non-archived, ACTIVE-status,
+ * and not in a terminal stage. Reflects what a recruiter would call
+ * "deals in the pipeline."
+ */
 async function activeDealsCount(agentId: string): Promise<number> {
   const [land, building] = await Promise.all([
     prisma.acquisitionLand.count({
       where: {
         agentId,
         deletedAt: null,
+        status: "ACTIVE",
         stage: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
       },
     }),
@@ -30,6 +26,7 @@ async function activeDealsCount(agentId: string): Promise<number> {
       where: {
         agentId,
         deletedAt: null,
+        status: "ACTIVE",
         stage: { notIn: ["CLOSED_WON", "CLOSED_LOST"] },
       },
     }),
@@ -39,12 +36,10 @@ async function activeDealsCount(agentId: string): Promise<number> {
 
 function normalize(input: Record<string, unknown>) {
   const data: Record<string, unknown> = { ...input };
-  // Coerce empty strings to null for optional text/date columns.
   const nullables = ["companyName", "email", "areaFocus", "firstContactDate", "lastAvailabilityCheck", "notes"];
   for (const k of nullables) {
     if (data[k] === "" || data[k] === undefined) data[k] = null;
   }
-  // Date coercion
   for (const k of ["firstContactDate", "lastAvailabilityCheck"] as const) {
     if (data[k] && typeof data[k] === "string") {
       const d = new Date(data[k] as string);
@@ -94,7 +89,6 @@ export const agentService = {
       }),
     ]);
 
-    // Attach activeDeals counts
     const enriched = await Promise.all(
       rows.map(async (a) => ({ ...a, activeDeals: await activeDealsCount(a.id) })),
     );
@@ -127,8 +121,9 @@ export const agentService = {
 
   async create(input: Record<string, unknown>) {
     const data = normalize(input) as Prisma.AcquisitionAgentCreateInput;
-    data.agentCode = await generateNextCode("AGT");
-    return prisma.acquisitionAgent.create({ data });
+    return withCodeRetry("AGT", "AcquisitionAgent", "agentCode", (code) =>
+      prisma.acquisitionAgent.create({ data: { ...data, agentCode: code } }),
+    );
   },
 
   async update(id: string, input: Record<string, unknown>) {
@@ -154,10 +149,17 @@ export const agentService = {
     const results: { row: number; status: "success" | "error"; id?: string; error?: string }[] = [];
     for (let i = 0; i < items.length; i++) {
       try {
-        const created = await this.create(items[i]);
+        // Validate against the create schema first — gives clean, field-level
+        // errors instead of a raw Prisma stack trace.
+        const parsed = createAgentSchema.safeParse(items[i]);
+        if (!parsed.success) {
+          results.push({ row: i + 1, status: "error", error: formatZodError(parsed.error) });
+          continue;
+        }
+        const created = await this.create(parsed.data as Record<string, unknown>);
         results.push({ row: i + 1, status: "success", id: created.id });
-      } catch (e: any) {
-        results.push({ row: i + 1, status: "error", error: e?.message || "Unknown error" });
+      } catch (e) {
+        results.push({ row: i + 1, status: "error", error: formatImportError(e) });
       }
     }
     return results;

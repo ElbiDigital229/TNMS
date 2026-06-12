@@ -1,5 +1,11 @@
 import { prisma } from "../../../config/db.js";
 import type { Prisma } from "@prisma/client";
+import { createLandSchema } from "./land.schemas.js";
+import {
+  withCodeRetry,
+  formatZodError,
+  formatImportError,
+} from "../_shared.js";
 
 const UTILITY_VALUES = [
   "WATER",
@@ -13,25 +19,23 @@ const UTILITY_VALUES = [
 ] as const;
 type Utility = (typeof UTILITY_VALUES)[number];
 
-async function generateNextCode(): Promise<string> {
-  const last = await prisma.acquisitionLand.findFirst({
-    where: { landCode: { startsWith: "LND-" } },
-    orderBy: { landCode: "desc" },
-    select: { landCode: true },
-  });
-  let n = 1;
-  if (last) {
-    const parsed = parseInt(last.landCode.split("-")[1] ?? "0", 10);
-    if (!Number.isNaN(parsed)) n = parsed + 1;
-  }
-  return `LND-${String(n).padStart(4, "0")}`;
-}
+/** Agent include — includes deletedAt so the UI can show "(archived)". */
+const AGENT_INCLUDE = {
+  agent: {
+    select: {
+      id: true,
+      agentCode: true,
+      agentName: true,
+      companyName: true,
+      deletedAt: true,
+    },
+  },
+} as const;
 
 function normalizeUtilities(value: unknown): Utility[] {
   if (Array.isArray(value)) {
     return value.filter((u): u is Utility => UTILITY_VALUES.includes(u as Utility));
   }
-  // CSV-friendly: accept "WATER|GAS" or "WATER,GAS" strings.
   if (typeof value === "string" && value.trim()) {
     return value
       .split(/[|,]/)
@@ -43,7 +47,6 @@ function normalizeUtilities(value: unknown): Utility[] {
 
 function normalize(input: Record<string, unknown>) {
   const data: Record<string, unknown> = { ...input };
-  // Empty-string → null
   const nullableText = [
     "agentId", "areaLocation", "addressDescription", "coordinates",
     "developmentStatus", "parkingPotential", "ownerFlexibility", "notes",
@@ -52,11 +55,9 @@ function normalize(input: Record<string, unknown>) {
   for (const k of nullableText) {
     if (data[k] === "" || data[k] === undefined) data[k] = null;
   }
-  // Empty-string enums → null
   for (const k of ["zoning", "proposedModel"]) {
     if (data[k] === "") data[k] = null;
   }
-  // Decimal coercion
   for (const k of ["plotSizeKanal", "frontRoadWidthFt", "maxCoveredAreaSqft", "askingPrice"]) {
     if (data[k] === "" || data[k] === undefined) {
       data[k] = null;
@@ -65,14 +66,31 @@ function normalize(input: Record<string, unknown>) {
       data[k] = Number.isNaN(parsed) ? null : parsed;
     }
   }
-  // Date coercion
   if (data.lastAvailabilityCheck && typeof data.lastAvailabilityCheck === "string") {
     const d = new Date(data.lastAvailabilityCheck);
     data.lastAvailabilityCheck = Number.isNaN(d.getTime()) ? null : d;
   }
-  // Utilities
   data.utilities = normalizeUtilities(data.utilities);
   return data;
+}
+
+/**
+ * Resolve a bulk-import row that uses `agentCode` (admin-friendly) into the
+ * UUID-based `agentId` the create schema expects. Returns the modified row;
+ * throws if the code is given but doesn't match any agent.
+ */
+async function resolveAgentCode(raw: Record<string, unknown>) {
+  if (raw.agentCode && !raw.agentId) {
+    const code = String(raw.agentCode).trim();
+    const agent = await prisma.acquisitionAgent.findUnique({
+      where: { agentCode: code },
+      select: { id: true },
+    });
+    if (!agent) throw new Error(`Unknown agentCode: ${code}`);
+    raw.agentId = agent.id;
+    delete raw.agentCode;
+  }
+  return raw;
 }
 
 export const landService = {
@@ -113,9 +131,7 @@ export const landService = {
         orderBy: { createdAt: "desc" },
         skip: (page - 1) * limit,
         take: limit,
-        include: {
-          agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-        },
+        include: AGENT_INCLUDE,
       }),
     ]);
 
@@ -128,21 +144,18 @@ export const landService = {
   async findById(id: string) {
     return prisma.acquisitionLand.findUnique({
       where: { id },
-      include: {
-        agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-      },
+      include: AGENT_INCLUDE,
     });
   },
 
   async create(input: Record<string, unknown>) {
     const data = normalize(input) as Prisma.AcquisitionLandCreateInput;
-    (data as any).landCode = await generateNextCode();
-    return prisma.acquisitionLand.create({
-      data,
-      include: {
-        agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-      },
-    });
+    return withCodeRetry("LND", "AcquisitionLand", "landCode", (code) =>
+      prisma.acquisitionLand.create({
+        data: { ...data, landCode: code },
+        include: AGENT_INCLUDE,
+      }),
+    );
   },
 
   async update(id: string, input: Record<string, unknown>) {
@@ -150,9 +163,7 @@ export const landService = {
     return prisma.acquisitionLand.update({
       where: { id },
       data,
-      include: {
-        agent: { select: { id: true, agentCode: true, agentName: true, companyName: true } },
-      },
+      include: AGENT_INCLUDE,
     });
   },
 
@@ -174,20 +185,16 @@ export const landService = {
     const results: { row: number; status: "success" | "error"; id?: string; error?: string }[] = [];
     for (let i = 0; i < items.length; i++) {
       try {
-        // Allow CSV to reference agent by code instead of UUID.
-        const raw = items[i];
-        if (raw.agentCode && !raw.agentId) {
-          const agent = await prisma.acquisitionAgent.findUnique({
-            where: { agentCode: String(raw.agentCode) },
-            select: { id: true },
-          });
-          if (!agent) throw new Error(`Unknown agentCode: ${raw.agentCode}`);
-          raw.agentId = agent.id;
+        const raw = await resolveAgentCode({ ...items[i] });
+        const parsed = createLandSchema.safeParse(raw);
+        if (!parsed.success) {
+          results.push({ row: i + 1, status: "error", error: formatZodError(parsed.error) });
+          continue;
         }
-        const created = await this.create(raw);
+        const created = await this.create(parsed.data as Record<string, unknown>);
         results.push({ row: i + 1, status: "success", id: created.id });
-      } catch (e: any) {
-        results.push({ row: i + 1, status: "error", error: e?.message || "Unknown error" });
+      } catch (e) {
+        results.push({ row: i + 1, status: "error", error: formatImportError(e) });
       }
     }
     return results;
