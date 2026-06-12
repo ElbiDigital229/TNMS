@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 import { acquisitionAgentApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
 import { useAuth } from "../contexts/AuthContext";
@@ -11,16 +12,17 @@ import BulkImportModal from "../components/ui/BulkImportModal";
 import {
   Plus,
   Search,
-  Pencil,
-  Trash2,
-  RotateCcw,
   Star,
   Handshake,
   Download,
   Upload,
+  MoreHorizontal,
+  Eye,
+  Pencil,
+  Trash2,
+  RotateCcw,
 } from "lucide-react";
 
-// ─── Types ───────────────────────────────────────────────────────────────
 interface Agent {
   id: string;
   agentCode: string;
@@ -47,59 +49,104 @@ const SOURCE_TYPE_LABELS: Record<string, string> = {
   OWNER: "Owner",
   CONSULTANT: "Consultant",
 };
-
 const SOURCE_TYPE_COLORS: Record<string, string> = {
   BROKER: "bg-blue-50 text-blue-700",
   OWNER: "bg-emerald-50 text-emerald-700",
   CONSULTANT: "bg-violet-50 text-violet-700",
 };
 
-const emptyForm = {
-  agentName: "",
-  companyName: "",
-  contactNumber: "",
-  email: "",
-  city: "",
-  areaFocus: "",
-  sourceType: "BROKER",
-  rating: 3,
-  firstContactDate: "",
-  status: "ACTIVE",
-  lastAvailabilityCheck: "",
-  notes: "",
-};
-
-// ─── Mini star-rating input ───────────────────────────────────────────────
-function StarRating({ value, onChange, readOnly = false, size = 16 }: {
-  value: number;
-  onChange?: (n: number) => void;
-  readOnly?: boolean;
-  size?: number;
-}) {
+function StarRow({ value }: { value: number }) {
   return (
     <div className="inline-flex items-center gap-0.5">
       {[1, 2, 3, 4, 5].map((n) => (
-        <button
-          key={n}
-          type="button"
-          disabled={readOnly}
-          onClick={() => onChange?.(n)}
-          className={readOnly ? "cursor-default" : "cursor-pointer transition-transform hover:scale-110"}
-          title={`${n} of 5`}
-        >
-          <Star
-            size={size}
-            className={n <= value ? "fill-amber-400 text-amber-400" : "text-gray-300"}
-          />
-        </button>
+        <Star key={n} size={12} className={n <= value ? "fill-amber-400 text-amber-400" : "text-gray-300"} />
       ))}
     </div>
   );
 }
 
-// ─── Page ─────────────────────────────────────────────────────────────────
+/** 3-dot action menu shown in the rightmost column of each row. */
+function RowMenu({
+  agent,
+  canEdit,
+  canDelete,
+  onArchive,
+  onRestore,
+}: {
+  agent: Agent;
+  canEdit: boolean;
+  canDelete: boolean;
+  onArchive: () => void;
+  onRestore: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const navigate = useNavigate();
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const close = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", close);
+    return () => document.removeEventListener("mousedown", close);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative inline-block">
+      <button
+        type="button"
+        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
+        className={cls.btnIcon}
+        title="More actions"
+      >
+        <MoreHorizontal size={16} />
+      </button>
+      {open && (
+        <div className="absolute right-0 z-10 mt-1 w-36 rounded-md bg-white py-1 text-[13px] shadow-lg ring-1 ring-gray-200">
+          <button
+            type="button"
+            onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/acquisitions/agents/${agent.id}/edit`); }}
+            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50"
+          >
+            <Eye size={13} className="text-gray-500" /> View
+          </button>
+          {canEdit && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/acquisitions/agents/${agent.id}/edit`); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50"
+            >
+              <Pencil size={13} className="text-gray-500" /> Edit
+            </button>
+          )}
+          {canDelete && !agent.deletedAt && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onArchive(); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
+            >
+              <Trash2 size={13} /> Archive
+            </button>
+          )}
+          {canDelete && agent.deletedAt && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); setOpen(false); onRestore(); }}
+              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-emerald-600 hover:bg-emerald-50"
+            >
+              <RotateCcw size={13} /> Restore
+            </button>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function AcquisitionAgentsPage() {
   const toast = useToast();
+  const navigate = useNavigate();
   const { hasPermission } = useAuth();
   const canCreate = hasPermission(PERMISSIONS.ACQUISITIONS.CREATE);
   const canEdit = hasPermission(PERMISSIONS.ACQUISITIONS.EDIT);
@@ -117,11 +164,6 @@ export default function AcquisitionAgentsPage() {
   const [includeDeleted, setIncludeDeleted] = useState(false);
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState({ total: 0, totalPages: 0, page: 1, limit: 25 });
-
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editing, setEditing] = useState<Agent | null>(null);
-  const [form, setForm] = useState(emptyForm);
-  const [saving, setSaving] = useState(false);
 
   const [confirmArchive, setConfirmArchive] = useState<Agent | null>(null);
   const [importOpen, setImportOpen] = useState(false);
@@ -147,64 +189,10 @@ export default function AcquisitionAgentsPage() {
 
   useEffect(() => { fetchAgents(); }, [fetchAgents]);
 
-  // Debounced search
   useEffect(() => {
     const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
     return () => clearTimeout(t);
   }, [searchInput]);
-
-  const openCreate = () => {
-    setEditing(null);
-    setForm(emptyForm);
-    setModalOpen(true);
-  };
-
-  const openEdit = (a: Agent) => {
-    setEditing(a);
-    setForm({
-      agentName: a.agentName,
-      companyName: a.companyName || "",
-      contactNumber: a.contactNumber,
-      email: a.email || "",
-      city: a.city,
-      areaFocus: a.areaFocus || "",
-      sourceType: a.sourceType,
-      rating: a.rating,
-      firstContactDate: a.firstContactDate ? a.firstContactDate.slice(0, 10) : "",
-      status: a.status,
-      lastAvailabilityCheck: a.lastAvailabilityCheck ? a.lastAvailabilityCheck.slice(0, 10) : "",
-      notes: a.notes || "",
-    });
-    setModalOpen(true);
-  };
-
-  const closeModal = () => { setModalOpen(false); setEditing(null); setForm(emptyForm); };
-  const updateForm = (k: keyof typeof emptyForm, v: any) => setForm((f) => ({ ...f, [k]: v }));
-
-  const handleSave = async () => {
-    if (!form.agentName.trim()) return toast.error("Agent name is required");
-    if (!form.contactNumber.trim()) return toast.error("Contact number is required");
-    if (!form.city.trim()) return toast.error("City is required");
-
-    setSaving(true);
-    try {
-      const payload = { ...form };
-      if (editing) await acquisitionAgentApi.update(editing.id, payload);
-      else await acquisitionAgentApi.create(payload);
-      toast.success(editing ? "Agent updated" : "Agent created");
-      closeModal();
-      fetchAgents();
-    } catch (err: any) {
-      const data = err.response?.data;
-      let msg = data?.error || "Failed to save agent";
-      if (Array.isArray(data?.details) && data.details.length > 0) {
-        msg = `${msg} — ${data.details.map((d: any) => `${d.path}: ${d.message}`).join("; ")}`;
-      }
-      toast.error(msg);
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleArchive = async (a: Agent) => {
     try {
@@ -234,7 +222,6 @@ export default function AcquisitionAgentsPage() {
     if (sourceFilter) params.sourceType = sourceFilter;
     if (cityFilter) params.city = cityFilter;
     const url = acquisitionAgentApi.exportUrl(params);
-    // Use a token-aware fetch so the auth header passes through, then trigger download
     fetch(url, { headers: { Authorization: `Bearer ${localStorage.getItem("token") || ""}` } })
       .then((r) => r.blob())
       .then((blob) => {
@@ -247,12 +234,10 @@ export default function AcquisitionAgentsPage() {
       .catch(() => toast.error("Failed to export"));
   };
 
-  const fmtDate = (d: string | null) => d ? new Date(d).toLocaleDateString("en-GB") : "—";
-
   return (
     <div>
       <PageHeader
-        title="Acquisition Agents"
+        title="Agent Registry"
         subtitle={`${pagination.total} ${pagination.total === 1 ? "agent" : "agents"} total`}
         actions={
           <>
@@ -267,8 +252,8 @@ export default function AcquisitionAgentsPage() {
               </button>
             )}
             {canCreate && (
-              <button onClick={openCreate} className={cls.btnPrimary}>
-                <Plus size={14} /> Add Agent
+              <button onClick={() => navigate("/acquisitions/agents/new")} className={cls.btnPrimary}>
+                <Plus size={14} /> Create Agent
               </button>
             )}
           </>
@@ -316,30 +301,31 @@ export default function AcquisitionAgentsPage() {
         </label>
       </div>
 
-      {/* Table */}
+      {/* Details table */}
       <div className="rounded-lg bg-white ring-1 ring-gray-200">
+        <div className="border-b border-gray-100 px-4 py-2.5 text-[13px] font-semibold text-gray-700">
+          Details
+        </div>
         <div className="overflow-x-auto">
           <table className={cls.table}>
             <thead>
               <tr className="border-b border-gray-200">
-                <th className={cls.th}>Code</th>
+                <th className={cls.th}>Agent ID</th>
                 <th className={cls.th}>Name</th>
                 <th className={cls.th}>Company</th>
-                <th className={cls.th}>Source</th>
-                <th className={cls.th}>Phone</th>
                 <th className={cls.th}>City</th>
+                <th className={cls.th}>Source Type</th>
                 <th className={cls.th}>Rating</th>
-                <th className={cls.th}>Status</th>
                 <th className={cls.th}>Active Deals</th>
-                <th className={cls.th}>Last Updated</th>
+                <th className={cls.th}>Status</th>
                 <th className={cls.th + " text-right"}>Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11}><TableLoading /></td></tr>
+                <tr><td colSpan={9}><TableLoading /></td></tr>
               ) : agents.length === 0 ? (
-                <tr><td colSpan={11}>
+                <tr><td colSpan={9}>
                   <EmptyState
                     icon={<Handshake size={48} />}
                     title="No agents found"
@@ -348,18 +334,22 @@ export default function AcquisitionAgentsPage() {
                 </td></tr>
               ) : (
                 agents.map((a) => (
-                  <tr key={a.id} onClick={() => openEdit(a)} className={cls.trClick}>
+                  <tr
+                    key={a.id}
+                    onClick={() => navigate(`/acquisitions/agents/${a.id}/edit`)}
+                    className={cls.trClick}
+                  >
                     <td className={`px-3 py-2 ${cls.mono}`}>{a.agentCode}</td>
                     <td className="px-3 py-2 font-medium text-gray-900">{a.agentName}</td>
                     <td className="px-3 py-2 text-gray-600">{a.companyName || "—"}</td>
+                    <td className="px-3 py-2 text-gray-600">{a.city}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${SOURCE_TYPE_COLORS[a.sourceType]}`}>
                         {SOURCE_TYPE_LABELS[a.sourceType]}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-gray-600">{a.contactNumber}</td>
-                    <td className="px-3 py-2 text-gray-600">{a.city}</td>
-                    <td className="px-3 py-2"><StarRating value={a.rating} readOnly size={13} /></td>
+                    <td className="px-3 py-2"><StarRow value={a.rating} /></td>
+                    <td className="px-3 py-2 text-center font-semibold text-gray-900">{a.activeDeals}</td>
                     <td className="px-3 py-2">
                       <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLOR[a.status]}`}>
                         {a.status === "ACTIVE" ? "Active" : "Inactive"}
@@ -370,26 +360,14 @@ export default function AcquisitionAgentsPage() {
                         </span>
                       )}
                     </td>
-                    <td className="px-3 py-2 text-center font-semibold text-gray-900">{a.activeDeals}</td>
-                    <td className="px-3 py-2 text-gray-500 text-[12px]">{fmtDate(a.updatedAt)}</td>
                     <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                      <div className="inline-flex items-center gap-1">
-                        {canEdit && (
-                          <button onClick={() => openEdit(a)} className={cls.btnIcon} title="Edit">
-                            <Pencil size={14} />
-                          </button>
-                        )}
-                        {canDelete && !a.deletedAt && (
-                          <button onClick={() => setConfirmArchive(a)} className={cls.btnIcon} title="Archive">
-                            <Trash2 size={14} className="text-red-600" />
-                          </button>
-                        )}
-                        {canDelete && a.deletedAt && (
-                          <button onClick={() => handleRestore(a)} className={cls.btnIcon} title="Restore">
-                            <RotateCcw size={14} className="text-emerald-600" />
-                          </button>
-                        )}
-                      </div>
+                      <RowMenu
+                        agent={a}
+                        canEdit={canEdit}
+                        canDelete={canDelete}
+                        onArchive={() => setConfirmArchive(a)}
+                        onRestore={() => handleRestore(a)}
+                      />
                     </td>
                   </tr>
                 ))
@@ -399,73 +377,6 @@ export default function AcquisitionAgentsPage() {
         </div>
         <Pagination pagination={pagination} onPageChange={setPage} />
       </div>
-
-      {/* Form modal */}
-      <Modal isOpen={modalOpen} onClose={closeModal} title={editing ? `Edit ${editing.agentCode}` : "Add Agent"}>
-        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <div className="sm:col-span-2">
-            <label className={cls.label}>Agent Name <span className="text-red-500">*</span></label>
-            <input type="text" value={form.agentName} onChange={(e) => updateForm("agentName", e.target.value)} className={cls.input} />
-          </div>
-          <div>
-            <label className={cls.label}>Company Name</label>
-            <input type="text" value={form.companyName} onChange={(e) => updateForm("companyName", e.target.value)} className={cls.input} />
-          </div>
-          <div>
-            <label className={cls.label}>Contact Number <span className="text-red-500">*</span></label>
-            <input type="text" value={form.contactNumber} onChange={(e) => updateForm("contactNumber", e.target.value)} className={cls.input} placeholder="+92-300-1234567" />
-          </div>
-          <div>
-            <label className={cls.label}>Email</label>
-            <input type="email" value={form.email} onChange={(e) => updateForm("email", e.target.value)} className={cls.input} />
-          </div>
-          <div>
-            <label className={cls.label}>City <span className="text-red-500">*</span></label>
-            <input type="text" value={form.city} onChange={(e) => updateForm("city", e.target.value)} className={cls.input} />
-          </div>
-          <div>
-            <label className={cls.label}>Area Focus</label>
-            <input type="text" value={form.areaFocus} onChange={(e) => updateForm("areaFocus", e.target.value)} className={cls.input} placeholder="e.g. DHA Phase 5, Bahria Town" />
-          </div>
-          <div>
-            <label className={cls.label}>Source Type <span className="text-red-500">*</span></label>
-            <select value={form.sourceType} onChange={(e) => updateForm("sourceType", e.target.value)} className={cls.select}>
-              <option value="BROKER">Broker</option>
-              <option value="OWNER">Owner</option>
-              <option value="CONSULTANT">Consultant</option>
-            </select>
-          </div>
-          <div>
-            <label className={cls.label}>Rating</label>
-            <StarRating value={form.rating} onChange={(n) => updateForm("rating", n)} size={20} />
-          </div>
-          <div>
-            <label className={cls.label}>First Contact Date</label>
-            <input type="date" value={form.firstContactDate} onChange={(e) => updateForm("firstContactDate", e.target.value)} className={cls.input} />
-          </div>
-          <div>
-            <label className={cls.label}>Last Availability Check</label>
-            <input type="date" value={form.lastAvailabilityCheck} onChange={(e) => updateForm("lastAvailabilityCheck", e.target.value)} className={cls.input} />
-          </div>
-          <div>
-            <label className={cls.label}>Status</label>
-            <select value={form.status} onChange={(e) => updateForm("status", e.target.value)} className={cls.select}>
-              <option value="ACTIVE">Active</option>
-              <option value="INACTIVE">Inactive</option>
-            </select>
-          </div>
-          <div className="sm:col-span-2">
-            <label className={cls.label}>Notes</label>
-            <textarea value={form.notes} onChange={(e) => updateForm("notes", e.target.value)} className={cls.input} rows={3} />
-          </div>
-        </div>
-        <div className="mt-4 flex justify-end gap-2">
-          <button onClick={closeModal} className={cls.btnSecondary} disabled={saving}>Cancel</button>
-          <button onClick={handleSave} className={cls.btnPrimary} disabled={saving}>
-            {saving ? "Saving…" : (editing ? "Save Changes" : "Create Agent")}
-          </button>
-        </div>
-      </Modal>
 
       {/* Archive confirm */}
       <Modal isOpen={!!confirmArchive} onClose={() => setConfirmArchive(null)} title="Archive agent">

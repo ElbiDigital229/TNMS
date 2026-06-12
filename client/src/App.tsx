@@ -36,8 +36,11 @@ const ReportBuilderPage = lazy(() => import("./pages/ReportBuilderPage"));
 const EntityReportPage = lazy(() => import("./pages/EntityReportPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const AcquisitionAgentsPage = lazy(() => import("./pages/AcquisitionAgentsPage"));
+const AcquisitionAgentFormPage = lazy(() => import("./pages/AcquisitionAgentFormPage"));
 const AcquisitionLandPage = lazy(() => import("./pages/AcquisitionLandPage"));
+const AcquisitionLandFormPage = lazy(() => import("./pages/AcquisitionLandFormPage"));
 const AcquisitionBuildingsPage = lazy(() => import("./pages/AcquisitionBuildingsPage"));
+const AcquisitionBuildingFormPage = lazy(() => import("./pages/AcquisitionBuildingFormPage"));
 
 function PageFallback() {
   return null;
@@ -99,8 +102,14 @@ export default function App() {
               <Route path="/reports/:entityType/:entityId" element={<RequirePermission permission={P.REPORTS.VIEW}><EntityReportPage /></RequirePermission>} />
               <Route path="/settings/audit-logs" element={<RequirePermission permission={P.AUDIT.VIEW}><AuditLogPage /></RequirePermission>} />
               <Route path="/acquisitions/agents" element={<RequirePermission permission={P.ACQUISITIONS.VIEW}><AcquisitionAgentsPage /></RequirePermission>} />
+              <Route path="/acquisitions/agents/new" element={<RequirePermission permission={P.ACQUISITIONS.CREATE}><AcquisitionAgentFormPage /></RequirePermission>} />
+              <Route path="/acquisitions/agents/:id/edit" element={<RequirePermission permission={P.ACQUISITIONS.EDIT}><AcquisitionAgentFormPage /></RequirePermission>} />
               <Route path="/acquisitions/land" element={<RequirePermission permission={P.ACQUISITIONS.VIEW}><AcquisitionLandPage /></RequirePermission>} />
+              <Route path="/acquisitions/land/new" element={<RequirePermission permission={P.ACQUISITIONS.CREATE}><AcquisitionLandFormPage /></RequirePermission>} />
+              <Route path="/acquisitions/land/:id/edit" element={<RequirePermission permission={P.ACQUISITIONS.EDIT}><AcquisitionLandFormPage /></RequirePermission>} />
               <Route path="/acquisitions/buildings" element={<RequirePermission permission={P.ACQUISITIONS.VIEW}><AcquisitionBuildingsPage /></RequirePermission>} />
+              <Route path="/acquisitions/buildings/new" element={<RequirePermission permission={P.ACQUISITIONS.CREATE}><AcquisitionBuildingFormPage /></RequirePermission>} />
+              <Route path="/acquisitions/buildings/:id/edit" element={<RequirePermission permission={P.ACQUISITIONS.EDIT}><AcquisitionBuildingFormPage /></RequirePermission>} />
               <Route path="/notifications" element={<NotificationsPage />} />
             </Route>
           </Route>
