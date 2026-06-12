@@ -65,6 +65,46 @@ export function formatZodError(err: ZodError): string {
 }
 
 /**
+ * Pre-process one CSV-source row before schema validation.
+ *
+ * CSVs deliver everything as strings — including empty cells. The create
+ * schemas expect typed input (numbers, enums), so without this step
+ * every "4" fails as "Expected number, received string" and every blank
+ * optional enum field fails as "Invalid enum value ... received ''".
+ *
+ * We:
+ *  - Drop empty-string, null, and undefined values entirely, so an
+ *    optional field that lacks an explicit empty-string fallback still
+ *    passes validation.
+ *  - Coerce strings in the listed `numericFields` (decimals) and
+ *    `integerFields` (ints) into actual numbers so strict numeric
+ *    schemas accept them.
+ */
+export function preprocessCsvRow(
+  row: Record<string, unknown>,
+  opts: { numericFields?: string[]; integerFields?: string[] } = {},
+): Record<string, unknown> {
+  const intSet = new Set(opts.integerFields ?? []);
+  const numSet = new Set(opts.numericFields ?? []);
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(row)) {
+    if (v === "" || v === undefined || v === null) continue;
+    if (typeof v === "string" && intSet.has(k)) {
+      const n = parseInt(v, 10);
+      out[k] = Number.isNaN(n) ? v : n;
+      continue;
+    }
+    if (typeof v === "string" && numSet.has(k)) {
+      const n = parseFloat(v.replace(/,/g, ""));
+      out[k] = Number.isNaN(n) ? v : n;
+      continue;
+    }
+    out[k] = v;
+  }
+  return out;
+}
+
+/**
  * Sanitize an arbitrary thrown error into something fit to show an admin
  * in a CSV-import results table. Strips Prisma stack noise.
  */

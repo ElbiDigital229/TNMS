@@ -5,6 +5,7 @@ import {
   withCodeRetry,
   formatZodError,
   formatImportError,
+  preprocessCsvRow,
 } from "../_shared.js";
 
 const UTILITY_VALUES = [
@@ -186,7 +187,10 @@ export const landService = {
     for (let i = 0; i < items.length; i++) {
       try {
         const raw = await resolveAgentCode({ ...items[i] });
-        const parsed = createLandSchema.safeParse(raw);
+        const cleaned = preprocessCsvRow(raw, {
+          numericFields: ["plotSizeKanal", "frontRoadWidthFt", "maxCoveredAreaSqft", "askingPrice"],
+        });
+        const parsed = createLandSchema.safeParse(cleaned);
         if (!parsed.success) {
           results.push({ row: i + 1, status: "error", error: formatZodError(parsed.error) });
           continue;

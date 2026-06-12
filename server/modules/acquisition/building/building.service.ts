@@ -5,6 +5,7 @@ import {
   withCodeRetry,
   formatZodError,
   formatImportError,
+  preprocessCsvRow,
 } from "../_shared.js";
 
 const UTILITY_VALUES = [
@@ -187,7 +188,11 @@ export const buildingService = {
     for (let i = 0; i < items.length; i++) {
       try {
         const raw = await resolveAgentCode({ ...items[i] });
-        const parsed = createBuildingSchema.safeParse(raw);
+        const cleaned = preprocessCsvRow(raw, {
+          numericFields: ["coveredAreaSqft", "plotSizeKanal", "floorPlateSizeSqft", "askingRent"],
+          integerFields: ["floors", "parkingCapacity", "elevators"],
+        });
+        const parsed = createBuildingSchema.safeParse(cleaned);
         if (!parsed.success) {
           results.push({ row: i + 1, status: "error", error: formatZodError(parsed.error) });
           continue;

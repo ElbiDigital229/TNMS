@@ -5,6 +5,7 @@ import {
   withCodeRetry,
   formatZodError,
   formatImportError,
+  preprocessCsvRow,
 } from "../_shared.js";
 
 /**
@@ -149,9 +150,12 @@ export const agentService = {
     const results: { row: number; status: "success" | "error"; id?: string; error?: string }[] = [];
     for (let i = 0; i < items.length; i++) {
       try {
+        // CSVs deliver strings; strip empty cells and coerce numeric
+        // columns before the (strictly-typed) create schema sees them.
+        const cleaned = preprocessCsvRow(items[i], { integerFields: ["rating"] });
         // Validate against the create schema first — gives clean, field-level
         // errors instead of a raw Prisma stack trace.
-        const parsed = createAgentSchema.safeParse(items[i]);
+        const parsed = createAgentSchema.safeParse(cleaned);
         if (!parsed.success) {
           results.push({ row: i + 1, status: "error", error: formatZodError(parsed.error) });
           continue;
