@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { acquisitionAgentApi } from "../lib/api";
 import { useToast } from "../components/ui/Toast";
@@ -9,6 +9,7 @@ import { Pagination, EmptyState, TableLoading } from "../components/ui/DataTable
 import PageHeader from "../components/ui/PageHeader";
 import Modal from "../components/ui/Modal";
 import BulkImportModal from "../components/ui/BulkImportModal";
+import RowActionsMenu, { type RowActionsMenuItem } from "../components/ui/RowActionsMenu";
 import {
   Plus,
   Search,
@@ -16,7 +17,6 @@ import {
   Handshake,
   Download,
   Upload,
-  MoreHorizontal,
   Eye,
   Pencil,
   Trash2,
@@ -65,83 +65,34 @@ function StarRow({ value }: { value: number }) {
   );
 }
 
-/** 3-dot action menu shown in the rightmost column of each row. */
-function RowMenu({
+function buildAgentMenuItems({
   agent,
   canEdit,
   canDelete,
+  navigate,
   onArchive,
   onRestore,
 }: {
   agent: Agent;
   canEdit: boolean;
   canDelete: boolean;
+  navigate: (to: string) => void;
   onArchive: () => void;
   onRestore: () => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const navigate = useNavigate();
-  const ref = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const close = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    };
-    document.addEventListener("mousedown", close);
-    return () => document.removeEventListener("mousedown", close);
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative inline-block">
-      <button
-        type="button"
-        onClick={(e) => { e.stopPropagation(); setOpen((v) => !v); }}
-        className={cls.btnIcon}
-        title="More actions"
-      >
-        <MoreHorizontal size={16} />
-      </button>
-      {open && (
-        <div className="absolute right-0 z-10 mt-1 w-36 rounded-md bg-white py-1 text-[13px] shadow-lg ring-1 ring-gray-200">
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/acquisitions/agents/${agent.id}/edit`); }}
-            className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50"
-          >
-            <Eye size={13} className="text-gray-500" /> View
-          </button>
-          {canEdit && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setOpen(false); navigate(`/acquisitions/agents/${agent.id}/edit`); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-gray-50"
-            >
-              <Pencil size={13} className="text-gray-500" /> Edit
-            </button>
-          )}
-          {canDelete && !agent.deletedAt && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setOpen(false); onArchive(); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-red-600 hover:bg-red-50"
-            >
-              <Trash2 size={13} /> Archive
-            </button>
-          )}
-          {canDelete && agent.deletedAt && (
-            <button
-              type="button"
-              onClick={(e) => { e.stopPropagation(); setOpen(false); onRestore(); }}
-              className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-emerald-600 hover:bg-emerald-50"
-            >
-              <RotateCcw size={13} /> Restore
-            </button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+}): RowActionsMenuItem[] {
+  const items: RowActionsMenuItem[] = [
+    { label: "View", icon: Eye, onClick: () => navigate(`/acquisitions/agents/${agent.id}/edit`) },
+  ];
+  if (canEdit) {
+    items.push({ label: "Edit", icon: Pencil, onClick: () => navigate(`/acquisitions/agents/${agent.id}/edit`) });
+  }
+  if (canDelete && !agent.deletedAt) {
+    items.push({ label: "Archive", icon: Trash2, onClick: onArchive, variant: "danger" });
+  }
+  if (canDelete && agent.deletedAt) {
+    items.push({ label: "Restore", icon: RotateCcw, onClick: onRestore, variant: "success" });
+  }
+  return items;
 }
 
 export default function AcquisitionAgentsPage() {
@@ -365,12 +316,15 @@ export default function AcquisitionAgentsPage() {
                       )}
                     </td>
                     <td className="px-3 py-2 text-right" onClick={(e) => e.stopPropagation()}>
-                      <RowMenu
-                        agent={a}
-                        canEdit={canEdit}
-                        canDelete={canDelete}
-                        onArchive={() => setConfirmArchive(a)}
-                        onRestore={() => handleRestore(a)}
+                      <RowActionsMenu
+                        items={buildAgentMenuItems({
+                          agent: a,
+                          canEdit,
+                          canDelete,
+                          navigate,
+                          onArchive: () => setConfirmArchive(a),
+                          onRestore: () => handleRestore(a),
+                        })}
                       />
                     </td>
                   </tr>
