@@ -6,6 +6,8 @@ import PageHeader from "../components/ui/PageHeader";
 import { ArrowLeft, Star } from "lucide-react";
 import { cls } from "../lib/styles";
 
+const PK_CITIES = ["Lahore", "Islamabad", "Karachi", "Rawalpindi"] as const;
+
 // ─── Mini star-rating input (re-defined locally for now) ─────────────────
 function StarRating({
   value,
@@ -189,13 +191,20 @@ export default function AcquisitionAgentFormPage() {
               <label className={cls.label}>
                 City <span className="text-red-500">*</span>
               </label>
-              <input
-                type="text"
+              <select
                 value={form.city}
                 onChange={(e) => updateForm("city", e.target.value)}
-                className={cls.input}
-                placeholder="e.g. Lahore"
-              />
+                className={`w-full ${cls.select}`}
+              >
+                <option value="">Select city</option>
+                {PK_CITIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+                {/* Preserve a legacy value that's not in the standard list */}
+                {form.city && !PK_CITIES.includes(form.city as typeof PK_CITIES[number]) && (
+                  <option value={form.city}>{form.city}</option>
+                )}
+              </select>
             </div>
             <div>
               <label className={cls.label}>Area Focus</label>

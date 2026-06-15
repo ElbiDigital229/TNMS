@@ -222,7 +222,13 @@ export default function AcquisitionLandPage() {
           <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
           <input type="text" placeholder="Search code, area, notes…" value={searchInput} onChange={(e) => setSearchInput(e.target.value)} className={`${cls.input} pl-8`} />
         </div>
-        <input type="text" placeholder="City…" value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setPage(1); }} className={cls.input} />
+        <select value={cityFilter} onChange={(e) => { setCityFilter(e.target.value); setPage(1); }} className={cls.select}>
+          <option value="">All Cities</option>
+          <option value="Lahore">Lahore</option>
+          <option value="Islamabad">Islamabad</option>
+          <option value="Karachi">Karachi</option>
+          <option value="Rawalpindi">Rawalpindi</option>
+        </select>
         <select value={zoningFilter} onChange={(e) => { setZoningFilter(e.target.value); setPage(1); }} className={cls.select}>
           <option value="">All Zoning</option>
           <option value="RESIDENTIAL">Residential</option>

@@ -278,13 +278,17 @@ export default function AcquisitionAgentsPage() {
           <option value="OWNER">Owner</option>
           <option value="CONSULTANT">Consultant</option>
         </select>
-        <input
-          type="text"
-          placeholder="City…"
+        <select
           value={cityFilter}
           onChange={(e) => { setCityFilter(e.target.value); setPage(1); }}
-          className={cls.input}
-        />
+          className={cls.select}
+        >
+          <option value="">All Cities</option>
+          <option value="Lahore">Lahore</option>
+          <option value="Islamabad">Islamabad</option>
+          <option value="Karachi">Karachi</option>
+          <option value="Rawalpindi">Rawalpindi</option>
+        </select>
         <select value={statusFilter} onChange={(e) => { setStatusFilter(e.target.value); setPage(1); }} className={cls.select}>
           <option value="">All Status</option>
           <option value="ACTIVE">Active</option>

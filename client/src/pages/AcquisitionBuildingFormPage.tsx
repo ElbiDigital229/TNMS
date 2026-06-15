@@ -6,6 +6,8 @@ import PageHeader from "../components/ui/PageHeader";
 import { ArrowLeft } from "lucide-react";
 import { cls } from "../lib/styles";
 
+const PK_CITIES = ["Lahore", "Islamabad", "Karachi", "Rawalpindi"] as const;
+
 interface AgentLite {
   id: string;
   agentCode: string;
@@ -184,7 +186,19 @@ export default function AcquisitionBuildingFormPage() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={cls.label}>City <span className="text-red-500">*</span></label>
-              <input type="text" value={form.city} onChange={(e) => updateForm("city", e.target.value)} className={cls.input} placeholder="e.g. Islamabad" />
+              <select
+                value={form.city}
+                onChange={(e) => updateForm("city", e.target.value)}
+                className={`w-full ${cls.select}`}
+              >
+                <option value="">Select city</option>
+                {PK_CITIES.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+                {form.city && !PK_CITIES.includes(form.city as typeof PK_CITIES[number]) && (
+                  <option value={form.city}>{form.city}</option>
+                )}
+              </select>
             </div>
             <div>
               <label className={cls.label}>Area / Location</label>
