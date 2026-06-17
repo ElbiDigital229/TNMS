@@ -34,7 +34,7 @@ async function ensureDirs() {
 
 async function regenerateAssetQRs() {
   const assets = await prisma.asset.findMany({
-    where: { qrCode: { not: null } },
+    where: { NOT: { qrCode: null } },
     select: { id: true, code: true, qrCode: true },
   });
   console.log(`\nRegenerating ${assets.length} asset QR codes…`);
@@ -70,7 +70,7 @@ async function regenerateAssetQRs() {
 
 async function clearDanglingPropertyImages() {
   const properties = await prisma.property.findMany({
-    where: { imagePath: { not: null } },
+    where: { NOT: { imagePath: null } },
     select: { id: true, code: true, name: true, imagePath: true },
   });
   console.log(`\nChecking ${properties.length} property imagePath references…`);
