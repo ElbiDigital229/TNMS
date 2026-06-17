@@ -1,9 +1,27 @@
+import fs from "fs";
+import path from "path";
 import { app } from "./app.js";
 import { prisma } from "./config/db.js";
 import { env } from "./config/env.js";
 import { seed } from "./config/seed.js";
 import { notificationTrigger } from "./services/notificationTrigger.service.js";
 import { ticketScheduleService } from "./modules/ticketSchedule/ticketSchedule.service.js";
+
+/**
+ * Make sure runtime-managed upload directories exist on boot. Asset QR
+ * generation depends on uploads/qrcodes/; if the directory is missing
+ * (e.g. wiped during a server migration or manual cleanup), the very
+ * first write would silently fail or throw on a cold prod box.
+ */
+function ensureUploadDirs() {
+  for (const sub of ["", "qrcodes"]) {
+    const dir = path.resolve("uploads", sub);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+      console.log(`Created missing upload dir: ${dir}`);
+    }
+  }
+}
 
 // Run overdue/due-soon checks every hour
 function startScheduledNotificationChecks() {
@@ -37,6 +55,8 @@ function startScheduledNotificationChecks() {
 
 async function main() {
   try {
+    ensureUploadDirs();
+
     await prisma.$connect();
     console.log("Database connected");
 
