@@ -256,8 +256,65 @@ export default function AcquisitionAgentsPage() {
         </label>
       </div>
 
-      {/* Details table */}
-      <div className="rounded-lg bg-white ring-1 ring-gray-200">
+      {/* Mobile card view */}
+      <div className="space-y-2 md:hidden">
+        {loading ? (
+          <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200"><TableLoading /></div>
+        ) : agents.length === 0 ? (
+          <div className="rounded-lg bg-white p-6 ring-1 ring-gray-200">
+            <EmptyState
+              icon={<Handshake size={48} />}
+              title="No agents found"
+              subtitle="Try adjusting your search or add a new agent"
+            />
+          </div>
+        ) : (
+          agents.map((a) => (
+            <div
+              key={a.id}
+              onClick={() => navigate(`/acquisitions/agents/${a.id}/edit`)}
+              className="rounded-lg bg-white p-3 ring-1 ring-gray-200 active:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <span className={cls.mono + " text-[12px]"}>{a.agentCode}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <RowActionsMenu
+                    items={buildAgentMenuItems({
+                      agent: a, canEdit, canDelete, navigate,
+                      onArchive: () => setConfirmArchive(a),
+                      onRestore: () => handleRestore(a),
+                    })}
+                  />
+                </div>
+              </div>
+              <p className="mt-1 text-[14px] font-semibold text-gray-900 leading-snug">{a.agentName}</p>
+              {a.companyName && (
+                <p className="text-[11px] text-gray-500">{a.companyName}</p>
+              )}
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${SOURCE_TYPE_COLORS[a.sourceType]}`}>
+                  {SOURCE_TYPE_LABELS[a.sourceType]}
+                </span>
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STATUS_COLOR[a.status]}`}>
+                  {a.status === "ACTIVE" ? "Active" : "Inactive"}
+                </span>
+                {a.deletedAt && (
+                  <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">Archived</span>
+                )}
+                <StarRow value={a.rating} />
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+                <span>{a.city}{a.contactNumber ? ` · ${a.contactNumber}` : ""}</span>
+                <span><span className="font-semibold text-gray-900">{a.activeDeals}</span> active deals</span>
+              </div>
+            </div>
+          ))
+        )}
+        <Pagination pagination={pagination} onPageChange={setPage} />
+      </div>
+
+      {/* Desktop "Details" table */}
+      <div className="hidden md:block rounded-lg bg-white ring-1 ring-gray-200">
         <div className="border-b border-gray-100 px-4 py-2.5 text-[13px] font-semibold text-gray-700">
           Details
         </div>

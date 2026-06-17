@@ -227,7 +227,54 @@ export default function AcquisitionLandPage() {
         </label>
       </div>
 
-      <div className="rounded-lg bg-white ring-1 ring-gray-200">
+      {/* Mobile card view */}
+      <div className="space-y-2 md:hidden">
+        {loading ? (
+          <div className="rounded-lg bg-white p-4 ring-1 ring-gray-200"><TableLoading /></div>
+        ) : rows.length === 0 ? (
+          <div className="rounded-lg bg-white p-6 ring-1 ring-gray-200">
+            <EmptyState icon={<MapPin size={48} />} title="No land records" subtitle="Try adjusting filters or add a new land record" />
+          </div>
+        ) : (
+          rows.map((r) => (
+            <div
+              key={r.id}
+              onClick={() => navigate(`/acquisitions/land/${r.id}/edit`)}
+              className="rounded-lg bg-white p-3 ring-1 ring-gray-200 active:bg-gray-50 transition-colors cursor-pointer"
+            >
+              <div className="flex items-center justify-between">
+                <span className={cls.mono + " text-[12px]"}>{r.landCode}</span>
+                <div onClick={(e) => e.stopPropagation()}>
+                  <RowActionsMenu
+                    items={buildLandMenuItems({ row: r, canEdit, canDelete, navigate, onArchive: () => setConfirmArchive(r), onRestore: () => handleRestore(r) })}
+                  />
+                </div>
+              </div>
+              {r.agent && (
+                <p className="mt-1 text-[11px] text-gray-500">
+                  <span className={cls.mono}>{r.agent.agentCode}</span> · {r.agent.agentName}
+                  {r.agent.deletedAt && <span className="ml-1 text-red-500">(archived)</span>}
+                </p>
+              )}
+              <p className="mt-1 text-[14px] font-semibold text-gray-900 leading-snug">{r.city}{r.areaLocation ? ` · ${r.areaLocation}` : ""}</p>
+              <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                <span className={`inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium ${STAGE_COLORS[r.stage]}`}>{STAGE_LABELS[r.stage]}</span>
+                {r.zoning && <span className="inline-flex rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700">{ZONING_LABELS[r.zoning]}</span>}
+                {r.proposedModel && <span className="inline-flex rounded-full bg-blue-50 px-2 py-0.5 text-[11px] font-medium text-blue-700">{PROPOSED_LABELS[r.proposedModel]}</span>}
+                {r.deletedAt && <span className="inline-flex rounded-full bg-red-50 px-2 py-0.5 text-[11px] font-medium text-red-700">Archived</span>}
+              </div>
+              <div className="mt-2 flex items-center justify-between text-[11px] text-gray-500">
+                <span>{r.plotSizeKanal ? `${r.plotSizeKanal} Kanal` : "—"}</span>
+                <span className="font-semibold text-gray-900">{fmtPKR(r.askingPrice)}</span>
+              </div>
+            </div>
+          ))
+        )}
+        <Pagination pagination={pagination} onPageChange={setPage} />
+      </div>
+
+      {/* Desktop "Details" table */}
+      <div className="hidden md:block rounded-lg bg-white ring-1 ring-gray-200">
         <div className="border-b border-gray-100 px-4 py-2.5 text-[13px] font-semibold text-gray-700">
           Details
         </div>
