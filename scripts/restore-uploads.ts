@@ -33,10 +33,12 @@ async function ensureDirs() {
 }
 
 async function regenerateAssetQRs() {
-  const assets = await prisma.asset.findMany({
-    where: { NOT: { qrCode: null } },
+  // Prisma 6 tightened null-filter syntax; just fetch everything and filter
+  // in JS — the asset table is small and this is a one-off script.
+  const all = await prisma.asset.findMany({
     select: { id: true, code: true, qrCode: true },
   });
+  const assets = all.filter((a): a is { id: string; code: string; qrCode: string } => !!a.qrCode);
   console.log(`\nRegenerating ${assets.length} asset QR codes…`);
 
   let written = 0;
@@ -69,10 +71,10 @@ async function regenerateAssetQRs() {
 }
 
 async function clearDanglingPropertyImages() {
-  const properties = await prisma.property.findMany({
-    where: { NOT: { imagePath: null } },
+  const allProps = await prisma.property.findMany({
     select: { id: true, code: true, name: true, imagePath: true },
   });
+  const properties = allProps.filter((p): p is { id: string; code: string; name: string; imagePath: string } => !!p.imagePath);
   console.log(`\nChecking ${properties.length} property imagePath references…`);
 
   let cleared = 0;
