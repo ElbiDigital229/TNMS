@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { assetApi, floorApi, assetCategoryApi, assetUrl } from "../../lib/api";
+import { assetApi, floorApi, assetCategoryApi, assetUrl, unitApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
 import BulkImportModal from "../ui/BulkImportModal";
@@ -25,6 +25,8 @@ interface Asset {
   imagePath?: string;
   floor: { id: string; name: string };
   category: { id: string; name: string };
+  unit?: { id: string; code: string; name: string } | null;
+  unitId?: string | null;
 }
 
 interface Floor {
@@ -73,6 +75,8 @@ export default function AssetsTab({
   const [condition, setCondition] = useState("");
   const [additionalInfo, setAdditionalInfo] = useState("");
   const [floorId, setFloorId] = useState("");
+  const [unitId, setUnitId] = useState("");
+  const [units, setUnits] = useState<Array<{ id: string; code: string; name: string; floorId: string | null }>>([]);
   const [serialNumber, setSerialNumber] = useState("");
   const [purchaseDate, setPurchaseDate] = useState("");
   const [image, setImage] = useState<File | null>(null);
@@ -82,11 +86,17 @@ export default function AssetsTab({
       assetApi.listByProperty(propertyId),
       floorApi.list(propertyId),
       assetCategoryApi.list(),
+      unitApi.list(propertyId),
     ])
-      .then(([assetsRes, floorsRes, catsRes]) => {
+      .then(([assetsRes, floorsRes, catsRes, unitsRes]) => {
         setAssets(assetsRes.data.data);
         setFloors(floorsRes.data.data.filter((f: Floor) => f.status === "ACTIVE"));
         setCategories(catsRes.data.data.filter((c: Category) => c.status === "ACTIVE"));
+        setUnits(
+          (unitsRes.data.data as Array<{ id: string; code: string; name: string; floorId: string | null; status: string }>)
+            .filter((u) => u.status === "ACTIVE")
+            .map((u) => ({ id: u.id, code: u.code, name: u.name, floorId: u.floorId })),
+        );
       })
       .catch(() => toast.error("Failed to load data"))
       .finally(() => setLoading(false));
@@ -140,6 +150,7 @@ export default function AssetsTab({
     setCondition("");
     setAdditionalInfo("");
     setFloorId("");
+    setUnitId("");
     setSerialNumber("");
     setPurchaseDate("");
     setImage(null);
@@ -163,6 +174,7 @@ export default function AssetsTab({
       setCondition(full.condition);
       setAdditionalInfo(full.additionalInfo || "");
       setFloorId(full.floorId || full.floor?.id || "");
+      setUnitId(full.unitId || full.unit?.id || "");
       setSerialNumber(full.serialNumber || "");
       setPurchaseDate(
         full.purchaseDate
@@ -195,6 +207,9 @@ export default function AssetsTab({
     if (condition) formData.append("condition", condition);
     if (additionalInfo) formData.append("additionalInfo", additionalInfo);
     formData.append("floorId", floorId);
+    // unitId is intentionally always sent (even empty) so an admin can clear
+    // the unit on edit; backend treats "" as null on update.
+    formData.append("unitId", unitId);
     if (serialNumber) formData.append("serialNumber", serialNumber);
     if (purchaseDate) formData.append("purchaseDate", purchaseDate);
     if (image) formData.append("image", image);
@@ -314,6 +329,7 @@ export default function AssetsTab({
                 <th className={cls.th}>Name</th>
                 <th className={cls.th}>Category</th>
                 <th className={cls.th}>Floor</th>
+                <th className={cls.th}>Unit</th>
                 <th className={cls.th}>Condition</th>
                 <th className={cls.th}>Status</th>
                 <th className={cls.th}>Actions</th>
@@ -337,6 +353,16 @@ export default function AssetsTab({
                   <td className={`${cls.td} font-medium`}>{asset.name}</td>
                   <td className={`${cls.td} text-gray-600`}>{asset.category.name}</td>
                   <td className={`${cls.td} text-gray-600`}>{asset.floor?.name || "\u2014"}</td>
+                  <td className={`${cls.td} text-gray-600`}>
+                    {asset.unit ? (
+                      <span>
+                        <span className={cls.mono + " text-[11px]"}>{asset.unit.code}</span>
+                        <span className="ml-1">{asset.unit.name}</span>
+                      </span>
+                    ) : (
+                      <span className="text-gray-400">\u2014</span>
+                    )}
+                  </td>
                   <td className={cls.td}><ConditionBadge condition={asset.condition} /></td>
                   <td className={cls.td}><ActiveBadge status={asset.status} /></td>
                   <td className={cls.td}>
@@ -426,10 +452,46 @@ export default function AssetsTab({
 
           <div>
             <label className={cls.label}>Select Floor <span className="text-red-500">*</span></label>
-            <select value={floorId} onChange={(e) => setFloorId(e.target.value)} className={`w-full ${cls.select}`}>
+            <select
+              value={floorId}
+              onChange={(e) => {
+                setFloorId(e.target.value);
+                // Clear the unit if it no longer belongs to the newly-selected floor.
+                if (unitId) {
+                  const u = units.find((x) => x.id === unitId);
+                  if (u && u.floorId && u.floorId !== e.target.value) setUnitId("");
+                }
+              }}
+              className={`w-full ${cls.select}`}
+            >
               <option value="">Select floor</option>
               {floors.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
             </select>
+          </div>
+
+          <div>
+            <label className={cls.label}>
+              Unit <span className="ml-1 text-[11px] font-normal text-gray-400">(optional)</span>
+            </label>
+            <select
+              value={unitId}
+              onChange={(e) => setUnitId(e.target.value)}
+              className={`w-full ${cls.select}`}
+              disabled={!floorId && units.length === 0}
+            >
+              <option value="">— No specific unit —</option>
+              {(floorId
+                ? units.filter((u) => !u.floorId || u.floorId === floorId)
+                : units
+              ).map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.code} — {u.name}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-gray-500">
+              Leave blank for floor-wide assets (e.g. lobby AC).
+            </p>
           </div>
 
           <div>

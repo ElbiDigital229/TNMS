@@ -28,6 +28,17 @@ const optionalIsoDate = z
     { message: "Purchase date cannot be in the future" },
   );
 
+/** Accepts a UUID, empty string, or null — empty / null = "no unit". */
+const optionalUnitId = z
+  .string()
+  .optional()
+  .nullable()
+  .transform((v) => (v === "" || v === null ? undefined : v))
+  .refine(
+    (v) => v === undefined || /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v),
+    { message: "Invalid unitId" },
+  );
+
 export const createAssetSchema = z.object({
   name: z.string().trim().min(1, "Name is required").max(200),
   categoryId: z.string().uuid("Invalid categoryId"),
@@ -36,6 +47,7 @@ export const createAssetSchema = z.object({
   condition: conditionEnum.optional(),
   additionalInfo: z.string().trim().max(2000).optional().or(z.literal("")),
   floorId: z.string().uuid("Invalid floorId"),
+  unitId: optionalUnitId,
   serialNumber: z.string().trim().max(200).optional().or(z.literal("")),
   purchaseDate: optionalIsoDate,
 });
@@ -48,6 +60,7 @@ export const updateAssetSchema = z.object({
   condition: conditionEnum.optional(),
   additionalInfo: z.string().trim().max(2000).optional().or(z.literal("")),
   floorId: z.string().uuid().optional(),
+  unitId: optionalUnitId,
   serialNumber: z.string().trim().max(200).optional().or(z.literal("")),
   purchaseDate: optionalIsoDate,
 });

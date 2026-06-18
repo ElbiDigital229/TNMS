@@ -41,6 +41,7 @@ export const assetService = {
     condition?: string;
     categoryId?: string;
     propertyId?: string;
+    unitId?: string;
     userId?: string;
     allProperties?: boolean;
   }) {
@@ -59,6 +60,7 @@ export const assetService = {
     if (params.condition) where.condition = params.condition;
     if (params.categoryId) where.categoryId = params.categoryId;
     if (params.propertyId) where.propertyId = params.propertyId;
+    if (params.unitId) where.unitId = params.unitId;
 
     // Filter by user's assigned properties unless they have access to all
     if (params.userId && !params.allProperties) {
@@ -100,6 +102,7 @@ export const assetService = {
       include: {
         floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
+        unit: { select: { id: true, code: true, name: true } },
       },
       orderBy: { createdAt: "desc" },
     });
@@ -112,6 +115,7 @@ export const assetService = {
         floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         property: { select: { id: true, name: true, code: true } },
+        unit: { select: { id: true, code: true, name: true } },
       },
     });
   },
@@ -123,6 +127,7 @@ export const assetService = {
         floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         property: { select: { id: true, name: true, code: true } },
+        unit: { select: { id: true, code: true, name: true } },
       },
     });
   },
@@ -136,6 +141,7 @@ export const assetService = {
     additionalInfo?: string;
     floorId: string;
     propertyId: string;
+    unitId?: string | null;
     serialNumber?: string;
     purchaseDate?: Date;
     imagePath?: string;
@@ -148,6 +154,7 @@ export const assetService = {
       include: {
         floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
+        unit: { select: { id: true, code: true, name: true } },
       },
     });
   },
@@ -162,6 +169,7 @@ export const assetService = {
       condition?: AssetCondition;
       additionalInfo?: string;
       floorId?: string;
+      unitId?: string | null;
       serialNumber?: string;
       purchaseDate?: Date;
       imagePath?: string;
@@ -184,6 +192,7 @@ export const assetService = {
         floor: { select: { id: true, name: true } },
         category: { select: { id: true, name: true } },
         property: { select: { id: true, name: true } },
+        unit: { select: { id: true, code: true, name: true } },
       },
     });
 
@@ -246,6 +255,8 @@ export const assetService = {
       quantity?: number;
       condition?: string;
       floorName: string;
+      unitName?: string;
+      unitCode?: string;
       serialNumber?: string;
       purchaseDate?: string;
       additionalInfo?: string;
@@ -262,6 +273,14 @@ export const assetService = {
       select: { id: true, name: true },
     });
     const floorMap = new Map(floors.map((f) => [f.name.toLowerCase(), f.id]));
+
+    // Units in this property — lookup by either name or unique code.
+    const units = await prisma.unit.findMany({
+      where: { propertyId, status: "ACTIVE" },
+      select: { id: true, name: true, code: true },
+    });
+    const unitNameMap = new Map(units.map((u) => [u.name.toLowerCase(), u.id]));
+    const unitCodeMap = new Map(units.map((u) => [u.code.toLowerCase(), u.id]));
 
     const validConditions = ["EXCELLENT", "GOOD", "FAIR", "POOR"];
     const results: { row: number; status: string; name: string; error?: string }[] = [];
@@ -292,6 +311,22 @@ export const assetService = {
           continue;
         }
 
+        // Optional unit. Prefer unitCode (more precise); fall back to unitName.
+        let unitId: string | undefined;
+        if (item.unitCode && item.unitCode.trim()) {
+          unitId = unitCodeMap.get(item.unitCode.trim().toLowerCase());
+          if (!unitId) {
+            results.push({ row: i + 1, status: "error", name: item.name, error: `Unit code "${item.unitCode}" not found in this property` });
+            continue;
+          }
+        } else if (item.unitName && item.unitName.trim()) {
+          unitId = unitNameMap.get(item.unitName.trim().toLowerCase());
+          if (!unitId) {
+            results.push({ row: i + 1, status: "error", name: item.name, error: `Unit "${item.unitName}" not found in this property` });
+            continue;
+          }
+        }
+
         if (item.purchaseDate && new Date(item.purchaseDate) > new Date()) {
           results.push({ row: i + 1, status: "error", name: item.name, error: "Purchase date cannot be in the future" });
           continue;
@@ -310,6 +345,7 @@ export const assetService = {
             condition: conditionUpper as AssetCondition,
             floorId,
             propertyId,
+            unitId,
             serialNumber: item.serialNumber || undefined,
             purchaseDate: item.purchaseDate ? new Date(item.purchaseDate) : undefined,
             additionalInfo: item.additionalInfo || undefined,

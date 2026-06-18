@@ -193,12 +193,21 @@ export default function AssetDetailPage() {
               <ActiveBadge status={asset.status} />
             </div>
           </div>
-          <div className="mt-3 flex items-center gap-1.5 text-[13px] text-gray-500">
+          <div className="mt-3 flex flex-wrap items-center gap-1.5 text-[13px] text-gray-500">
             <Building2 size={13} />
             <span>{asset.property?.name}</span>
             <span>/</span>
             <Layers size={13} />
             <span>{asset.floor?.name}</span>
+            {asset.unit && (
+              <>
+                <span>/</span>
+                <span className="inline-flex items-center gap-1">
+                  <span className={cls.mono + " text-[12px]"}>{asset.unit.code}</span>
+                  <span>{asset.unit.name}</span>
+                </span>
+              </>
+            )}
           </div>
         </div>
 

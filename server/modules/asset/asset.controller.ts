@@ -5,7 +5,7 @@ import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 export const assetController = {
   async findAll(req: Request, res: Response) {
     try {
-      const { page, limit, search, status, condition, categoryId, propertyId } = req.query;
+      const { page, limit, search, status, condition, categoryId, propertyId, unitId } = req.query;
       const result = await assetService.findAll({
         page: page ? parseInt(page as string) : undefined,
         limit: limit ? parseInt(limit as string) : undefined,
@@ -14,6 +14,7 @@ export const assetController = {
         condition: condition as string,
         categoryId: categoryId as string,
         propertyId: propertyId as string,
+        unitId: unitId as string,
         userId: (req as any).user?.id,
         allProperties: (req as any).user?.allProperties,
       });
@@ -62,6 +63,7 @@ export const assetController = {
         condition,
         additionalInfo,
         floorId,
+        unitId,
         serialNumber,
         purchaseDate,
       } = req.body;
@@ -89,6 +91,7 @@ export const assetController = {
         additionalInfo: additionalInfo || undefined,
         floorId,
         propertyId: req.params.propertyId,
+        unitId: unitId || undefined,
         serialNumber: serialNumber || undefined,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
         imagePath,
@@ -110,6 +113,7 @@ export const assetController = {
         condition,
         additionalInfo,
         floorId,
+        unitId,
         serialNumber,
         purchaseDate,
       } = req.body;
@@ -120,6 +124,10 @@ export const assetController = {
 
       const imagePath = req.file ? `uploads/${req.file.filename}` : undefined;
 
+      // unitId is allowed to be explicitly null to detach an asset from a unit;
+      // undefined means "don't touch it". Empty string from a form select → null.
+      const unitIdToSet = unitId === undefined ? undefined : (unitId === "" ? null : unitId);
+
       const asset = await assetService.update(req.params.id, {
         name,
         categoryId,
@@ -128,6 +136,7 @@ export const assetController = {
         condition,
         additionalInfo,
         floorId,
+        unitId: unitIdToSet,
         serialNumber,
         purchaseDate: purchaseDate ? new Date(purchaseDate) : undefined,
         imagePath,

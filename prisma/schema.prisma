@@ -281,6 +281,7 @@ model Unit {
 
   tickets Ticket[]
   ticketSchedules TicketSchedule[]
+  assets  Asset[]
 
   @@index([propertyId])
   @@index([floorId])
@@ -300,6 +301,8 @@ model Asset {
   floor             Floor          @relation(fields: [floorId], references: [id])
   propertyId        String
   property          Property       @relation(fields: [propertyId], references: [id])
+  unitId            String?
+  unit              Unit?          @relation(fields: [unitId], references: [id], onDelete: SetNull)
   serialNumber      String?
   purchaseDate      DateTime?
   imagePath         String?
@@ -314,6 +317,7 @@ model Asset {
   @@index([propertyId, categoryId])
   @@index([floorId])
   @@index([categoryId])
+  @@index([unitId])
 }
 
 model Ticket {
