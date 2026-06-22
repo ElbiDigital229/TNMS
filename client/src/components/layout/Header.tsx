@@ -11,10 +11,14 @@ export default function Header({ onMenuClick }: HeaderProps) {
 
   return (
     <header className="relative z-20 flex h-12 items-center justify-between border-b border-gray-200 bg-white px-4">
-      {/* Hamburger — desktop only (mobile uses bottom tab bar) */}
+      {/* Hamburger — visible on phone + tablet so users can reach sections
+          that aren't in the bottom tab bar (Reports, Settings, Acquisitions,
+          Properties, Assets…). Desktop hides it because the sidebar is
+          permanently docked there. */}
       <button
         onClick={onMenuClick}
-        className="hidden rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden md:block"
+        className="rounded-md p-1.5 text-gray-400 hover:bg-gray-100 hover:text-gray-600 lg:hidden"
+        aria-label="Open menu"
       >
         <Menu size={20} />
       </button>

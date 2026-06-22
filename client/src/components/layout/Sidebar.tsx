@@ -62,16 +62,17 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
 
   return (
     <>
-      {/* Mobile overlay — only between md and lg (tablet). On <md we use bottom tab bar */}
+      {/* Backdrop — shown whenever the drawer is open on anything below the
+          docked-desktop breakpoint. Tapping it closes the drawer. */}
       {isOpen && (
         <div
-          className="fixed inset-0 z-40 hidden bg-sidebar/60 backdrop-blur-sm md:block lg:hidden"
+          className="fixed inset-0 z-40 bg-sidebar/60 backdrop-blur-sm lg:hidden"
           onClick={onClose}
         />
       )}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 hidden w-[230px] flex-col bg-sidebar transition-transform duration-300 ease-in-out md:flex lg:static lg:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[260px] max-w-[85vw] flex-col bg-sidebar transition-transform duration-300 ease-in-out lg:static lg:w-[230px] lg:translate-x-0 ${
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
