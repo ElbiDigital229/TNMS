@@ -160,7 +160,7 @@ function HBarChart({ data }: { data: { label: string; count: number }[] }) {
     <div className="space-y-2.5">
       {data.slice(0, 10).map((row, i) => (
         <div key={i} className="flex items-center gap-2">
-          <span className="w-28 shrink-0 text-[11px] text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
+          <span className="w-44 shrink-0 text-[11px] text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
           <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
             <div
               className="h-3 rounded-full transition-all duration-500"

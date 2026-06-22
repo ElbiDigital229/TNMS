@@ -95,7 +95,7 @@ function HBarChart({ data, onSegmentClick }: { data: BreakdownSlice[]; onSegment
           onClick={clickable ? () => onSegmentClick(row) : undefined}
           title={clickable ? `Click to filter by ${row.label}` : undefined}
         >
-          <span className="w-28 shrink-0 text-[11px] text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
+          <span className="w-44 shrink-0 text-[11px] text-gray-600 truncate text-right" title={row.label}>{row.label}</span>
           <div className="flex-1 bg-gray-100 rounded-full h-3 overflow-hidden">
             <div
               className={`h-3 rounded-full transition-all duration-500${clickable ? " group-hover:brightness-110" : ""}`}
