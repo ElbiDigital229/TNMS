@@ -870,7 +870,12 @@ export default function ReportBuilderPage() {
                     <div className="space-y-2">
                       {rows.map((row, i) => (
                         <div key={i} className="flex items-center gap-3">
-                          <span className="w-32 flex-shrink-0 truncate text-right text-[11px] text-gray-600">{row.label}</span>
+                          <span
+                            className="w-44 flex-shrink-0 truncate text-right text-[11px] text-gray-600"
+                            title={row.label}
+                          >
+                            {row.label}
+                          </span>
                           <div className="flex-1">
                             <div className="h-6 rounded bg-primary-500 transition-all duration-500"
                               style={{ width: `${maxVal > 0 ? (row.value / maxVal) * 100 : 0}%`, minWidth: row.value > 0 ? 2 : 0 }} />
