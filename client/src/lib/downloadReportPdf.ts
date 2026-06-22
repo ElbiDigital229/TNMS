@@ -23,6 +23,16 @@ export async function downloadReportPdf(
   options: DownloadReportPdfOptions,
 ): Promise<void> {
   const orientation = options.orientation ?? "portrait";
+
+  // Wait for any in-flight CSS transitions to settle. The horizontal bar
+  // charts use a 500ms width animation; if we snapshot mid-animation
+  // (common when the user clicks "Download PDF" immediately after "Run
+  // Report"), html2canvas captures the bars at width: 0 and the PDF shows
+  // the legend without the bars. Two animation frames + a 700ms timeout
+  // covers the transition plus a small buffer.
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+  await new Promise<void>((resolve) => setTimeout(resolve, 700));
+
   const canvas = await html2canvas(element, {
     scale: 2,
     backgroundColor: "#ffffff",
