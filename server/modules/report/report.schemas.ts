@@ -4,7 +4,10 @@ import { z } from "zod";
 // known envelope shape and leave filters as a loose object. Unknown entity
 // or measure names are rejected so the SQL builder never sees garbage.
 
-const entityEnum = z.enum(["ticket", "asset", "property", "user"]);
+// Plural to match the frontend payload and the report.service.ts Entity
+// type. The previous singular form rejected every legitimate query at
+// the validation layer ("Validation failed" toast in the UI).
+const entityEnum = z.enum(["tickets", "assets", "properties", "units", "users"]);
 const granularityEnum = z.enum(["day", "week", "month", "quarter", "year"]);
 
 export const runQuerySchema = z.object({
