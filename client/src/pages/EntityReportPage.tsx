@@ -390,7 +390,13 @@ export default function EntityReportPage() {
     return sorted;
   }, [filteredTickets, sortCol, sortDir]);
 
-  const pagedTickets = sortedTickets.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
+  // PDF mode: when capturing, render every row (not just the current page)
+  // and inline-collapse the truncate / max-width caps so the captured DOM
+  // matches what a reader expects to see in a static report.
+  const [pdfMode, setPdfMode] = useState(false);
+  const pagedTickets = pdfMode
+    ? sortedTickets
+    : sortedTickets.slice((tablePage - 1) * TABLE_PAGE_SIZE, tablePage * TABLE_PAGE_SIZE);
   const totalPages = Math.ceil(sortedTickets.length / TABLE_PAGE_SIZE);
 
   const toggleSort = (col: typeof sortCol) => {
@@ -426,6 +432,11 @@ export default function EntityReportPage() {
   const exportPdf = async () => {
     if (!reportRef.current) return;
     setDownloadingPdf(true);
+    setPdfMode(true);
+    // Yield two frames so React re-renders the full ticket table before
+    // html2canvas snapshots the DOM.
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+    await new Promise<void>((r) => requestAnimationFrame(() => r()));
     try {
       const label = entityType ? entityType.charAt(0).toUpperCase() + entityType.slice(1) : "Entity";
       const entityName = meta?.fullName ?? meta?.username ?? meta?.name ?? entityType;
@@ -437,6 +448,7 @@ export default function EntityReportPage() {
     } catch (e: any) {
       toast.error(e?.message || "Failed to generate PDF");
     } finally {
+      setPdfMode(false);
       setDownloadingPdf(false);
     }
   };
@@ -555,8 +567,9 @@ export default function EntityReportPage() {
 
       <div ref={reportRef}>
 
-      {/* Filter Bar */}
-      <div className="mb-3 rounded-lg bg-white p-3 ring-1 ring-gray-200">
+      {/* Filter Bar (hidden in PDF — the filters are interactive UI, not
+          report content; the resulting filtered counts speak for themselves) */}
+      <div className="mb-3 rounded-lg bg-white p-3 ring-1 ring-gray-200" data-pdf-hide>
         <div className="flex flex-wrap items-end gap-3">
           {/* Date range */}
           <div className="flex items-center gap-1.5">
@@ -656,36 +669,36 @@ export default function EntityReportPage() {
       <div className="mb-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
         <BreakdownCard title="By Status">
           <DonutChart data={breakdowns.byStatus} onSegmentClick={(s) => applyChartFilter("status", s)} />
-          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
+          <p className="text-[10px] text-gray-400 mt-2" data-pdf-hide>Click to filter</p>
         </BreakdownCard>
 
         {entityType !== "asset" && breakdowns.byProperty.length > 0 && (
           <BreakdownCard title="By Property">
             <HBarChart data={breakdowns.byProperty} onSegmentClick={(s) => applyChartFilter("property", s)} />
-            <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
+            <p className="text-[10px] text-gray-400 mt-2" data-pdf-hide>Click to filter</p>
           </BreakdownCard>
         )}
 
         <BreakdownCard title="By Category">
           <HBarChart data={breakdowns.byCategory} onSegmentClick={(s) => applyChartFilter("category", s)} />
-          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
+          <p className="text-[10px] text-gray-400 mt-2" data-pdf-hide>Click to filter</p>
         </BreakdownCard>
 
         <BreakdownCard title="By Assignee">
           <HBarChart data={breakdowns.byAssignee} onSegmentClick={(s) => applyChartFilter("assignee", s)} />
-          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
+          <p className="text-[10px] text-gray-400 mt-2" data-pdf-hide>Click to filter</p>
         </BreakdownCard>
 
         {entityType === "property" && breakdowns.byUnit.filter(s => s.key !== null).length > 0 && (
           <BreakdownCard title="By Unit">
             <HBarChart data={breakdowns.byUnit.filter(s => s.key !== null)} onSegmentClick={(s) => applyChartFilter("unit", s)} />
-            <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
+            <p className="text-[10px] text-gray-400 mt-2" data-pdf-hide>Click to filter</p>
           </BreakdownCard>
         )}
 
         <BreakdownCard title="By Priority">
           <HBarChart data={breakdowns.byPriority} onSegmentClick={(s) => applyChartFilter("priority", s)} />
-          <p className="text-[10px] text-gray-400 mt-2">Click to filter</p>
+          <p className="text-[10px] text-gray-400 mt-2" data-pdf-hide>Click to filter</p>
         </BreakdownCard>
       </div>
 
@@ -786,10 +799,12 @@ export default function EntityReportPage() {
         </div>
 
         {/* Pagination */}
-        <Pagination
-          pagination={{ page: tablePage, totalPages, total: filteredTickets.length, limit: TABLE_PAGE_SIZE }}
-          onPageChange={setTablePage}
-        />
+        <div data-pdf-hide>
+          <Pagination
+            pagination={{ page: tablePage, totalPages, total: filteredTickets.length, limit: TABLE_PAGE_SIZE }}
+            onPageChange={setTablePage}
+          />
+        </div>
       </div>
 
       </div>

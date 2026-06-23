@@ -40,13 +40,13 @@ export async function downloadReportPdf(
     logging: false,
     windowWidth: element.scrollWidth,
     onclone: (doc) => {
-      // html2canvas measures glyph widths slightly differently from the
+      // (1) html2canvas measures glyph widths slightly differently from the
       // browser. At small font sizes with `truncate` (overflow:hidden +
       // white-space:nowrap + text-overflow:ellipsis), the gap is enough
       // that labels which fit in the live DOM get clipped mid-character
       // in the canvas — turning "Electronics" into "Flectronics",
       // "Glass" into "Glaee", "Equipment" into "Fauinment".
-      // In the cloned DOM only, relax the constraints so labels expand
+      // Relax the constraints in the cloned DOM only so labels expand
       // to their natural width during capture.
       doc.querySelectorAll<HTMLElement>(".truncate").forEach((el) => {
         el.style.overflow = "visible";
@@ -54,6 +54,14 @@ export async function downloadReportPdf(
         el.style.whiteSpace = "nowrap";
         el.style.maxWidth = "none";
         el.style.width = "max-content";
+      });
+
+      // (2) Elements explicitly marked as UI-only (filter chips,
+      // pagination controls, "Click to filter" hints, etc.) are hidden
+      // from the PDF capture. The page itself remains interactive — only
+      // the cloned DOM gets these collapsed.
+      doc.querySelectorAll<HTMLElement>("[data-pdf-hide]").forEach((el) => {
+        el.style.display = "none";
       });
     },
   });
