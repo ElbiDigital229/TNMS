@@ -39,6 +39,23 @@ export async function downloadReportPdf(
     useCORS: true,
     logging: false,
     windowWidth: element.scrollWidth,
+    onclone: (doc) => {
+      // html2canvas measures glyph widths slightly differently from the
+      // browser. At small font sizes with `truncate` (overflow:hidden +
+      // white-space:nowrap + text-overflow:ellipsis), the gap is enough
+      // that labels which fit in the live DOM get clipped mid-character
+      // in the canvas — turning "Electronics" into "Flectronics",
+      // "Glass" into "Glaee", "Equipment" into "Fauinment".
+      // In the cloned DOM only, relax the constraints so labels expand
+      // to their natural width during capture.
+      doc.querySelectorAll<HTMLElement>(".truncate").forEach((el) => {
+        el.style.overflow = "visible";
+        el.style.textOverflow = "clip";
+        el.style.whiteSpace = "nowrap";
+        el.style.maxWidth = "none";
+        el.style.width = "max-content";
+      });
+    },
   });
 
   const pdf = new jsPDF({ unit: "pt", format: "a4", orientation });
