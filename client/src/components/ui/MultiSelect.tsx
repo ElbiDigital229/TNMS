@@ -30,14 +30,33 @@ export default function MultiSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const ref = useRef<HTMLDivElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!open) return;
-    const onDoc = (e: MouseEvent) => {
+    // Track both mousedown and touchstart — some mobile WebViews don't
+    // fire a synthetic mousedown reliably when the tap lands on a
+    // scrollable ancestor, leaving the dropdown stuck open.
+    const onDoc = (e: Event) => {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     };
     document.addEventListener("mousedown", onDoc);
-    return () => document.removeEventListener("mousedown", onDoc);
+    document.addEventListener("touchstart", onDoc);
+    return () => {
+      document.removeEventListener("mousedown", onDoc);
+      document.removeEventListener("touchstart", onDoc);
+    };
+  }, [open]);
+
+  // When the dropdown opens inside a scrollable ancestor (e.g. the ticket
+  // filter modal's overflow-y-auto body), the menu can extend past the
+  // scroller's clip box and become unreachable. Nudge the scroll so the
+  // full menu is visible.
+  useEffect(() => {
+    if (!open || !menuRef.current) return;
+    requestAnimationFrame(() => {
+      menuRef.current?.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    });
   }, [open]);
 
   const filtered = useMemo(() => {
@@ -89,7 +108,7 @@ export default function MultiSelect({
       </button>
 
       {open && (
-        <div className="absolute left-0 right-0 z-30 mt-1 max-h-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
+        <div ref={menuRef} className="absolute left-0 right-0 z-30 mt-1 max-h-64 overflow-hidden rounded-md border border-gray-200 bg-white shadow-lg">
           {searchable && (
             <div className="border-b border-gray-100 p-1.5">
               <div className="relative">

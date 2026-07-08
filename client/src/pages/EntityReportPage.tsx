@@ -570,21 +570,24 @@ export default function EntityReportPage() {
       {/* Filter Bar (hidden in PDF — the filters are interactive UI, not
           report content; the resulting filtered counts speak for themselves) */}
       <div className="mb-3 rounded-lg bg-white p-3 ring-1 ring-gray-200" data-pdf-hide>
-        <div className="flex flex-wrap items-end gap-3">
+        {/* Mobile: each filter block claims its own row (`flex-col`) so
+            Android date pickers and long select labels can't push the bar
+            past the viewport. Desktop keeps the compact wrap layout. */}
+        <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-end gap-3">
           {/* Date range */}
           <div className="flex items-center gap-1.5">
             <input
               type="date"
               value={activeFilters.dateFrom}
               onChange={(e) => setFilter("dateFrom", e.target.value)}
-              className={cls.input + " w-auto"}
+              className={cls.input + " min-w-0 flex-1 sm:w-auto sm:flex-none"}
             />
             <span className="text-[11px] text-gray-400">to</span>
             <input
               type="date"
               value={activeFilters.dateTo}
               onChange={(e) => setFilter("dateTo", e.target.value)}
-              className={cls.input + " w-auto"}
+              className={cls.input + " min-w-0 flex-1 sm:w-auto sm:flex-none"}
             />
           </div>
 

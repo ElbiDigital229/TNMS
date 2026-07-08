@@ -81,7 +81,7 @@ const fromCsv = (s: string | null) => (s ? s.split(",").filter(Boolean) : []);
 export default function TicketListPage() {
   const navigate = useNavigate();
   const toast = useToast();
-  const { hasPermission } = useAuth();
+  const { hasPermission, user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [tickets, setTickets] = useState<Ticket[]>([]);
@@ -317,6 +317,18 @@ export default function TicketListPage() {
             <span>Overdue only</span>
             {overdueFilter && <X size={11} />}
           </button>
+          {user && (
+            <button
+              onClick={() => {
+                setFilter("assigneeId", filters.assigneeId === user.id ? "" : user.id);
+                setPage(1);
+              }}
+              className={`mt-1.5 flex w-full items-center justify-between rounded-md px-2.5 py-1.5 text-[12px] ${filters.assigneeId === user.id ? "bg-primary-50 text-primary-700 font-medium" : "text-gray-600 hover:bg-gray-100"}`}
+            >
+              <span>Assigned to me</span>
+              {filters.assigneeId === user.id && <X size={11} />}
+            </button>
+          )}
         </div>
 
         {/* Priority */}
