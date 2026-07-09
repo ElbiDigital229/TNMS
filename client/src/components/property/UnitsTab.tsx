@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { unitApi, floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
@@ -6,7 +6,7 @@ import BulkImportModal from "../ui/BulkImportModal";
 import { cls } from "../../lib/styles";
 import { ActiveBadge } from "../ui/Badge";
 import { TableLoading, EmptyState } from "../ui/DataTable";
-import { Plus, Pencil, Building2, Upload, Trash2, Download } from "lucide-react";
+import { Plus, Pencil, Building2, Upload, Trash2, Download, Search, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { PERMISSIONS } from "../../../../shared/permissions";
 
@@ -49,6 +49,11 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
   const [unitType, setUnitType] = useState("");
   const [floorId, setFloorId] = useState("");
   const [description, setDescription] = useState("");
+
+  // Filter controls
+  const [searchInput, setSearchInput] = useState("");
+  const [floorFilter, setFloorFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
 
   const fetchData = () => {
     Promise.all([
@@ -141,10 +146,12 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === units.length) {
+    const visibleIds = visibleUnits.map((u) => u.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(units.map((u) => u.id)));
+      setSelectedIds(new Set(visibleIds));
     }
   };
 
@@ -166,10 +173,59 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
     }
   };
 
+  const visibleUnits = useMemo(() => {
+    const q = searchInput.trim().toLowerCase();
+    return units.filter((u) => {
+      if (q && !u.name.toLowerCase().includes(q) && !u.code.toLowerCase().includes(q)) return false;
+      if (floorFilter && (u.floor?.id || "") !== floorFilter) return false;
+      if (statusFilter && u.status !== statusFilter) return false;
+      return true;
+    });
+  }, [units, searchInput, floorFilter, statusFilter]);
+  const hasActiveFilters = !!(searchInput || floorFilter || statusFilter);
+
   if (loading) return <TableLoading />;
 
   return (
     <div>
+      {/* Filter bar — stacks on mobile, one row on desktop */}
+      {units.length > 0 && (
+        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search name or code..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className={`${cls.input} pl-8`}
+            />
+          </div>
+          <select value={floorFilter} onChange={(e) => setFloorFilter(e.target.value)} className={cls.select}>
+            <option value="">All Floors</option>
+            {floors.map((f) => <option key={f.id} value={f.id}>{f.name}</option>)}
+          </select>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={cls.select}>
+            <option value="">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+      )}
+      {hasActiveFilters && (
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-[11px] text-gray-500">
+            {visibleUnits.length} of {units.length}
+          </span>
+          <button
+            onClick={() => { setSearchInput(""); setFloorFilter(""); setStatusFilter(""); }}
+            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
+          >
+            Clear <X size={10} />
+          </button>
+        </div>
+      )}
+
       <div className="mb-3 flex items-center justify-between">
         <div>
           {selectedIds.size > 0 && hasPermission(P.UNITS.DEACTIVATE) && (
@@ -240,7 +296,7 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
               </tr>
             </thead>
             <tbody>
-              {units.map((unit) => (
+              {visibleUnits.map((unit) => (
                 <tr key={unit.id} className={`${cls.tr} ${selectedIds.has(unit.id) ? "bg-primary-50/40" : ""}`}>
                   <td className="px-3 py-2">
                     <input
@@ -252,7 +308,21 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
                   </td>
                   <td className={`${cls.td} ${cls.mono}`}>{unit.code}</td>
                   <td className={`${cls.td} font-medium`}>{unit.name}</td>
-                  <td className={`${cls.td} text-gray-600`}>{unit.floor?.name || "\u2014"}</td>
+                  <td className={cls.td}>
+                    {(() => {
+                      const floor = unit.floor;
+                      if (!floor) return <span className="text-gray-600">{"\u2014"}</span>;
+                      return (
+                        <button
+                          onClick={() => setFloorFilter(floor.id)}
+                          className={cls.link}
+                          title="Filter to this floor"
+                        >
+                          {floor.name}
+                        </button>
+                      );
+                    })()}
+                  </td>
                   <td className={`${cls.td} text-gray-600`}>{unit.unitType || "\u2014"}</td>
                   <td className={cls.td}><ActiveBadge status={unit.status} /></td>
                   <td className={cls.td}>

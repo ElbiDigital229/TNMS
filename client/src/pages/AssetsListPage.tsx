@@ -373,8 +373,16 @@ export default function AssetsListPage() {
                         onChange={() => toggleSelectOne(asset.id)}
                       />
                     </td>
-                    <td className={`px-3 py-2 ${cls.mono}`}>{asset.code}</td>
-                    <td className="px-3 py-2 font-medium">{asset.name}</td>
+                    <td className={`px-3 py-2 ${cls.mono}`}>
+                      <Link to={`/assets/${asset.code}`} className={cls.link}>
+                        {asset.code}
+                      </Link>
+                    </td>
+                    <td className="px-3 py-2 font-medium">
+                      <Link to={`/assets/${asset.code}`} className={cls.link}>
+                        {asset.name}
+                      </Link>
+                    </td>
                     <td className="px-3 py-2 text-gray-600">{asset.category.name}</td>
                     <td className="px-3 py-2">
                       <Link to={`/properties/${asset.property.id}`} className={cls.link}>

@@ -17,6 +17,8 @@ export const unitService = {
     limit?: number;
     search?: string;
     status?: string;
+    propertyId?: string;
+    floorId?: string;
     userId?: string;
     allProperties?: boolean;
   }) {
@@ -32,12 +34,18 @@ export const unitService = {
       ];
     }
     if (params.status) where.status = params.status;
+    if (params.propertyId) where.propertyId = params.propertyId;
+    if (params.floorId) where.floorId = params.floorId;
 
-    // Filter by user's assigned properties unless they have access to all
+    // Filter by user's assigned properties unless they have access to all.
+    // Applied AFTER explicit propertyId so an unauthorized property filter
+    // still gets narrowed to the user's scope.
     if (params.userId && !params.allProperties) {
       const propertyIds = await rbacService.getUserPropertyIds(params.userId);
       if (propertyIds !== "all") {
-        where.propertyId = { in: propertyIds };
+        where.propertyId = params.propertyId
+          ? (propertyIds.includes(params.propertyId) ? params.propertyId : "__none__")
+          : { in: propertyIds };
       }
     }
 

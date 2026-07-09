@@ -1,4 +1,5 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
@@ -6,7 +7,7 @@ import BulkImportModal from "../ui/BulkImportModal";
 import { cls } from "../../lib/styles";
 import { ActiveBadge } from "../ui/Badge";
 import { TableLoading, EmptyState } from "../ui/DataTable";
-import { Plus, Pencil, Layers, Download, Upload, Trash2 } from "lucide-react";
+import { Plus, Pencil, Layers, Download, Upload, Trash2, Search, X } from "lucide-react";
 import { useAuth } from "../../contexts/AuthContext";
 import { PERMISSIONS } from "../../../../shared/permissions";
 
@@ -34,6 +35,18 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
   const [floorName, setFloorName] = useState("");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [deleting, setDeleting] = useState(false);
+  const [searchInput, setSearchInput] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+
+  const visibleFloors = useMemo(() => {
+    const q = searchInput.trim().toLowerCase();
+    return floors.filter((f) => {
+      if (q && !f.name.toLowerCase().includes(q)) return false;
+      if (statusFilter && f.status !== statusFilter) return false;
+      return true;
+    });
+  }, [floors, searchInput, statusFilter]);
+  const hasActiveFilters = !!(searchInput || statusFilter);
 
   const fetchFloors = () => {
     floorApi
@@ -107,10 +120,12 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
   };
 
   const toggleSelectAll = () => {
-    if (selectedIds.size === floors.length) {
+    const visibleIds = visibleFloors.map((f) => f.id);
+    const allVisibleSelected = visibleIds.length > 0 && visibleIds.every((id) => selectedIds.has(id));
+    if (allVisibleSelected) {
       setSelectedIds(new Set());
     } else {
-      setSelectedIds(new Set(floors.map((f) => f.id)));
+      setSelectedIds(new Set(visibleIds));
     }
   };
 
@@ -136,6 +151,40 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
 
   return (
     <div>
+      {/* Filter bar */}
+      {floors.length > 0 && (
+        <div className="mb-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+            <input
+              type="text"
+              placeholder="Search floor name..."
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              className={`${cls.input} pl-8`}
+            />
+          </div>
+          <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={cls.select}>
+            <option value="">All Status</option>
+            <option value="ACTIVE">Active</option>
+            <option value="INACTIVE">Inactive</option>
+          </select>
+        </div>
+      )}
+      {hasActiveFilters && (
+        <div className="mb-3 flex items-center gap-2">
+          <span className="text-[11px] text-gray-500">
+            {visibleFloors.length} of {floors.length}
+          </span>
+          <button
+            onClick={() => { setSearchInput(""); setStatusFilter(""); }}
+            className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2 py-0.5 text-[11px] font-medium text-gray-700 hover:bg-gray-200"
+          >
+            Clear <X size={10} />
+          </button>
+        </div>
+      )}
+
       <div className="mb-3 flex items-center justify-between">
         <div>
           {selectedIds.size > 0 && hasPermission(P.FLOORS.DELETE) && (
@@ -191,7 +240,7 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
               <th className="px-3 py-2 text-left">
                 <input
                   type="checkbox"
-                  checked={selectedIds.size === floors.length && floors.length > 0}
+                  checked={visibleFloors.length > 0 && visibleFloors.every((f) => selectedIds.has(f.id))}
                   onChange={toggleSelectAll}
                   className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                 />
@@ -202,7 +251,7 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
             </tr>
           </thead>
           <tbody>
-            {floors.map((floor) => (
+            {visibleFloors.map((floor) => (
               <tr key={floor.id} className={`${cls.tr} ${selectedIds.has(floor.id) ? "bg-primary-50/40" : ""}`}>
                 <td className="px-3 py-2">
                   <input
@@ -212,7 +261,15 @@ export default function FloorsTab({ propertyId, propertyName, onUpdate }: Floors
                     className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
                   />
                 </td>
-                <td className={`${cls.td} font-medium`}>{floor.name}</td>
+                <td className={`${cls.td} font-medium`}>
+                  <Link
+                    to={`/units?propertyId=${propertyId}&floorId=${floor.id}`}
+                    className={cls.link}
+                    title="See units on this floor"
+                  >
+                    {floor.name}
+                  </Link>
+                </td>
                 <td className={cls.td}><ActiveBadge status={floor.status} /></td>
                 <td className={cls.td}>
                   <div className="flex items-center gap-1">
