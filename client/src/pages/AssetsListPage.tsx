@@ -390,10 +390,20 @@ export default function AssetsListPage() {
                       </Link>
                       <span className="ml-1 text-xs text-gray-400">({asset.property.code})</span>
                     </td>
-                    <td className="px-3 py-2 text-gray-600">
-                      {asset.unit?.name || "\u2014"}
-                      {asset.unit?.code && (
-                        <span className="ml-1 text-xs text-gray-400">({asset.unit.code})</span>
+                    <td className="px-3 py-2">
+                      {asset.unit ? (
+                        <>
+                          <Link
+                            to={`/tickets?propertyId=${asset.property.id}&unitId=${asset.unit.id}`}
+                            className={cls.link}
+                            title="See tickets on this unit"
+                          >
+                            {asset.unit.name}
+                          </Link>
+                          <span className="ml-1 text-xs text-gray-400">({asset.unit.code})</span>
+                        </>
+                      ) : (
+                        <span className="text-gray-600">{"\u2014"}</span>
                       )}
                     </td>
                     <td className="px-3 py-2"><ConditionBadge condition={asset.condition} /></td>

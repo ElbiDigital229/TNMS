@@ -100,6 +100,7 @@ export default function TicketListPage() {
     taskType: string[];
     blocked: string;
     propertyId: string[];
+    unitId: string;
     assigneeId: string;
     createdById: string;
     createdFrom: string;
@@ -111,6 +112,7 @@ export default function TicketListPage() {
     taskType: fromCsv(searchParams.get("taskType")),
     blocked: "",
     propertyId: fromCsv(searchParams.get("propertyId")),
+    unitId: searchParams.get("unitId") || "",
     assigneeId: "",
     createdById: "",
     createdFrom: "",
@@ -154,11 +156,12 @@ export default function TicketListPage() {
     const priority = fromCsv(searchParams.get("priority"));
     const taskType = fromCsv(searchParams.get("taskType"));
     const propertyId = fromCsv(searchParams.get("propertyId"));
+    const unitId = searchParams.get("unitId") || "";
     const overdue = searchParams.get("overdue") === "1";
     setView(v);
     setStatusFilter(status);
     setOverdueFilter(overdue);
-    setFilters((f) => ({ ...f, priority, taskType, propertyId }));
+    setFilters((f) => ({ ...f, priority, taskType, propertyId, unitId }));
     setPage(1);
   }, [searchParams]);
 
@@ -257,7 +260,7 @@ export default function TicketListPage() {
     (search ? 1 : 0);
 
   const clearAll = () => {
-    setFilters({ priority: [], taskType: [], blocked: "", propertyId: [], assigneeId: "", createdById: "", createdFrom: "", createdTo: "", dueDateFrom: "", dueDateTo: "" });
+    setFilters({ priority: [], taskType: [], blocked: "", propertyId: [], unitId: "", assigneeId: "", createdById: "", createdFrom: "", createdTo: "", dueDateFrom: "", dueDateTo: "" });
     setStatusFilter([]);
     setOverdueFilter(false);
     setSearchInput("");
@@ -546,6 +549,7 @@ export default function TicketListPage() {
               {filters.taskType.length > 0 && <span className={chip}>Type: {filters.taskType.length === 1 ? filters.taskType[0] : `${filters.taskType.length} selected`}<button onClick={() => clearFilter("taskType")}><X size={10} /></button></span>}
               {filters.blocked && <span className={`${chip} bg-orange-100 text-orange-700`}>{filters.blocked === "yes" ? "Blocked" : "Not blocked"}<button onClick={() => clearFilter("blocked")}><X size={10} /></button></span>}
               {filters.propertyId.length > 0 && <span className={chip}>Property: {filters.propertyId.length === 1 ? (properties.find(p => p.id === filters.propertyId[0])?.name || "...") : `${filters.propertyId.length} selected`}<button onClick={() => clearFilter("propertyId")}><X size={10} /></button></span>}
+              {filters.unitId && <span className={chip}>Unit: {tickets.find(t => t.unit?.id === filters.unitId)?.unit?.name || tickets.find(t => t.unit?.id === filters.unitId)?.unit?.code || "…"}<button onClick={() => clearFilter("unitId")}><X size={10} /></button></span>}
               {filters.assigneeId && <span className={chip}>{filters.assigneeId === user?.id ? "Assigned to me" : `Assignee: ${users.find(u => u.id === filters.assigneeId)?.fullName || "..."}`}<button onClick={() => clearFilter("assigneeId")}><X size={10} /></button></span>}
               {filters.createdById && <span className={chip}>Created by: {users.find(u => u.id === filters.createdById)?.fullName || "..."}<button onClick={() => clearFilter("createdById")}><X size={10} /></button></span>}
               {(filters.createdFrom || filters.createdTo) && <span className={chip}>Created: {filters.createdFrom || "..."} → {filters.createdTo || "..."}<button onClick={() => { clearFilter("createdFrom"); clearFilter("createdTo"); }}><X size={10} /></button></span>}
@@ -649,9 +653,15 @@ export default function TicketListPage() {
                               />
                             </td>
                           )}
-                          <td className={`${cls.td} ${cls.mono}`}>{ticket.ticketNumber}</td>
-                          <td className={`${cls.td} font-medium text-gray-900`}>
-                            {ticket.name}
+                          <td className={cls.td}>
+                            <Link to={`/tickets/${ticket.id}`} onClick={(e) => e.stopPropagation()} className={`${cls.mono} ${cls.link}`}>
+                              {ticket.ticketNumber}
+                            </Link>
+                          </td>
+                          <td className={`${cls.td} font-medium`}>
+                            <Link to={`/tickets/${ticket.id}`} onClick={(e) => e.stopPropagation()} className={cls.link}>
+                              {ticket.name}
+                            </Link>
                             {ticket.legacy && <Badge color="bg-gray-100 text-gray-600 ml-1">Legacy</Badge>}
                             {ticket.deletedAt && <Badge color="bg-red-50 text-red-600 ml-1">Archived</Badge>}
                           </td>

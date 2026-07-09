@@ -215,7 +215,15 @@ export default function UnitListPage() {
                 units.map((unit) => (
                   <tr key={unit.id} className={cls.tr}>
                     <td className={`${cls.td} ${cls.mono}`}>{unit.code}</td>
-                    <td className={`${cls.td} font-medium`}>{unit.name}</td>
+                    <td className={`${cls.td} font-medium`}>
+                      <Link
+                        to={`/tickets?propertyId=${unit.property.id}&unitId=${unit.id}`}
+                        className={cls.link}
+                        title="See tickets on this unit"
+                      >
+                        {unit.name}
+                      </Link>
+                    </td>
                     <td className={`${cls.td} text-gray-600`}>
                       {unit.unitType || "\u2014"}
                     </td>

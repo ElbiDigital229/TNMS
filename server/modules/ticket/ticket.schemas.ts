@@ -132,6 +132,7 @@ export const listTicketsQuerySchema = z.object({
   priority: csvString,
   taskType: csvString,
   propertyId: csvString,
+  unitId: z.string().uuid().optional(),
   assigneeId: z.string().uuid().optional(),
   createdById: z.string().uuid().optional(),
   createdFrom: z.string().optional(),

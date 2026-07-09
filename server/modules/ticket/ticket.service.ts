@@ -59,6 +59,7 @@ export const ticketService = {
     taskType?: TaskType;
     propertyId?: string;
     propertyIds?: string[];
+    unitId?: string;
     assigneeId?: string;
     createdById?: string;
     createdFrom?: string;
@@ -148,6 +149,7 @@ export const ticketService = {
         },
       ];
     }
+    if (params.unitId) where.unitId = params.unitId;
     if (params.assigneeId) where.assignedToId = params.assigneeId;
     if (params.createdById) where.createdById = params.createdById;
     if (params.createdFrom || params.createdTo) {

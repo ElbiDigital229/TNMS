@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
+import { Link } from "react-router-dom";
 import { unitApi, floorApi } from "../../lib/api";
 import { useToast } from "../ui/Toast";
 import Modal from "../ui/Modal";
@@ -307,7 +308,15 @@ export default function UnitsTab({ propertyId, propertyName, onUpdate }: UnitsTa
                     />
                   </td>
                   <td className={`${cls.td} ${cls.mono}`}>{unit.code}</td>
-                  <td className={`${cls.td} font-medium`}>{unit.name}</td>
+                  <td className={`${cls.td} font-medium`}>
+                    <Link
+                      to={`/tickets?propertyId=${propertyId}&unitId=${unit.id}`}
+                      className={cls.link}
+                      title="See tickets on this unit"
+                    >
+                      {unit.name}
+                    </Link>
+                  </td>
                   <td className={cls.td}>
                     {(() => {
                       const floor = unit.floor;
