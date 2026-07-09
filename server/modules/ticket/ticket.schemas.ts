@@ -64,6 +64,7 @@ export const createTicketSchema = z.object({
   assignedToId: z.string().uuid().optional().or(z.literal("")),
   priority: priorityEnum.optional(),
   assetIds: assetIdsField,
+  ppmId: z.string().uuid().optional().or(z.literal("")),
 });
 
 export const updateTicketSchema = z.object({

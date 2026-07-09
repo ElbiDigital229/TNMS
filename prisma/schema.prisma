@@ -203,6 +203,7 @@ model User {
   blocksResolved      TicketBlock[] @relation("BlockResolvedBy")
   ticketActivities    TicketActivity[] @relation("ActivityPerformedBy")
   ticketComments      TicketComment[] @relation("CommentAuthor")
+  ppmStepsCompleted   TicketPpmStep[]  @relation("PpmStepCompletedBy")
   schedulesAssigned   TicketSchedule[] @relation("ScheduleAssignee")
   schedulesCreated    TicketSchedule[] @relation("ScheduleCreator")
   todoWatchersOwned   TodoWatcher[] @relation("TodoOwner")
@@ -347,6 +348,9 @@ model Ticket {
   recurringDay    Int?
   recurringDueDays Int?
   imagePath       String?
+  ppmId           String?
+  ppm             Ppm?          @relation(fields: [ppmId], references: [id])
+  ppmSteps        TicketPpmStep[]
   completedAt     DateTime?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
@@ -373,6 +377,60 @@ model Ticket {
   @@index([categoryId])
   @@index([departmentId])
   @@index([unitId])
+  @@index([ppmId])
+}
+
+// ─── PPM (Planned Preventive Maintenance) ─────────────────────────────────
+// A Ppm is a reusable checklist template — e.g. "AC Service Checklist" or
+// "Elevator Monthly Inspection". Its steps are ordered rows the technician
+// works through when they visit site. When a ticket is created with a PPM
+// attached, the template's steps are SNAPSHOTTED into TicketPpmStep so
+// later edits to the template don't retroactively rewrite finished
+// tickets' history.
+model Ppm {
+  id          String     @id @default(uuid())
+  name        String     @unique
+  description String?
+  status      Status     @default(ACTIVE)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  steps       PpmStep[]
+  tickets     Ticket[]
+}
+
+model PpmStep {
+  id        String   @id @default(uuid())
+  ppmId     String
+  ppm       Ppm      @relation(fields: [ppmId], references: [id], onDelete: Cascade)
+  order     Int
+  text      String
+  createdAt DateTime @default(now())
+
+  @@index([ppmId, order])
+}
+
+enum PpmStepStatus {
+  PENDING
+  OK
+  NOT_OK
+  NA
+}
+
+model TicketPpmStep {
+  id             String        @id @default(uuid())
+  ticketId       String
+  ticket         Ticket        @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  order          Int
+  text           String        // snapshot of PpmStep.text at ticket creation time
+  status         PpmStepStatus @default(PENDING)
+  remarks        String?
+  completedAt    DateTime?
+  completedById  String?
+  completedBy    User?         @relation("PpmStepCompletedBy", fields: [completedById], references: [id])
+  updatedAt      DateTime      @updatedAt
+
+  @@index([ticketId, order])
 }
 
 model TicketAsset {

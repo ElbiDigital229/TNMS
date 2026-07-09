@@ -88,6 +88,10 @@ export default function TicketFormPage() {
   const [images, setImages] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [assetSearch, setAssetSearch] = useState("");
+  // PPM toggle + selection
+  const [isPpm, setIsPpm] = useState(false);
+  const [ppmId, setPpmId] = useState("");
+  const [ppms, setPpms] = useState<{ id: string; name: string }[]>([]);
 
   // Load properties, categories, and departments
   useEffect(() => {
@@ -105,6 +109,13 @@ export default function TicketFormPage() {
       })
       .catch(() => toast.error("Failed to load data"))
       .finally(() => setLoadingData(false));
+
+    // PPMs (best-effort — user may not have PPM.VIEW; silently skip)
+    import("../lib/api").then(({ ppmApi }) => {
+      ppmApi.list({ status: "ACTIVE" })
+        .then((r) => setPpms(r.data.data.map((p: any) => ({ id: p.id, name: p.name }))))
+        .catch(() => {});
+    });
   }, []);
 
   // Load ticket data for edit mode
@@ -124,6 +135,10 @@ export default function TicketFormPage() {
       setDepartmentId(t.departmentId);
       setAssignedToId(t.assignedToId || "");
       setPriority(t.priority);
+      if (t.ppmId) {
+        setIsPpm(true);
+        setPpmId(t.ppmId);
+      }
     });
   }, [id]);
 
@@ -193,6 +208,7 @@ export default function TicketFormPage() {
     if (selectedAssetIds.length > 0) {
       formData.append("assetIds", JSON.stringify(selectedAssetIds));
     }
+    if (isPpm && ppmId) formData.append("ppmId", ppmId);
     images.forEach((img) => formData.append("images", img));
 
     try {
@@ -384,6 +400,45 @@ export default function TicketFormPage() {
               onChange={(e) => setDueDate(e.target.value)}
               className={cls.input}
             />
+          </div>
+
+          {/* PPM (Planned Preventive Maintenance) */}
+          <div className="rounded-md border border-gray-200 bg-gray-50 p-3">
+            <label className="flex items-center gap-2 text-[13px] text-gray-800">
+              <input
+                type="checkbox"
+                checked={isPpm}
+                onChange={(e) => {
+                  setIsPpm(e.target.checked);
+                  if (!e.target.checked) setPpmId("");
+                  // PPM implies Preventive maintenance
+                  if (e.target.checked) {
+                    setTaskType("MAINTENANCE");
+                    setSubTaskType("PREVENTIVE");
+                  }
+                }}
+                className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+              />
+              <span className="font-medium">Is this a PPM?</span>
+              <span className="text-[11px] text-gray-500">Planned Preventive Maintenance — attaches a checklist to the ticket.</span>
+            </label>
+            {isPpm && (
+              <div className="mt-2">
+                <label className={cls.label}>Select PPM Checklist <span className="text-red-500">*</span></label>
+                <select
+                  value={ppmId}
+                  onChange={(e) => setPpmId(e.target.value)}
+                  className={`w-full ${cls.select}`}
+                  disabled={isEdit}
+                >
+                  <option value="">Select a PPM…</option>
+                  {ppms.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                </select>
+                {isEdit && (
+                  <p className="mt-1 text-[11px] text-gray-500">PPM can't be changed on an existing ticket — the checklist is snapshotted at creation.</p>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Task Type & Sub Task Type */}

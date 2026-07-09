@@ -95,6 +95,11 @@ ticketRoutes.post(
   requirePermission(PERMISSIONS.TICKETS.ASSIGN),
   ticketController.bulkAssign,
 );
+ticketRoutes.patch(
+  "/:id/ppm-steps/:stepId",
+  requireAnyPermission(PERMISSIONS.TICKETS.UPDATE_STATUS, PERMISSIONS.TICKETS.EDIT),
+  ticketController.updatePpmStep,
+);
 ticketRoutes.get(
   "/:id/assignable-users",
   requirePermission(PERMISSIONS.TICKETS.ASSIGN),

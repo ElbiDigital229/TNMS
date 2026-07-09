@@ -12,6 +12,7 @@ import SlaBar from "../components/ticket/SlaBar";
 import StatusTimeline from "../components/ticket/StatusTimeline";
 import RelatedTickets from "../components/ticket/RelatedTickets";
 import MentionInput from "../components/ticket/MentionInput";
+import PpmChecklist from "../components/ticket/PpmChecklist";
 import { capture } from "../lib/posthog";
 import {
   TASK_TYPE_LABELS,
@@ -872,6 +873,22 @@ export default function TicketDetailPage() {
               </div>
             );
           })()}
+
+          {/* PPM Checklist */}
+          {ticket.ppm && Array.isArray(ticket.ppmSteps) && ticket.ppmSteps.length > 0 && (
+            <PpmChecklist
+              ticketId={ticket.id}
+              ppmName={ticket.ppm.name}
+              steps={ticket.ppmSteps}
+              canEdit={isAssignee || hasPermission(PERMISSIONS.TICKETS.UPDATE_STATUS)}
+              onStepChanged={(updated) => {
+                setTicket((prev: any) => prev && ({
+                  ...prev,
+                  ppmSteps: (prev.ppmSteps || []).map((s: any) => s.id === updated.id ? { ...s, ...updated } : s),
+                }));
+              }}
+            />
+          )}
 
           {/* Comments & Activity Tabs */}
           <div className="rounded-lg bg-white ring-1 ring-gray-200">

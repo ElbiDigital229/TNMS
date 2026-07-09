@@ -374,4 +374,17 @@ export const acquisitionBuildingApi = {
   },
 };
 
+export const ppmApi = {
+  list: (params?: Record<string, string>) => api.get("/ppms", { params }),
+  get: (id: string) => api.get(`/ppms/${id}`),
+  create: (data: { name: string; description?: string | null; steps: { text: string }[] }) =>
+    api.post("/ppms", data),
+  update: (id: string, data: { name?: string; description?: string | null; steps?: { text: string }[] }) =>
+    api.put(`/ppms/${id}`, data),
+  deactivate: (id: string) => api.patch(`/ppms/${id}/deactivate`),
+  activate: (id: string) => api.patch(`/ppms/${id}/activate`),
+  updateTicketStep: (ticketId: string, stepId: string, data: { status: string; remarks?: string | null }) =>
+    api.patch(`/tickets/${ticketId}/ppm-steps/${stepId}`, data),
+};
+
 export default api;

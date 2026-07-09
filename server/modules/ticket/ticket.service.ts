@@ -243,6 +243,11 @@ export const ticketService = {
         },
         createdBy: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
         assignedTo: { select: { id: true, username: true, fullName: true, role: { select: { name: true } } } },
+        ppm: { select: { id: true, name: true, description: true } },
+        ppmSteps: {
+          orderBy: { order: "asc" },
+          include: { completedBy: { select: { id: true, fullName: true, username: true } } },
+        },
         comments: { orderBy: { createdAt: "desc" }, include: { commenter: { select: { id: true, fullName: true, username: true } } } },
         activities: {
           orderBy: { createdAt: "asc" },
@@ -275,6 +280,7 @@ export const ticketService = {
     priority?: Priority;
     imagePath?: string;
     assetIds?: string[];
+    ppmId?: string;
     createdById?: string;
   }) {
     const ticketNumber = await this.generateTicketNumber();
@@ -335,6 +341,25 @@ export const ticketService = {
         performedById: data.createdById || null,
       },
     });
+
+    // Snapshot PPM steps if this ticket was created as a PPM run.
+    // Snapshotting (not referencing) so future edits to the template
+    // don't retroactively rewrite finished tickets' checklists.
+    if (data.ppmId) {
+      const steps = await prisma.ppmStep.findMany({
+        where: { ppmId: data.ppmId },
+        orderBy: { order: "asc" },
+      });
+      if (steps.length > 0) {
+        await prisma.ticketPpmStep.createMany({
+          data: steps.map((s) => ({
+            ticketId: ticket.id,
+            order: s.order,
+            text: s.text,
+          })),
+        });
+      }
+    }
 
     // Log auto-assignment activity if applicable
     if (autoAssigned && effectiveAssigneeId) {

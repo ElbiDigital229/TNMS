@@ -34,6 +34,7 @@ import { ticketScheduleRoutes } from "./modules/ticketSchedule/ticketSchedule.ro
 import { acquisitionAgentRoutes } from "./modules/acquisition/agent/agent.routes.js";
 import { acquisitionLandRoutes } from "./modules/acquisition/land/land.routes.js";
 import { acquisitionBuildingRoutes } from "./modules/acquisition/building/building.routes.js";
+import { ppmRoutes } from "./modules/ppm/ppm.routes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -197,6 +198,7 @@ app.use("/api/ticket-schedules", ticketScheduleRoutes);
 app.use("/api/acquisitions/agents", acquisitionAgentRoutes);
 app.use("/api/acquisitions/land", acquisitionLandRoutes);
 app.use("/api/acquisitions/buildings", acquisitionBuildingRoutes);
+app.use("/api/ppms", ppmRoutes);
 
 // Unmatched /api/* → JSON 404 (don't fall through to SPA)
 app.use("/api", (_req, res) => {

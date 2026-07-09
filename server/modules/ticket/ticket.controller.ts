@@ -1,5 +1,6 @@
 import type { Request, Response } from "express";
 import { ticketService } from "./ticket.service.js";
+import { ppmService } from "../ppm/ppm.service.js";
 import { sendSuccess, sendError } from "../../utils/apiResponse.js";
 import { rbacService } from "../../services/rbac.service.js";
 import { PERMISSIONS } from "../../../shared/permissions.js";
@@ -97,6 +98,7 @@ export const ticketController = {
         assignedToId,
         priority,
         assetIds,
+        ppmId,
       } = req.body;
 
       if (!name || !description || !propertyId) {
@@ -128,6 +130,7 @@ export const ticketController = {
             ? JSON.parse(assetIds)
             : assetIds
           : undefined,
+        ppmId: ppmId || undefined,
         createdById: req.user?.id,
       });
 
@@ -249,6 +252,22 @@ export const ticketController = {
       sendSuccess(res, result, "Ticket assigned");
     } catch (error: any) {
       sendError(res, error.message, 400);
+    }
+  },
+
+  async updatePpmStep(req: Request, res: Response) {
+    try {
+      const { status, remarks } = req.body;
+      if (!status || !["PENDING", "OK", "NOT_OK", "NA"].includes(status)) {
+        return sendError(res, "Invalid status", 400);
+      }
+      const step = await ppmService.updateStepStatus(req.params.stepId, req.user!.id, {
+        status,
+        remarks,
+      });
+      sendSuccess(res, step);
+    } catch (e: any) {
+      sendError(res, e.message, 400);
     }
   },
 

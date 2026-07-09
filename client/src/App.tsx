@@ -41,6 +41,8 @@ const AcquisitionLandPage = lazy(() => import("./pages/AcquisitionLandPage"));
 const AcquisitionLandFormPage = lazy(() => import("./pages/AcquisitionLandFormPage"));
 const AcquisitionBuildingsPage = lazy(() => import("./pages/AcquisitionBuildingsPage"));
 const AcquisitionBuildingFormPage = lazy(() => import("./pages/AcquisitionBuildingFormPage"));
+const PpmListPage = lazy(() => import("./pages/PpmListPage"));
+const PpmFormPage = lazy(() => import("./pages/PpmFormPage"));
 
 function PageFallback() {
   return null;
@@ -90,6 +92,9 @@ export default function App() {
               <Route path="/tickets/:id" element={<RequirePermission any={[P.TICKETS.VIEW_ALL, P.TICKETS.VIEW_ASSIGNED]}><TicketDetailPage /></RequirePermission>} />
               <Route path="/tickets/:id/edit" element={<RequirePermission permission={P.TICKETS.EDIT}><TicketFormPage /></RequirePermission>} />
               <Route path="/ticket-schedules" element={<RequirePermission permission={P.TICKETS.CREATE}><TicketSchedulesPage /></RequirePermission>} />
+              <Route path="/ppm" element={<RequirePermission permission={P.PPM.VIEW}><PpmListPage /></RequirePermission>} />
+              <Route path="/ppm/new" element={<RequirePermission permission={P.PPM.MANAGE}><PpmFormPage /></RequirePermission>} />
+              <Route path="/ppm/:id/edit" element={<RequirePermission permission={P.PPM.MANAGE}><PpmFormPage /></RequirePermission>} />
               <Route path="/settings/area-groups" element={<RequirePermission permission={P.SETTINGS.AREA_GROUPS_MANAGE}><AreaGroupSettingsPage /></RequirePermission>} />
               <Route path="/settings/asset-categories" element={<RequirePermission permission={P.SETTINGS.ASSET_CATEGORIES_MANAGE}><AssetCategoriesPage /></RequirePermission>} />
               <Route path="/settings/ticket-categories" element={<RequirePermission permission={P.SETTINGS.TICKET_CATEGORIES_MANAGE}><TicketCategoriesPage /></RequirePermission>} />

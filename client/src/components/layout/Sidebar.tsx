@@ -12,6 +12,7 @@ import {
   BadgeCheck,
   TicketCheck,
   CheckSquare,
+  ListChecks,
   BarChart3,
   Users,
   Shield,
@@ -113,6 +114,13 @@ export default function Sidebar({ isOpen, onClose }: SidebarProps) {
               <NavLink to="/ticket-schedules" className={linkClass} onClick={onClose}>
                 <CalendarClock size={18} />
                 Schedules
+              </NavLink>
+            )}
+
+            {hasPermission(P.PPM.VIEW) && (
+              <NavLink to="/ppm" className={linkClass} onClick={onClose}>
+                <ListChecks size={18} />
+                PPM
               </NavLink>
             )}
 

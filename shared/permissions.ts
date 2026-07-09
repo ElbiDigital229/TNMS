@@ -83,6 +83,10 @@ export const PERMISSIONS = {
     IMPORT: "acquisitions.import",
     EXPORT: "acquisitions.export",
   },
+  PPM: {
+    VIEW: "ppm.view",
+    MANAGE: "ppm.manage",
+  },
 } as const;
 
 // Flat list of all permission keys
@@ -167,6 +171,9 @@ export const PERMISSION_DEFINITIONS: {
   { key: PERMISSIONS.ACQUISITIONS.DELETE, module: "acquisitions", description: "Archive/restore acquisition records" },
   { key: PERMISSIONS.ACQUISITIONS.IMPORT, module: "acquisitions", description: "Bulk import acquisition records via CSV" },
   { key: PERMISSIONS.ACQUISITIONS.EXPORT, module: "acquisitions", description: "Export acquisition records to CSV" },
+  // PPM
+  { key: PERMISSIONS.PPM.VIEW, module: "ppm", description: "View PPM checklist templates" },
+  { key: PERMISSIONS.PPM.MANAGE, module: "ppm", description: "Create, edit, and deactivate PPM checklist templates" },
 ];
 
 // Module labels for UI grouping
