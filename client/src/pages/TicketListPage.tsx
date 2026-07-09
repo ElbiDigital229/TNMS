@@ -498,6 +498,19 @@ export default function TicketListPage() {
                 <span className="flex h-4 w-4 items-center justify-center rounded-full bg-primary-600 text-[10px] font-semibold text-white">{activeFilterCount}</span>
               )}
             </button>
+            {canAssign && selectedIds.size > 0 && (
+              <>
+                <button
+                  onClick={() => setReassignOpen(true)}
+                  className={cls.btnPrimary}
+                >
+                  Reassign {selectedIds.size}
+                </button>
+                <button onClick={clearSelection} className="text-[12px] font-medium text-gray-500 hover:text-gray-700">
+                  Clear
+                </button>
+              </>
+            )}
             {hasPermission(PERMISSIONS.TICKETS.CREATE) && (
               <>
                 <button onClick={() => setImportOpen(true)} className={cls.btnSecondary}>
@@ -800,10 +813,11 @@ export default function TicketListPage() {
         </div>
       </Modal>
 
-      {/* Floating bulk action bar — sits above the mobile FAB & tab bar */}
+      {/* Mobile-only bulk action bar. Desktop shows the Reassign button
+          inline in the PageHeader actions row. */}
       {canAssign && selectedIds.size > 0 && (
-        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white shadow-lg md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:rounded-full md:border md:shadow-xl">
-          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 md:px-5">
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white shadow-lg sm:hidden">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3">
             <span className="text-[13px] font-medium text-gray-800">
               {selectedIds.size} selected
             </span>
