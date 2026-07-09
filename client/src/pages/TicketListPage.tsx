@@ -317,7 +317,10 @@ export default function TicketListPage() {
             <span>Overdue only</span>
             {overdueFilter && <X size={11} />}
           </button>
-          {user && (
+          {/* Only show the "Assigned to me" shortcut when the user can
+              actually be assigned tickets — otherwise toggling it always
+              returns an empty list, which reads as a bug. */}
+          {user && hasPermission(PERMISSIONS.TICKETS.ASSIGNEE_ELIGIBLE) && (
             <button
               onClick={() => {
                 setFilter("assigneeId", filters.assigneeId === user.id ? "" : user.id);
@@ -495,7 +498,7 @@ export default function TicketListPage() {
               {filters.taskType.length > 0 && <span className={chip}>Type: {filters.taskType.length === 1 ? filters.taskType[0] : `${filters.taskType.length} selected`}<button onClick={() => clearFilter("taskType")}><X size={10} /></button></span>}
               {filters.blocked && <span className={`${chip} bg-orange-100 text-orange-700`}>{filters.blocked === "yes" ? "Blocked" : "Not blocked"}<button onClick={() => clearFilter("blocked")}><X size={10} /></button></span>}
               {filters.propertyId.length > 0 && <span className={chip}>Property: {filters.propertyId.length === 1 ? (properties.find(p => p.id === filters.propertyId[0])?.name || "...") : `${filters.propertyId.length} selected`}<button onClick={() => clearFilter("propertyId")}><X size={10} /></button></span>}
-              {filters.assigneeId && <span className={chip}>Assignee: {users.find(u => u.id === filters.assigneeId)?.fullName || "..."}<button onClick={() => clearFilter("assigneeId")}><X size={10} /></button></span>}
+              {filters.assigneeId && <span className={chip}>{filters.assigneeId === user?.id ? "Assigned to me" : `Assignee: ${users.find(u => u.id === filters.assigneeId)?.fullName || "..."}`}<button onClick={() => clearFilter("assigneeId")}><X size={10} /></button></span>}
               {filters.createdById && <span className={chip}>Created by: {users.find(u => u.id === filters.createdById)?.fullName || "..."}<button onClick={() => clearFilter("createdById")}><X size={10} /></button></span>}
               {(filters.createdFrom || filters.createdTo) && <span className={chip}>Created: {filters.createdFrom || "..."} → {filters.createdTo || "..."}<button onClick={() => { clearFilter("createdFrom"); clearFilter("createdTo"); }}><X size={10} /></button></span>}
               {(filters.dueDateFrom || filters.dueDateTo) && <span className={chip}>Due: {filters.dueDateFrom || "..."} → {filters.dueDateTo || "..."}<button onClick={() => { clearFilter("dueDateFrom"); clearFilter("dueDateTo"); }}><X size={10} /></button></span>}
