@@ -130,7 +130,14 @@ export default function TicketListPage() {
   const [confirmRestore, setConfirmRestore] = useState<Ticket | null>(null);
   const [actionLoading, setActionLoading] = useState(false);
 
+  // Bulk-select for reassignment
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [reassignOpen, setReassignOpen] = useState(false);
+  const [reassignTo, setReassignTo] = useState("");
+  const [reassigning, setReassigning] = useState(false);
+
   const canDelete = hasPermission(PERMISSIONS.TICKETS.DELETE);
+  const canAssign = hasPermission(PERMISSIONS.TICKETS.ASSIGN);
 
   // Fetch dropdown data once
   useEffect(() => {
@@ -160,6 +167,47 @@ export default function TicketListPage() {
     const t = setTimeout(() => { setSearch(searchInput); setPage(1); }, 300);
     return () => clearTimeout(t);
   }, [searchInput]);
+
+  // Clear bulk selection whenever the visible ticket set changes — no
+  // point in keeping selections that are no longer on-screen.
+  useEffect(() => {
+    setSelectedIds(new Set());
+  }, [page, search, statusFilter, overdueFilter, filters, view]);
+
+  const toggleSelectTicket = (id: string) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+  const toggleSelectAllVisible = (visibleTicketIds: string[]) => {
+    const allSelected = visibleTicketIds.length > 0 && visibleTicketIds.every((id) => selectedIds.has(id));
+    setSelectedIds(allSelected ? new Set() : new Set(visibleTicketIds));
+  };
+  const clearSelection = () => setSelectedIds(new Set());
+  const handleBulkReassign = async () => {
+    if (!reassignTo || selectedIds.size === 0) return;
+    setReassigning(true);
+    try {
+      const res = await ticketApi.bulkAssign(Array.from(selectedIds), reassignTo);
+      const { succeeded, failed } = res.data.data;
+      if (failed > 0) {
+        toast.error(`${succeeded} reassigned, ${failed} failed`);
+      } else {
+        toast.success(`${succeeded} ticket${succeeded === 1 ? "" : "s"} reassigned`);
+      }
+      setReassignOpen(false);
+      setReassignTo("");
+      clearSelection();
+      fetchTickets();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || "Failed to reassign");
+    } finally {
+      setReassigning(false);
+    }
+  };
 
   const fetchTickets = useCallback(async () => {
     setLoading(true);
@@ -515,9 +563,24 @@ export default function TicketListPage() {
               {/* Mobile Card View */}
               <div className="space-y-2 md:hidden">
                 {tickets.map((ticket) => (
-                  <Link key={ticket.id} to={`/tickets/${ticket.id}`} className="block rounded-lg bg-white p-3 ring-1 ring-gray-200 active:bg-gray-50 transition-colors">
-                    <div className="flex items-center justify-between">
-                      <span className={cls.mono}>{ticket.ticketNumber}</span>
+                  <Link
+                    key={ticket.id}
+                    to={`/tickets/${ticket.id}`}
+                    className={`block rounded-lg p-3 ring-1 transition-colors active:bg-gray-50 ${selectedIds.has(ticket.id) ? "bg-primary-50/40 ring-primary-300" : "bg-white ring-gray-200"}`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2">
+                        {canAssign && (
+                          <input
+                            type="checkbox"
+                            checked={selectedIds.has(ticket.id)}
+                            onClick={(e) => e.stopPropagation()}
+                            onChange={(e) => { e.stopPropagation(); toggleSelectTicket(ticket.id); }}
+                            className="h-4 w-4 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                          />
+                        )}
+                        <span className={cls.mono}>{ticket.ticketNumber}</span>
+                      </div>
                       <PriorityBadge priority={ticket.priority} />
                     </div>
                     <p className="mt-1 text-[13px] font-semibold text-gray-900 leading-snug">{ticket.name}</p>
@@ -547,6 +610,17 @@ export default function TicketListPage() {
                   <table className={cls.table}>
                     <thead>
                       <tr className="border-b border-gray-200">
+                        {canAssign && (
+                          <th className="w-8 px-3 py-2">
+                            <input
+                              type="checkbox"
+                              checked={tickets.length > 0 && tickets.every((t) => selectedIds.has(t.id))}
+                              onChange={() => toggleSelectAllVisible(tickets.map((t) => t.id))}
+                              className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              title="Select all on this page"
+                            />
+                          </th>
+                        )}
                         <SortTh column="ticketNumber">#</SortTh>
                         <SortTh column="name">Name</SortTh>
                         <th className={cls.th}>Type</th>
@@ -560,7 +634,21 @@ export default function TicketListPage() {
                     </thead>
                     <tbody>
                       {tickets.map((ticket) => (
-                        <tr key={ticket.id} onClick={() => navigate(`/tickets/${ticket.id}`)} className={cls.trClick}>
+                        <tr
+                          key={ticket.id}
+                          onClick={() => navigate(`/tickets/${ticket.id}`)}
+                          className={`${cls.trClick} ${selectedIds.has(ticket.id) ? "bg-primary-50/40" : ""}`}
+                        >
+                          {canAssign && (
+                            <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                              <input
+                                type="checkbox"
+                                checked={selectedIds.has(ticket.id)}
+                                onChange={() => toggleSelectTicket(ticket.id)}
+                                className="h-3.5 w-3.5 rounded border-gray-300 text-primary-600 focus:ring-primary-500"
+                              />
+                            </td>
+                          )}
                           <td className={`${cls.td} ${cls.mono}`}>{ticket.ticketNumber}</td>
                           <td className={`${cls.td} font-medium text-gray-900`}>
                             {ticket.name}
@@ -697,6 +785,68 @@ export default function TicketListPage() {
           <button onClick={handleRestore} className={cls.btnPrimary} disabled={actionLoading}>
             {actionLoading ? "Restoring..." : "Restore"}
           </button>
+        </div>
+      </Modal>
+
+      {/* Floating bulk action bar — sits above the mobile FAB & tab bar */}
+      {canAssign && selectedIds.size > 0 && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t border-gray-200 bg-white shadow-lg md:bottom-4 md:left-1/2 md:right-auto md:-translate-x-1/2 md:rounded-full md:border md:shadow-xl">
+          <div className="mx-auto flex max-w-3xl items-center justify-between gap-3 px-4 py-3 md:px-5">
+            <span className="text-[13px] font-medium text-gray-800">
+              {selectedIds.size} selected
+            </span>
+            <div className="flex items-center gap-2">
+              <button onClick={clearSelection} className="text-[12px] font-medium text-gray-500 hover:text-gray-700">
+                Clear
+              </button>
+              <button
+                onClick={() => setReassignOpen(true)}
+                className={cls.btnPrimary}
+              >
+                Reassign
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reassign modal */}
+      <Modal isOpen={reassignOpen} onClose={() => { if (!reassigning) { setReassignOpen(false); setReassignTo(""); } }} title={`Reassign ${selectedIds.size} ticket${selectedIds.size === 1 ? "" : "s"}`}>
+        <div className="space-y-3">
+          <div>
+            <label className={cls.label}>Assign to <span className="text-red-500">*</span></label>
+            <select
+              value={reassignTo}
+              onChange={(e) => setReassignTo(e.target.value)}
+              className={`w-full ${cls.select}`}
+              disabled={reassigning}
+              autoFocus
+            >
+              <option value="">Select a user…</option>
+              {users.map((u) => (
+                <option key={u.id} value={u.id}>{u.fullName || u.username}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-gray-500">
+              Assignment is validated per-ticket. Any that can't be reassigned (e.g., the new user lacks access to the property) will report a failure at the end.
+            </p>
+          </div>
+          <div className="flex justify-end gap-2">
+            <button
+              onClick={() => { setReassignOpen(false); setReassignTo(""); }}
+              className={cls.btnSecondary}
+              disabled={reassigning}
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleBulkReassign}
+              className={cls.btnPrimary}
+              disabled={!reassignTo || reassigning}
+            >
+              {reassigning ? "Reassigning..." : `Reassign ${selectedIds.size}`}
+            </button>
+          </div>
         </div>
       </Modal>
     </div>

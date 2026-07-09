@@ -668,6 +668,24 @@ export const ticketService = {
     return updated;
   },
 
+  async bulkAssign(ticketIds: string[], assigneeId: string, assignerId: string) {
+    // Reuses the single-ticket assign() so we keep one code path for
+    // status auto-promotion, activity log entries, and notifications.
+    // Failures on individual tickets don't halt the batch; we report
+    // per-ticket outcomes so the client can surface partial failures.
+    let succeeded = 0;
+    const failures: { ticketId: string; error: string }[] = [];
+    for (const ticketId of ticketIds) {
+      try {
+        await this.assign(ticketId, assigneeId, assignerId);
+        succeeded++;
+      } catch (e: any) {
+        failures.push({ ticketId, error: e?.message ?? "Unknown error" });
+      }
+    }
+    return { succeeded, failed: failures.length, failures };
+  },
+
   async block(ticketId: string, data: { blockingUserId?: string; departmentId: string; reason: string }, blockedById: string) {
     const ticket = await prisma.ticket.findUnique({ where: { id: ticketId }, select: { id: true, status: true } });
     if (!ticket) throw new Error("Ticket not found");

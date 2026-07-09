@@ -176,6 +176,8 @@ export const ticketApi = {
     api.delete(`/tickets/${ticketId}/comments/${commentId}`),
   assign: (id: string, assigneeId: string) =>
     api.patch(`/tickets/${id}/assign`, { assigneeId }),
+  bulkAssign: (ticketIds: string[], assigneeId: string) =>
+    api.post(`/tickets/bulk-assign`, { ticketIds, assigneeId }),
   getAssignableUsers: (id: string) =>
     api.get(`/tickets/${id}/assignable-users`),
   block: (id: string, data: { blockingUserId?: string; departmentId: string; reason: string }) =>

@@ -90,6 +90,11 @@ ticketRoutes.patch(
   validate({ params: ticketIdParamSchema, body: assignSchema }),
   ticketController.assign,
 );
+ticketRoutes.post(
+  "/bulk-assign",
+  requirePermission(PERMISSIONS.TICKETS.ASSIGN),
+  ticketController.bulkAssign,
+);
 ticketRoutes.get(
   "/:id/assignable-users",
   requirePermission(PERMISSIONS.TICKETS.ASSIGN),

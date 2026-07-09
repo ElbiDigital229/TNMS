@@ -251,6 +251,21 @@ export const ticketController = {
     }
   },
 
+  async bulkAssign(req: Request, res: Response) {
+    try {
+      const { ticketIds, assigneeId } = req.body;
+      if (!Array.isArray(ticketIds) || ticketIds.length === 0) {
+        return sendError(res, "ticketIds must be a non-empty array", 400);
+      }
+      if (!assigneeId) return sendError(res, "assigneeId is required", 400);
+
+      const result = await ticketService.bulkAssign(ticketIds, assigneeId, req.user!.id);
+      sendSuccess(res, result, `${result.succeeded} ticket(s) reassigned`);
+    } catch (error: any) {
+      sendError(res, error.message, 400);
+    }
+  },
+
   async getAssignableUsers(req: Request, res: Response) {
     try {
       const users = await ticketService.getAssignableUsers(
