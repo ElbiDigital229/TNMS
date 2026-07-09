@@ -702,8 +702,10 @@ export default function TicketListPage() {
                 <Pagination pagination={pagination} onPageChange={setPage} />
               </div>
 
-              {/* Mobile pagination */}
-              <div className="md:hidden">
+              {/* Mobile pagination — clear the FAB (4.5rem + h-14) and
+                  the bulk-action bar so the prev/next controls aren't
+                  hidden underneath when scrolled to the bottom. */}
+              <div className="md:hidden pb-[calc(9rem+env(safe-area-inset-bottom,0px))]">
                 <Pagination pagination={pagination} onPageChange={setPage} />
               </div>
             </>
