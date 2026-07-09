@@ -816,23 +816,89 @@ export const dashboardReportService = {
       ticketsTrend.push({ month: monthKey, created, completed });
     }
 
-    // ── Tech performance (by assignedToId) ──
-    const techTickets = await prisma.ticket.findMany({
-      where: { ...scopeFilter, assignedToId: { not: null } },
-      select: { assignedToId: true, status: true, createdAt: true, completedAt: true, dueDate: true },
-    });
+    // ── Tech performance ─────────────────────────────────────────────
+    // Attribution model:
+    //   • `completed` / avgHours / slaRate are credited to whoever
+    //     ACTUALLY CLOSED the ticket — the actor on the STATUS_CHANGED
+    //     → COMPLETED activity row. This is what fixes the "night team
+    //     closes tickets that then get reassigned to the morning
+    //     supervisor at shift change, and the morning supervisor gets
+    //     the credit" bug reported by ops.
+    //   • `assigned` is still the count of tickets CURRENTLY assigned
+    //     to the person (unchanged semantic). Rewriting this properly
+    //     would require walking assignment history — the ASSIGNED
+    //     activity only records the assignee's name as text, not an
+    //     id, so name-collision would make it unreliable.
+    //   • Fallback: if a COMPLETED ticket has no STATUS_CHANGED
+    //     activity (legacy or imported data), credit falls back to the
+    //     current assignedToId. Better to over-credit the current
+    //     assignee for those than to silently drop the completion.
+    const [assignedTickets, completedTicketsForCredit, closureActivities] =
+      await Promise.all([
+        prisma.ticket.findMany({
+          where: { ...scopeFilter, assignedToId: { not: null } },
+          select: { assignedToId: true },
+        }),
+        prisma.ticket.findMany({
+          where: { ...scopeFilter, status: "COMPLETED" },
+          select: {
+            id: true,
+            assignedToId: true,
+            createdAt: true,
+            completedAt: true,
+            dueDate: true,
+          },
+        }),
+        prisma.ticketActivity.findMany({
+          where: {
+            action: "STATUS_CHANGED",
+            details: { contains: "to COMPLETED" },
+            performedById: { not: null },
+            ticket: { ...scopeFilter, status: "COMPLETED" },
+          },
+          select: { ticketId: true, performedById: true, createdAt: true },
+          orderBy: { createdAt: "desc" },
+        }),
+      ]);
 
-    const techMap = new Map<string, { assigned: number; completed: number; totalHours: number; slaOk: number }>();
-    for (const t of techTickets) {
-      const uid = t.assignedToId!;
-      if (!techMap.has(uid)) techMap.set(uid, { assigned: 0, completed: 0, totalHours: 0, slaOk: 0 });
-      const entry = techMap.get(uid)!;
-      entry.assigned++;
-      if (t.status === "COMPLETED" && t.completedAt) {
-        entry.completed++;
-        entry.totalHours += (t.completedAt.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
-        if (t.dueDate && t.completedAt <= t.dueDate) entry.slaOk++;
+    // Most recent closure per ticket (handles COMPLETED→REOPEN→COMPLETED).
+    const closureByTicket = new Map<string, { closerId: string; closedAt: Date }>();
+    for (const a of closureActivities) {
+      if (closureByTicket.has(a.ticketId)) continue;
+      closureByTicket.set(a.ticketId, {
+        closerId: a.performedById!,
+        closedAt: a.createdAt,
+      });
+    }
+
+    const techMap = new Map<
+      string,
+      { assigned: number; completed: number; totalHours: number; slaOk: number }
+    >();
+    const getOrCreate = (uid: string) => {
+      let entry = techMap.get(uid);
+      if (!entry) {
+        entry = { assigned: 0, completed: 0, totalHours: 0, slaOk: 0 };
+        techMap.set(uid, entry);
       }
+      return entry;
+    };
+
+    for (const t of assignedTickets) {
+      getOrCreate(t.assignedToId!).assigned++;
+    }
+
+    for (const t of completedTicketsForCredit) {
+      const closure = closureByTicket.get(t.id);
+      const closerId = closure?.closerId ?? t.assignedToId;
+      const closedAt = closure?.closedAt ?? t.completedAt;
+      if (!closerId || !closedAt) continue;
+
+      const entry = getOrCreate(closerId);
+      entry.completed++;
+      entry.totalHours +=
+        (closedAt.getTime() - t.createdAt.getTime()) / (1000 * 60 * 60);
+      if (t.dueDate && closedAt <= t.dueDate) entry.slaOk++;
     }
 
     const techUserIds = [...techMap.keys()];
@@ -851,7 +917,11 @@ export const dashboardReportService = {
         avgHours: d.completed > 0 ? Math.round((d.totalHours / d.completed) * 10) / 10 : 0,
         slaRate: d.completed > 0 ? Math.round((d.slaOk / d.completed) * 1000) / 10 : 0,
       }))
-      .sort((a, b) => b.assigned - a.assigned)
+      // Sort by completions — the ranking is called "performance", so a
+      // technician with 50 closures should top the list even if they now
+      // hold zero current assignments (common when work migrates between
+      // shifts).
+      .sort((a, b) => b.completed - a.completed || b.assigned - a.assigned)
       .slice(0, 20);
 
     // ── Asset health ──
@@ -900,6 +970,12 @@ export const entityReportService = {
           // Tickets where this user is currently blocking (so the active
           // block shows up in their queue / "Blocked" KPI).
           { blocks: { some: { blockingUserId: targetUserId, resolvedAt: null } } },
+          // Tickets this user actually closed — even if they've since
+          // been reassigned away from them (e.g. shift-handover moves
+          // the ticket to a different owner in the morning). Without
+          // this clause, night-shift closures would vanish from the
+          // tech's own user report.
+          { activities: { some: { action: "STATUS_CHANGED", details: { contains: "to COMPLETED" }, performedById: targetUserId } } },
         ],
       },
       include: TICKET_REPORT_INCLUDE,
