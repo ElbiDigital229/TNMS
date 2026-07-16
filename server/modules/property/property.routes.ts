@@ -2,7 +2,7 @@ import { Router } from "express";
 import { propertyController } from "./property.controller.js";
 import { authenticate } from "../../middleware/authenticate.js";
 import { uploadSingle } from "../../middleware/upload.js";
-import { requirePermission } from "../../middleware/authorize.js";
+import { requirePermission, requireAnyPermission } from "../../middleware/authorize.js";
 import { validate } from "../../middleware/validate.js";
 import { PERMISSIONS } from "../../../shared/permissions.js";
 import {
@@ -22,9 +22,23 @@ propertyRoutes.get(
   validate({ query: listPropertiesQuerySchema }),
   propertyController.exportCsv,
 );
+// The property list also powers filter dropdowns on Assets / Units /
+// Tickets / Reports pages, so anyone with those view permissions needs
+// to hit it. RBAC scope on the service side already limits each user
+// to only their assigned properties, so exposing this to a broader
+// permission set is safe.
 propertyRoutes.get(
   "/",
-  requirePermission(PERMISSIONS.PROPERTIES.VIEW),
+  requireAnyPermission(
+    PERMISSIONS.PROPERTIES.VIEW,
+    PERMISSIONS.ASSETS.VIEW,
+    PERMISSIONS.UNITS.VIEW,
+    PERMISSIONS.TICKETS.VIEW_ALL,
+    PERMISSIONS.TICKETS.VIEW_ASSIGNED,
+    PERMISSIONS.TICKETS.CREATE,
+    PERMISSIONS.REPORTS.VIEW,
+    PERMISSIONS.DASHBOARD.VIEW,
+  ),
   validate({ query: listPropertiesQuerySchema }),
   propertyController.findAll,
 );
