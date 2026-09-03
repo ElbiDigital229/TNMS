@@ -256,11 +256,15 @@ export default function TicketDetailPage() {
   const [showStickyHeader, setShowStickyHeader] = useState(false);
   const [mentionableUsers, setMentionableUsers] = useState<any[]>([]);
 
-  // Fetch mentionable users once on mount
+  // Fetch mentionable users once on mount.
+  //
+  // Not getAssignableUsers — that is department-scoped by design, which is
+  // right for assigning work and wrong for mentions: it hid everyone outside
+  // the ticket's department, the ticket's own creator included.
   useEffect(() => {
     if (!id) return;
     ticketApi
-      .getAssignableUsers(id)
+      .getMentionableUsers(id)
       .then((res) => setMentionableUsers(res.data.data))
       .catch(() => {}); // silently fail — mentions just won't autocomplete
   }, [id]);

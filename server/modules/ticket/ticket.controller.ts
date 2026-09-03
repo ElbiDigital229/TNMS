@@ -286,6 +286,15 @@ export const ticketController = {
     }
   },
 
+  async getMentionableUsers(req: Request, res: Response) {
+    try {
+      const users = await ticketService.getMentionableUsers(req.params.id);
+      sendSuccess(res, users);
+    } catch (error: any) {
+      sendError(res, error.message);
+    }
+  },
+
   async getAssignableUsers(req: Request, res: Response) {
     try {
       const users = await ticketService.getAssignableUsers(

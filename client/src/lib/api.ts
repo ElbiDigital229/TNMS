@@ -180,6 +180,8 @@ export const ticketApi = {
     api.post(`/tickets/bulk-assign`, { ticketIds, assigneeId }),
   getAssignableUsers: (id: string) =>
     api.get(`/tickets/${id}/assignable-users`),
+  getMentionableUsers: (id: string) =>
+    api.get(`/tickets/${id}/mentionable-users`),
   block: (id: string, data: { blockingUserId?: string; departmentId: string; reason: string }) =>
     api.post(`/tickets/${id}/block`, data),
   unblock: (id: string, resolvedNote?: string) =>
