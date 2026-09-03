@@ -12,6 +12,8 @@ import SlaBar from "../components/ticket/SlaBar";
 import StatusTimeline from "../components/ticket/StatusTimeline";
 import RelatedTickets from "../components/ticket/RelatedTickets";
 import MentionInput from "../components/ticket/MentionInput";
+import { compressImages } from "../lib/compressImage";
+import { uploadErrorMessage } from "../lib/uploadError";
 import PpmChecklist from "../components/ticket/PpmChecklist";
 import { capture } from "../lib/posthog";
 import {
@@ -395,13 +397,21 @@ export default function TicketDetailPage() {
     const toUpload = Array.from(files).slice(0, remaining);
     setUploadingImage(true);
     try {
+      // Downscale first. Production nginx caps the whole request at 10MB and
+      // an Android camera photo is routinely 3-6MB, so two straight off the
+      // camera would not fit. See lib/compressImage.ts.
+      const compressed = await compressImages(toUpload);
       const formData = new FormData();
-      toUpload.forEach((f) => formData.append("images", f));
+      compressed.forEach((f) => formData.append("images", f));
       await ticketApi.update(id!, formData);
       toast.success(toUpload.length === 1 ? "Image uploaded" : `${toUpload.length} images uploaded`);
       fetchTicket();
-    } catch {
-      toast.error("Failed to upload image");
+    } catch (err: any) {
+      // Say what actually failed. This used to be a bare
+      // `catch { toast.error("Failed to upload image") }`, which reported
+      // permission errors, oversized files and server faults identically —
+      // and is a large part of why the same bug kept being re-reported.
+      toast.error(uploadErrorMessage(err));
     } finally {
       setUploadingImage(false);
     }

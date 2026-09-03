@@ -46,12 +46,28 @@ const fileFilter = (
   cb(null, true);
 };
 
+/**
+ * Per-file ceiling, raised from 5MB.
+ *
+ * The real constraint is upstream: production nginx caps the WHOLE request
+ * body at 10MB (verified against live — 9MB passes, 11MB returns 413), and
+ * we cannot change that without SSH, which we do not have. So this is a
+ * safety valve, not the limit that matters. The client downscales images
+ * before upload (client/src/lib/compressImage.ts), which is what actually
+ * keeps a technician's 6MB camera photo inside the envelope.
+ *
+ * Do not raise this past ~9MB: anything larger cannot reach the app at all,
+ * it is rejected by nginx with an HTML 413 the client cannot parse.
+ */
+export const MAX_UPLOAD_MB = 8;
+export const MAX_UPLOAD_FILES = 5;
+
 const upload = multer({
   storage,
   fileFilter,
   limits: {
-    fileSize: 5 * 1024 * 1024, // 5MB per file
-    files: 5,
+    fileSize: MAX_UPLOAD_MB * 1024 * 1024,
+    files: MAX_UPLOAD_FILES,
     fields: 20,
   },
 });
