@@ -1,5 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { Prisma } from "@prisma/client";
+import multer from "multer";
+import { MAX_UPLOAD_MB, MAX_UPLOAD_FILES } from "./upload.js";
 import { ZodError } from "zod";
 import { AppError } from "../utils/appError.js";
 import { env } from "../config/env.js";
@@ -27,6 +29,38 @@ export function errorHandler(
       error: err.message,
       code: err.code,
       ...(err.details ? { details: err.details } : {}),
+    });
+  }
+
+  // --- Multer upload error ---------------------------------------------
+  // Previously these fell through to the generic branch below and came back
+  // as a bare 500 "Internal server error", which the client renders as
+  // "Failed to upload image" — one message for six unrelated causes, and no
+  // way for anyone to tell which had happened. Say what actually went wrong.
+  if (err instanceof multer.MulterError) {
+    const messages: Record<string, string> = {
+      LIMIT_FILE_SIZE: `That image is too large. Maximum ${MAX_UPLOAD_MB}MB per photo.`,
+      LIMIT_FILE_COUNT: `Too many images. Maximum ${MAX_UPLOAD_FILES} at a time.`,
+      LIMIT_UNEXPECTED_FILE: "Unexpected file field in the upload.",
+      LIMIT_PART_COUNT: "Too many parts in the upload.",
+      LIMIT_FIELD_COUNT: "Too many form fields in the upload.",
+      LIMIT_FIELD_KEY: "A form field name was too long.",
+      LIMIT_FIELD_VALUE: "A form field value was too long.",
+    };
+    return res.status(413).json({
+      success: false,
+      error: messages[err.code] ?? `Upload failed: ${err.message}`,
+      code: err.code,
+    });
+  }
+
+  // fileFilter rejections are plain Errors thrown from upload.ts, not
+  // MulterErrors, so they need matching separately or they 500 as well.
+  if (err instanceof Error && /Only image files|Unsupported file extension/.test(err.message)) {
+    return res.status(415).json({
+      success: false,
+      error: err.message,
+      code: "UNSUPPORTED_MEDIA_TYPE",
     });
   }
 

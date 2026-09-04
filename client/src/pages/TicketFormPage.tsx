@@ -15,6 +15,8 @@ import PageHeader from "../components/ui/PageHeader";
 import { ArrowLeft } from "lucide-react";
 import { cls } from "../lib/styles";
 import { capture } from "../lib/posthog";
+import { compressImages } from "../lib/compressImage";
+import { uploadErrorMessage } from "../lib/uploadError";
 
 interface Property {
   id: string;
@@ -209,7 +211,10 @@ export default function TicketFormPage() {
       formData.append("assetIds", JSON.stringify(selectedAssetIds));
     }
     if (isPpm && ppmId) formData.append("ppmId", ppmId);
-    images.forEach((img) => formData.append("images", img));
+    // Downscale before attaching — nginx caps the whole request at 10MB and
+    // camera photos are several MB each. See lib/compressImage.ts.
+    const compressed = await compressImages(images);
+    compressed.forEach((img) => formData.append("images", img));
 
     try {
       if (isEdit) {
@@ -227,8 +232,10 @@ export default function TicketFormPage() {
         toast.success("Ticket created");
       }
       navigate("/tickets");
-    } catch {
-      toast.error(isEdit ? "Failed to update ticket" : "Failed to create ticket");
+    } catch (err: any) {
+      const fallback = isEdit ? "Failed to update ticket" : "Failed to create ticket";
+      const message = uploadErrorMessage(err);
+      toast.error(message === "Failed to upload image" ? fallback : message);
     } finally {
       setSaving(false);
     }
