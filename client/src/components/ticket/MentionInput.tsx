@@ -5,6 +5,7 @@ interface MentionUser {
   fullName: string;
   username: string;
   role?: { name: string };
+  department?: { name: string } | null;
 }
 
 interface MentionInputProps {
@@ -30,11 +31,14 @@ export default function MentionInput({
   const [selectedIndex, setSelectedIndex] = useState(0);
 
   const filteredUsers = mentionQuery
-    ? users.filter(
-        (u) =>
-          u.fullName.toLowerCase().includes(mentionQuery.toLowerCase()) ||
-          u.username.toLowerCase().includes(mentionQuery.toLowerCase())
-      )
+    ? users.filter((u) => {
+        const q = mentionQuery.toLowerCase();
+        return (
+          u.fullName.toLowerCase().includes(q) ||
+          u.username.toLowerCase().includes(q) ||
+          (u.department?.name.toLowerCase().includes(q) ?? false)
+        );
+      })
     : users;
 
   const displayedUsers = filteredUsers.slice(0, 10);
@@ -194,6 +198,13 @@ export default function MentionInput({
               <span className="ml-2 text-[11px] text-gray-400">
                 @{user.username}
               </span>
+              {/* The list spans the whole org now, so the department is what
+                  tells two people with the same first name apart. */}
+              {user.department && (
+                <span className="ml-2 text-[11px] text-gray-400">
+                  · {user.department.name}
+                </span>
+              )}
             </div>
           ))}
         </div>

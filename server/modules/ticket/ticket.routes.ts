@@ -100,6 +100,16 @@ ticketRoutes.patch(
   requireAnyPermission(PERMISSIONS.TICKETS.UPDATE_STATUS, PERMISSIONS.TICKETS.EDIT),
   ticketController.updatePpmStep,
 );
+// Gated on COMMENT, not ASSIGN: this feeds the @ autocomplete in the comment
+// box. It previously shared the assignable-users route, so anyone without
+// TICKETS.ASSIGN — technicians, most Staff — got a 403 that the client
+// swallowed, leaving them with an @ dropdown that was simply always empty.
+ticketRoutes.get(
+  "/:id/mentionable-users",
+  requirePermission(PERMISSIONS.TICKETS.COMMENT),
+  validate({ params: ticketIdParamSchema }),
+  ticketController.getMentionableUsers,
+);
 ticketRoutes.get(
   "/:id/assignable-users",
   requirePermission(PERMISSIONS.TICKETS.ASSIGN),

@@ -578,8 +578,21 @@ export const ticketService = {
         notificationTrigger.onTicketCommentAdded(ticketId, commenterId),
       );
 
-      // Parse @mentions and notify mentioned users
-      const mentionPattern = /@([A-Za-z\u00C0-\u024F]+(?: [A-Za-z\u00C0-\u024F]+)?)/g;
+      // Parse @mentions and notify mentioned users.
+      //
+      // Up to four words, and hyphens / apostrophes / dots count as name
+      // characters. The old pattern was letters plus at most ONE space, so
+      // "@Syed Talha Hasnain" captured only "Syed Talha" and matched nobody,
+      // and "@Abdul-Rehman" truncated to "Abdul" — a typed mention of anyone
+      // with a three-word or hyphenated name silently notified no one.
+      //
+      // Longest-first below means "Syed Talha Hasnain" is tried before the
+      // "Syed Talha" prefix that this pattern also produces.
+      // The lookbehind requires the @ to start a word, so "ali@example.com"
+      // in a comment can never notify a user who happens to be called
+      // "example". Matches the client's own trigger rule in MentionInput.
+      const mentionPattern =
+        /(?<=^|\s)@([\p{L}][\p{L}'.-]*(?:[ ][\p{L}][\p{L}'.-]*){0,3})/gu;
       const mentions: string[] = [];
       let match: RegExpExecArray | null;
       while ((match = mentionPattern.exec(content)) !== null) {
@@ -587,22 +600,54 @@ export const ticketService = {
       }
 
       if (mentions.length > 0) {
-        const mentionedUsers = await prisma.user.findMany({
+        // The pattern is greedy, so "@Izza Tariq can you check" captures four
+        // words. Try every prefix of each capture, then resolve each mention
+        // to its LONGEST match only: "@Syed Talha Hasnain" must notify that
+        // person and not also a colleague called "Syed Talha", and the
+        // trailing ordinary words must not notify anyone whose username
+        // happens to be "can" or "you".
+        const prefixes = (name: string) => {
+          const words = name.split(" ");
+          return Array.from({ length: words.length }, (_, i) =>
+            words.slice(0, words.length - i).join(" "),
+          ); // longest first
+        };
+
+        const candidates = new Set(mentions.flatMap(prefixes));
+
+        const matches = await prisma.user.findMany({
           where: {
             status: "ACTIVE",
-            OR: mentions.flatMap((name) => [
+            OR: [...candidates].flatMap((name) => [
               { fullName: { equals: name, mode: "insensitive" as const } },
               { username: { equals: name, mode: "insensitive" as const } },
             ]),
           },
-          select: { id: true },
+          select: { id: true, fullName: true, username: true },
         });
 
-        if (mentionedUsers.length > 0) {
+        const byName = new Map<string, string>();
+        for (const u of matches) {
+          if (u.fullName) byName.set(u.fullName.toLowerCase(), u.id);
+          byName.set(u.username.toLowerCase(), u.id);
+        }
+
+        const mentionedIds = new Set<string>();
+        for (const name of mentions) {
+          for (const candidate of prefixes(name)) {
+            const id = byName.get(candidate.toLowerCase());
+            if (id) {
+              mentionedIds.add(id);
+              break; // longest match wins; ignore its shorter prefixes
+            }
+          }
+        }
+
+        if (mentionedIds.size > 0) {
           fireAndForgetNotify("onTicketMention", () =>
             notificationTrigger.onTicketMention(
               ticketId,
-              mentionedUsers.map((u) => u.id),
+              [...mentionedIds],
               commenterId,
             ),
           );
@@ -871,6 +916,61 @@ export const ticketService = {
       orderBy: { createdAt: "desc" },
       take: 5,
     });
+  },
+
+  /**
+   * Who the @ autocomplete offers in the comment box.
+   *
+   * Deliberately NOT getAssignableUsers(). Assigning work is department-scoped
+   * on purpose; mentioning someone is not the same question. Sharing that
+   * endpoint meant a commenter could not mention anyone outside the ticket's
+   * own department — not even the person who raised the ticket — while the
+   * server happily notifies any active user matched by name in addComment().
+   * The dropdown was the only thing enforcing a rule nobody had decided on.
+   *
+   * Returns every active user, ordered so the people most likely to be wanted
+   * come first: the ticket's creator and current assignee, then the ticket's
+   * own department, then everyone else alphabetically.
+   */
+  async getMentionableUsers(ticketId: string) {
+    const ticket = await prisma.ticket.findUnique({
+      where: { id: ticketId },
+      select: { departmentId: true, createdById: true, assignedToId: true },
+    });
+    if (!ticket) throw new Error("Ticket not found");
+
+    const users = await prisma.user.findMany({
+      where: { status: "ACTIVE" },
+      select: {
+        id: true,
+        fullName: true,
+        username: true,
+        departmentId: true,
+        role: { select: { id: true, name: true } },
+        department: { select: { name: true } },
+      },
+      orderBy: { fullName: "asc" },
+    });
+
+    // Department is shown in the dropdown now that it spans the whole org —
+    // without it two people called "Muhammad" are indistinguishable.
+    const rank = (u: (typeof users)[number]) => {
+      if (u.id === ticket.assignedToId || u.id === ticket.createdById) return 0;
+      if (ticket.departmentId && u.departmentId === ticket.departmentId) return 1;
+      return 2;
+    };
+
+    // fullName is nullable in the schema. Fall back to username, matching how
+    // the rest of the UI renders a name — and mentions still resolve, because
+    // addComment() matches on fullName OR username.
+    return users
+      .map((u) => ({
+        ...u,
+        fullName: u.fullName ?? u.username,
+        _rank: rank(u),
+      }))
+      .sort((a, b) => a._rank - b._rank || a.fullName.localeCompare(b.fullName))
+      .map(({ _rank, departmentId, ...u }) => u);
   },
 
   async getAssignableUsers(ticketId: string, _assignerId: string) {
