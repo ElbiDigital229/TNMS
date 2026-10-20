@@ -32,21 +32,18 @@ export const ticketService = {
     });
   },
 
+  // Highest numeric part across ALL tickets (raw SQL, so hidden legacy +
+  // soft-deleted rows count too). Must be numeric: ordering the string
+  // column puts "TKT9999" above "TKT10000", which repeated TKT10000 forever.
+  async maxTicketNum(): Promise<number> {
+    const rows = await prisma.$queryRaw<{ max: number | null }[]>`
+      SELECT MAX(CAST(SUBSTRING("ticketNumber" FROM 4) AS INTEGER)) AS max
+      FROM "Ticket" WHERE "ticketNumber" ~ '^TKT[0-9]+$'`;
+    return Number(rows[0]?.max ?? 0);
+  },
+
   async generateTicketNumber(): Promise<string> {
-    // Must include hidden (legacy + soft-deleted) tickets so the next number
-    // never collides with an existing ticket number.
-    const last = await prisma.ticket.findFirst({
-      where: { __includeHidden: true } as any,
-      orderBy: { ticketNumber: "desc" },
-      select: { ticketNumber: true },
-    });
-
-    let nextNum = 1;
-    if (last) {
-      const numPart = parseInt(last.ticketNumber.slice(3), 10);
-      nextNum = numPart + 1;
-    }
-
+    const nextNum = (await this.maxTicketNum()) + 1;
     return `TKT${String(nextNum).padStart(4, "0")}`;
   },
 
@@ -1079,12 +1076,7 @@ export const ticketService = {
 
     // Pre-fetch the highest existing ticket number once, then increment locally
     // (avoids 5000 round-trips to generateTicketNumber)
-    const last = await prisma.ticket.findFirst({
-      where: { __includeHidden: true } as any,
-      orderBy: { ticketNumber: "desc" },
-      select: { ticketNumber: true },
-    });
-    let nextNum = last ? parseInt(last.ticketNumber.slice(3), 10) + 1 : 1;
+    let nextNum = (await this.maxTicketNum()) + 1;
 
     for (let i = 0; i < items.length; i++) {
       const item = items[i];
