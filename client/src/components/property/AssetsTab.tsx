@@ -560,6 +560,7 @@ export default function AssetsTab({
         title="Bulk Import Assets"
         columns={[
           { key: "floorName", label: "Floor", required: true, example: "Ground" },
+          { key: "unitName", label: "Room", required: false, example: "101", aliases: ["Unit", "Unit Name", "Room Name"] },
           { key: "name", label: "Name", required: true, example: "Split AC Unit" },
           { key: "categoryName", label: "Category", required: true, example: "HVAC" },
           { key: "quantity", label: "Quantity", required: false, example: "5" },
